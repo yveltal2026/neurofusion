@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { iatConfigSchema } from "../config";
 
-const createIatStudy = vi.fn(async (_input: unknown) => ({}) as { error?: string });
+const createIatStudy = vi.fn<(input: unknown) => Promise<{ error?: string }>>(async () => ({}));
 vi.mock("./actions", () => ({ createIatStudy: (input: unknown) => createIatStudy(input) }));
 
 import { Wizard } from "./Wizard";

@@ -59,6 +59,9 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
           </p>
         </div>
         <CopyLink url={link} />
+        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-primary hover:underline">
+          Abrir vista previa (no guarda datos) ↗
+        </a>
         {study.status !== "published" ? (
           <Alert tone="warning">
             La liga está inactiva porque el estudio está en estado «{STATUS_LABEL[study.status].toLowerCase()}».
