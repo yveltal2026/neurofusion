@@ -55,6 +55,10 @@ npm run seed:demo -- tu@correo.com   # opcional: estudio de demo con 36 particip
 ### 4. Desplegar en Vercel
 Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PUBLIC_APP_URL` con la URL pública. El análisis con IA puede tardar: la ruta declara `maxDuration = 120`.
 
+- **Rama de producción: `main`.** Vercel publica producción desde `main` (Settings → Environments → Production → Branch Tracking). Las demás ramas generan sólo *previews*. Para publicar algo, se mergea a `main`.
+- **Variables obligatorias en el proyecto de Vercel** (no en las del equipo), con los entornos Production y Preview marcados: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (la integración de Supabase las crea) y `PARTICIPANT_LOCK_SECRET` (a mano). Tras cambiar variables hay que redesplegar: las `NEXT_PUBLIC_*` se fijan al construir.
+- **Migraciones:** Vercel no las ejecuta. Aplica en Supabase todo `supabase/migrations/*.sql` en orden, y la URL `https://<tu-dominio>/auth/callback` debe estar en *Authentication → URL Configuration*.
+
 ## Comandos
 
 | Comando | Qué hace |
