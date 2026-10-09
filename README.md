@@ -1,39 +1,87 @@
 # NeuroFusion
 
-Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. V1: módulo **IAT** (Test de Asociación Implícita). Uso educativo/demostrativo hoy; arquitectura pensada para convertirse en SaaS.
+Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. **V1: módulo IAT** (Test de Asociación Implícita). Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS.
 
-## Flujo
-1. El investigador crea un **proyecto** (un proyecto puede tener varias herramientas en el futuro).
-2. Crea un **estudio IAT**: un wizard le hace las preguntas metodológicas.
-3. Se genera una **liga mágica** que comparte con N participantes.
-4. Los participantes dan sus datos, hacen el test y reciben un agradecimiento. Sus datos viajan a la base central.
-5. El investigador consulta datos crudos (CSV) o pide un **análisis con IA** (conclusiones, gráficas, interpretación).
+## Qué hace
+
+1. El investigador crea un **proyecto** (un proyecto podrá agrupar varias herramientas).
+2. Crea un **estudio IAT** con un wizard de 7 pasos (producto, conceptos, dimensiones, palabras, rigor, datos del participante, identidad visual) que reproduce el interrogatorio de la skill `iat-study-builder`.
+3. Se genera una **liga mágica** que comparte con N participantes. Puede cerrarse, limitarse por número de respuestas o fecha, regenerarse o probarse en **vista previa** (no guarda datos).
+4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
+5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
+
+## Principios de diseño
+
+- **Matemática determinista y testeada.** Bloques, contrabalanceo, D-score, validez y estadísticos viven en `src/tools/iat/engine` (código puro, sin I/O). La IA **sólo redacta** sobre agregados ya calculados y **nunca recibe filas crudas ni datos personales**.
+- **El servidor no confía en el cliente.** El servidor decide el contrabalanceo y una semilla por dimensión; con ellas regenera exactamente el plan de ensayos, valida lo que envía el cliente (sólo tiempos y teclas) y recalcula el D-score.
+- **Privacidad por defecto.** No se pide correo ni nombre al participante; la IP sólo se guarda como HMAC por estudio; los CSV no incluyen identificadores de dispositivo.
+
+Detalles metodológicos en [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md).
 
 ## Stack
-Next.js (App Router) · TypeScript · Tailwind · Supabase (Postgres/Auth/RLS) · Zod · Recharts · Vitest · Playwright.
 
-## Desarrollo
+Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, RLS) · Zod · Recharts · Vitest · Playwright. IA: SDK oficial de Anthropic (por defecto) u OpenAI.
+
+## Puesta en marcha
+
+### 1. Supabase
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor).
+3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*.
+4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
+
+### 2. Variables de entorno
 ```bash
-cp .env.example .env.local   # completar variables
+cp .env.example .env.local
+```
+Completa las de Supabase, `PARTICIPANT_LOCK_SECRET` (`openssl rand -hex 32`) y el proveedor de IA:
+
+| Variable | Para qué |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente del investigador (respeta RLS) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sólo servidor: endpoints públicos del participante. **Nunca exponer.** |
+| `PARTICIPANT_LOCK_SECRET` | Firma de la cookie de dispositivo y HMAC de IP |
+| `AI_PROVIDER` | `anthropic` (default) u `openai` |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Modelo por defecto: `claude-opus-5-5` |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | El modelo se exige explícitamente |
+
+### 3. Correr
+```bash
 npm install
 npm run dev
+npm run seed:demo -- tu@correo.com   # opcional: estudio de demo con 36 participantes simulados
 ```
+
+### 4. Desplegar en Vercel
+Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PUBLIC_APP_URL` con la URL pública. El análisis con IA puede tardar: la ruta declara `maxDuration = 120`.
+
+## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `npm run lint` / `typecheck` | Lint y tipos |
-| `npm test` | Pruebas unitarias (motor IAT) |
-| `npm run test:e2e` | Pruebas end-to-end (Playwright) |
-| `scripts/verify-sql.sh` | Valida migraciones y RLS en un Postgres desechable (requiere variables `PG*`) |
+| `npm run lint` / `npm run typecheck` | Lint y tipos |
+| `npm test` | Pruebas unitarias y de componentes (Vitest) |
+| `npm run test:e2e` | E2E con Playwright (requiere `E2E_EMAIL`/`E2E_PASSWORD` de un usuario real) |
+| `scripts/verify-sql.sh` | Valida migraciones y RLS en un Postgres desechable (variables `PG*`) |
+| `npm run seed:demo -- correo [n]` | Siembra datos de demostración simulados |
 
-## Principio de diseño
-La matemática del estudio (bloques, D-score, validez, estadísticos) es código determinista y testeado. La IA solo redacta conclusiones sobre números ya calculados y únicamente recibe agregados anónimos.
+## Seguridad y candado anti-repetición
+
+- **RLS** en todas las tablas: el investigador sólo ve datos de su organización; el rol anónimo no tiene acceso. Los participantes entran únicamente por `/api/s/*` (service role + validación del token).
+- **Candado** (`duplicate_policy` por estudio): cookie de dispositivo firmada `httpOnly` (bloquea a quien ya completó) y, opcionalmente, marca de posibles duplicados por IP+navegador (no bloquea, porque en un salón de clase muchos comparten IP). El alta de sesión es atómica (`claim_session`) para que el límite de respuestas no se salte con peticiones simultáneas.
+- **Límites conocidos:** ningún candado sin identidad real es infalible (modo incógnito u otro dispositivo lo evaden); sirve como disuasivo y deja trazabilidad para depurar la muestra. El limitador de peticiones es en memoria (por instancia); para SaaS conviene uno compartido (Redis/KV).
+
+## Estado de verificación
+
+| Área | Verificación |
+|---|---|
+| Motor IAT, configuración, sesión, estadísticos, CSV, IA (con proveedor falso), demo | Pruebas unitarias (Vitest) |
+| Wizard y runner del participante (teclado, táctil, errores, reintentos, bloqueos) | Pruebas de componente con servidor falso + recorrido real en Chromium (escritorio y celular emulado) |
+| Esquema, RLS y `claim_session` | Pruebas SQL contra Postgres 16 local (`scripts/verify-sql.sh`) |
+| Rutas `/api/s/*`, páginas del investigador, auth (email/Google), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica
 Greenwald, A. G., Nosek, B. A., & Banaji, M. R. (2003). Understanding and using the Implicit Association Test: I. An improved scoring algorithm. *Journal of Personality and Social Psychology, 85*(2), 197–216.
-
-## Base de datos
-Las migraciones están en `supabase/migrations`. Aplícalas en tu proyecto Supabase (`supabase db push` o pegando el SQL en el editor). Todas las tablas tienen RLS: el investigador sólo ve datos de su organización y el rol anónimo no tiene acceso; los participantes entran únicamente por los endpoints del servidor (`/api/s/*`), que usan la service role y validan el token del estudio.
 
 ## Notas de Next.js
 Esta versión de Next (16) usa `proxy.ts` en lugar de `middleware.ts`, y `params`/`searchParams`/`cookies()` son asíncronos. Cache Components está desactivado a propósito (la app es dinámica).

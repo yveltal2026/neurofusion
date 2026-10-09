@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Chromium viene preinstalado en /opt/pw-browsers; no se descarga nada.
-const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
+import fs from "node:fs";
+
+// En el entorno de la sesión Chromium viene preinstalado en /opt/pw-browsers; no se descarga nada.
+const preinstalled = "/opt/pw-browsers/chromium";
+const executablePath = process.env.PW_CHROMIUM_PATH || (fs.existsSync(preinstalled) ? preinstalled : undefined);
 
 export default defineConfig({
   testDir: "./e2e",
