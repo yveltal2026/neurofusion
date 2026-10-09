@@ -12,12 +12,15 @@ export function Field({
   hint?: string;
   children: ReactNode;
 }) {
+  // La pista va fuera del <label> para que el nombre accesible del campo sea sólo su etiqueta.
   return (
-    <label className="block space-y-1.5">
-      <span className="text-sm font-medium">{label}</span>
-      {children}
-      {hint ? <span className="block text-xs text-muted">{hint}</span> : null}
-    </label>
+    <div className="space-y-1.5">
+      <label className="block space-y-1.5">
+        <span className="text-sm font-medium">{label}</span>
+        {children}
+      </label>
+      {hint ? <p className="text-xs text-muted">{hint}</p> : null}
+    </div>
   );
 }
 

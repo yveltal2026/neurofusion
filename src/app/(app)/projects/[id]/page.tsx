@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
@@ -43,7 +43,12 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Estudios</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Estudios</h2>
+          <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
+            Nuevo estudio
+          </Link>
+        </div>
         {(studies ?? []).length === 0 ? (
           <Card className="text-sm text-muted">Este proyecto aún no tiene estudios.</Card>
         ) : (
