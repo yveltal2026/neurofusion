@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
+import { StudyTabs } from "@/components/study-tabs";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,8 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
           </p>
         </div>
       </div>
+
+      <StudyTabs id={id} active="overview" />
 
       {sp.created === "1" ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
 
