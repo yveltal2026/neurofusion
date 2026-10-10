@@ -14,8 +14,8 @@ export function StudyTabs({ id, active }: { id: string; active: (typeof TABS)[nu
           key={t.key}
           href={t.href(id)}
           aria-current={t.key === active ? "page" : undefined}
-          className={`-mb-px border-b-2 px-4 py-2 text-sm ${
-            t.key === active ? "border-primary font-medium" : "border-transparent text-muted hover:text-foreground"
+          className={`-mb-px border-b-[3px] px-4 py-2.5 font-display text-sm font-semibold ${
+            t.key === active ? "border-primary text-heading" : "border-transparent text-muted hover:text-heading"
           }`}
         >
           {t.label}

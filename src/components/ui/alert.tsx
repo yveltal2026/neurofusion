@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 
+// El color no es el único aviso (manual, cap. 20): el texto siempre va en tinta y la burbuja sólo acompaña.
 const tones = {
-  error: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
-  info: "border-primary/30 bg-primary/10",
-  warning: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  error: { box: "border-danger/40 bg-danger/10", dot: "bg-danger" },
+  info: { box: "border-primary/50 bg-primary/10", dot: "bg-primary" },
+  warning: { box: "border-warning/40 bg-warning/10", dot: "bg-warning" },
 } as const;
 
 export function Alert({
@@ -13,9 +14,11 @@ export function Alert({
   tone?: keyof typeof tones;
   children: ReactNode;
 }) {
+  const t = tones[tone];
   return (
-    <div role={tone === "error" ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-sm ${tones[tone]}`}>
-      {children}
+    <div role={tone === "error" ? "alert" : "status"} className={`flex gap-3 rounded-md border px-4 py-3 text-sm ${t.box}`}>
+      <span aria-hidden="true" className={`mt-1.5 size-2.5 shrink-0 rounded-full ${t.dot}`} />
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }

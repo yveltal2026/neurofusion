@@ -328,7 +328,7 @@ function DimensionsStep({
               <Button
                 type="button"
                 variant="ghost"
-                className="h-8 px-2 text-red-600"
+                className="h-8 px-2 text-danger"
                 onClick={() => update({ dimensions: config.dimensions.filter((_, j) => j !== i) })}
               >
                 Quitar
@@ -367,7 +367,7 @@ function DimensionsStep({
                   key={ex.name}
                   type="button"
                   onClick={() => addDimension(ex)}
-                  className="rounded-full border border-border px-2.5 py-1 hover:border-primary hover:text-primary"
+                  className="rounded-full border border-border px-2.5 py-1 hover:border-primary hover:text-heading"
                 >
                   {ex.positiveLabel} / {ex.negativeLabel}
                 </button>
@@ -537,7 +537,7 @@ function ParticipantStep({ config, update }: StepProps) {
           <div key={f.id} className="space-y-3 rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Campo adicional {i + 1}</span>
-              <Button type="button" variant="ghost" className="h-8 px-2 text-red-600" onClick={() => setParticipant({ extraFields: p.extraFields.filter((_, j) => j !== i) })}>
+              <Button type="button" variant="ghost" className="h-8 px-2 text-danger" onClick={() => setParticipant({ extraFields: p.extraFields.filter((_, j) => j !== i) })}>
                 Quitar
               </Button>
             </div>

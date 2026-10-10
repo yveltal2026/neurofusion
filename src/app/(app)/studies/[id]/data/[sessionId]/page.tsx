@@ -65,7 +65,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             </div>
           ))}
         </dl>
-        {view.duplicate_flag ? <p className="text-sm text-amber-700 dark:text-amber-300">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
+        {view.duplicate_flag ? <p className="text-sm text-warning">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
       </Card>
 
       <Card className="space-y-3">
@@ -146,7 +146,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             </thead>
             <tbody>
               {trials.map((t) => (
-                <tr key={`${t.dimension_idx}-${t.block}-${t.trial_idx}`} className={t.error ? "bg-red-500/10" : undefined}>
+                <tr key={`${t.dimension_idx}-${t.block}-${t.trial_idx}`} className={t.error ? "bg-danger/10" : undefined}>
                   <td className="py-0.5 pr-3">{config.dimensions[t.dimension_idx]?.name}</td>
                   <td className="py-0.5 pr-3">{t.block}</td>
                   <td className="py-0.5 pr-3">{t.trial_idx}</td>

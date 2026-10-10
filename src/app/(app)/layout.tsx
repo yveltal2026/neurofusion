@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import { SetupNotice } from "@/components/setup-notice";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/auth/actions";
@@ -15,14 +16,14 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/projects" className="font-semibold tracking-tight">
-            NeuroFusion
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+          <Link href="/projects" aria-label="NeuroFusion, ir a proyectos" className="flex items-center">
+            <Logo width={120} />
           </Link>
           <div className="flex items-center gap-3 text-sm text-muted">
             <span className="hidden sm:inline">{user?.email}</span>
             <form action={signOut}>
-              <Button type="submit" variant="ghost" className="h-8 px-3">
+              <Button type="submit" variant="ghost">
                 Salir
               </Button>
             </form>

@@ -168,7 +168,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
           Base del análisis: <strong className="text-foreground">{aggregates.nWithUsableData}</strong> participantes con datos utilizables
           ({completed.length} completadas).
         </p>
-        <Link href={includeInvalid ? `/studies/${id}/analysis` : `/studies/${id}/analysis?invalid=1`} className="text-primary hover:underline">
+        <Link href={includeInvalid ? `/studies/${id}/analysis` : `/studies/${id}/analysis?invalid=1`} className="text-heading underline underline-offset-4">
           {includeInvalid ? "Excluir datos de calidad dudosa" : "Incluir también datos de calidad dudosa"}
         </Link>
       </div>

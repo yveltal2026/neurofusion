@@ -165,7 +165,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               {rows.map((s) => (
                 <tr key={s.id} className={s.excluded ? "opacity-50" : undefined}>
                   <td className="px-3 py-2">
-                    <Link href={`/studies/${id}/data/${s.id}`} className="font-mono text-xs text-primary hover:underline">
+                    <Link href={`/studies/${id}/data/${s.id}`} className="font-mono text-xs text-heading hover:underline">
                       {s.participant_ref}
                     </Link>
                   </td>
@@ -183,7 +183,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
                   <td className="whitespace-nowrap px-3 py-2">{s.allValid === null ? "—" : validityText(s.allValid)}</td>
                   <td className="px-3 py-2 text-xs">
                     {s.excluded ? <span className="rounded bg-foreground/10 px-1.5 py-0.5">Excluida</span> : null}{" "}
-                    {s.duplicate_flag ? <span className="rounded bg-amber-500/20 px-1.5 py-0.5">Posible duplicado</span> : null}
+                    {s.duplicate_flag ? <span className="rounded bg-warning/20 px-1.5 py-0.5">Posible duplicado</span> : null}
                   </td>
                 </tr>
               ))}

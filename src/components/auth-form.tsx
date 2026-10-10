@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { Logo } from "@/components/brand/logo";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -23,10 +24,9 @@ export function AuthForm({
 
   return (
     <div className="w-full max-w-sm space-y-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isLogin ? "Iniciar sesión" : "Crear cuenta"}
-        </h1>
+      <div className="space-y-3 text-center">
+        <Logo width={140} className="mx-auto" />
+        <h1 className="text-2xl font-bold">{isLogin ? "Iniciar sesión" : "Crear cuenta"}</h1>
         <p className="text-sm text-muted">NeuroFusion · estudios de neuromarketing</p>
       </div>
 
@@ -73,14 +73,14 @@ export function AuthForm({
         {isLogin ? (
           <>
             ¿No tienes cuenta?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
+            <Link href="/signup" className="font-medium text-heading underline underline-offset-4">
               Regístrate
             </Link>
           </>
         ) : (
           <>
             ¿Ya tienes cuenta?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-heading underline underline-offset-4">
               Inicia sesión
             </Link>
           </>
