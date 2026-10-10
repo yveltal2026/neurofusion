@@ -30,6 +30,9 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*. Ese mismo callback sirve para confirmar el correo, Google y el **restablecimiento de contraseña** (`/forgot-password` → correo → `/reset-password`); la plantilla *Reset Password* de *Authentication → Email Templates* debe conservar `{{ .ConfirmationURL }}`.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
 
+#### Correo (SMTP propio): obligatorio para producción
+El correo integrado de Supabase es sólo para pruebas: tiene un tope muy bajo por hora y **sólo entrega a direcciones de los miembros del equipo** de la organización de Supabase. Con él, crear cuentas, confirmar el correo y restablecer la contraseña fallan con `email rate limit exceeded` o `Email address not authorized`. Configura un SMTP propio en *Authentication → Emails → SMTP Settings* (Resend, SendGrid, Amazon SES, etc.) con un remitente de tu dominio (p. ej. `noreply@frsko.com`) y publica en el DNS los registros SPF/DKIM que indique el proveedor. Con SMTP propio el tope por defecto es de 30 usuarios nuevos por hora y se ajusta en *Authentication → Rate Limits*. Mientras tanto, «Continuar con Google» no envía correos.
+
 #### Iniciar sesión con Google
 El botón «Continuar con Google» ya está en `/login` y `/signup`; sólo falta configurarlo (el código no cambia):
 1. En [Google Cloud Console](https://console.cloud.google.com) → *APIs & Services → OAuth consent screen*: tipo **External**, nombre «NeuroFusion», correo de soporte y de contacto. Con sólo los permisos básicos (correo y perfil) no pide verificación; pasa la pantalla de *Testing* a **In production**, o sólo podrán entrar los usuarios de prueba que listes.

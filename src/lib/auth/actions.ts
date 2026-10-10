@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { authErrorMessage } from "@/lib/auth/errors";
 import { newPasswordSchema, resetRequestSchema } from "@/lib/auth/password-reset";
 import { publicEnv } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
@@ -60,7 +61,10 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
       emailRedirectTo: `${await origin()}/auth/callback`,
     },
   });
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("signUp falló", { code: error.code, status: error.status });
+    return { error: authErrorMessage(error, "No pudimos crear tu cuenta. Inténtalo de nuevo en unos minutos.") };
+  }
   // Con confirmación de correo activa no hay sesión todavía.
   if (!data.session) {
     return { message: "Te enviamos un correo para confirmar tu cuenta. Ábrelo y vuelve a iniciar sesión." };
@@ -103,7 +107,10 @@ export async function requestPasswordReset(_prev: AuthState, formData: FormData)
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${await origin()}/auth/callback?next=/reset-password`,
   });
-  if (error) return { error: "No pudimos enviar el correo. Inténtalo de nuevo en unos minutos." };
+  if (error) {
+    console.error("resetPasswordForEmail falló", { code: error.code, status: error.status });
+    return { error: authErrorMessage(error, "No pudimos enviar el correo. Inténtalo de nuevo en unos minutos.") };
+  }
   return {
     message:
       "Si hay una cuenta con ese correo, te enviamos un enlace para crear una contraseña nueva. Revisa también tu carpeta de spam.",
@@ -126,9 +133,7 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
-    if (error.code === "same_password") return { error: "La contraseña nueva debe ser distinta a la anterior." };
-    if (error.code === "weak_password") return { error: "Esa contraseña es muy fácil de adivinar. Usa una más larga o más variada." };
-    return { error: "No pudimos actualizar tu contraseña. Inténtalo de nuevo." };
+    return { error: authErrorMessage(error, "No pudimos actualizar tu contraseña. Inténtalo de nuevo.") };
   }
   // Se cierra la sesión de recuperación: la persona entra con la contraseña nueva y confirma que funciona.
   await supabase.auth.signOut();
