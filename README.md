@@ -30,6 +30,14 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*. Ese mismo callback sirve para confirmar el correo, Google y el **restablecimiento de contraseña** (`/forgot-password` → correo → `/reset-password`); la plantilla *Reset Password* de *Authentication → Email Templates* debe conservar `{{ .ConfirmationURL }}`.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
 
+#### Iniciar sesión con Google
+El botón «Continuar con Google» ya está en `/login` y `/signup`; sólo falta configurarlo (el código no cambia):
+1. En [Google Cloud Console](https://console.cloud.google.com) → *APIs & Services → OAuth consent screen*: tipo **External**, nombre «NeuroFusion», correo de soporte y de contacto. Con sólo los permisos básicos (correo y perfil) no pide verificación; pasa la pantalla de *Testing* a **In production**, o sólo podrán entrar los usuarios de prueba que listes.
+2. *Credentials → Create credentials → OAuth client ID → Web application*. En **Authorized redirect URIs** pon la URI de callback de Supabase: `https://<ref-del-proyecto>.supabase.co/auth/v1/callback` (la muestra Supabase en *Authentication → Providers → Google*).
+3. Copia el *Client ID* y el *Client secret* a Supabase (*Authentication → Providers → Google*), activa el proveedor y guarda. El secreto va sólo ahí: nunca en el repo ni en variables de Vercel.
+4. En *Authentication → URL Configuration*: **Site URL** = la URL de producción y, en *Redirect URLs*, `https://<tu-dominio>/**` y `http://localhost:3000/**`. El callback lleva `?next=` y la lista debe aceptarlo; si Google devuelve a la portada en lugar de `/projects`, falta este paso.
+
+
 ### 2. Variables de entorno
 ```bash
 cp .env.example .env.local
