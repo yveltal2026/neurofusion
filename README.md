@@ -27,8 +27,19 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 ### 1. Supabase
 1. Crea un proyecto en [supabase.com](https://supabase.com).
 2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor).
-3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*.
+3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*. Ese mismo callback sirve para confirmar el correo, Google y el **restablecimiento de contraseña** (`/forgot-password` → correo → `/reset-password`); la plantilla *Reset Password* de *Authentication → Email Templates* debe conservar `{{ .ConfirmationURL }}`.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
+
+#### Correo (SMTP propio): obligatorio para producción
+El correo integrado de Supabase es sólo para pruebas: tiene un tope muy bajo por hora y **sólo entrega a direcciones de los miembros del equipo** de la organización de Supabase. Con él, crear cuentas, confirmar el correo y restablecer la contraseña fallan con `email rate limit exceeded` o `Email address not authorized`. Configura un SMTP propio en *Authentication → Emails → SMTP Settings* (Resend, SendGrid, Amazon SES, etc.) con un remitente de tu dominio (p. ej. `noreply@frsko.com`) y publica en el DNS los registros SPF/DKIM que indique el proveedor. Con SMTP propio el tope por defecto es de 30 usuarios nuevos por hora y se ajusta en *Authentication → Rate Limits*. Mientras tanto, «Continuar con Google» no envía correos.
+
+#### Iniciar sesión con Google
+El botón «Continuar con Google» ya está en `/login` y `/signup`; sólo falta configurarlo (el código no cambia):
+1. En [Google Cloud Console](https://console.cloud.google.com) → *APIs & Services → OAuth consent screen*: tipo **External**, nombre «NeuroFusion», correo de soporte y de contacto. Con sólo los permisos básicos (correo y perfil) no pide verificación; pasa la pantalla de *Testing* a **In production**, o sólo podrán entrar los usuarios de prueba que listes.
+2. *Credentials → Create credentials → OAuth client ID → Web application*. En **Authorized redirect URIs** pon la URI de callback de Supabase: `https://<ref-del-proyecto>.supabase.co/auth/v1/callback` (la muestra Supabase en *Authentication → Providers → Google*).
+3. Copia el *Client ID* y el *Client secret* a Supabase (*Authentication → Providers → Google*), activa el proveedor y guarda. El secreto va sólo ahí: nunca en el repo ni en variables de Vercel.
+4. En *Authentication → URL Configuration*: **Site URL** = la URL de producción y, en *Redirect URLs*, `https://<tu-dominio>/**` y `http://localhost:3000/**`. El callback lleva `?next=` y la lista debe aceptarlo; si Google devuelve a la portada en lugar de `/projects`, falta este paso.
+
 
 ### 2. Variables de entorno
 ```bash
@@ -82,7 +93,7 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | Motor IAT, configuración, sesión, estadísticos, CSV, IA (con proveedor falso), demo | Pruebas unitarias (Vitest) |
 | Wizard y runner del participante (teclado, táctil, errores, reintentos, bloqueos) | Pruebas de componente con servidor falso + recorrido real en Chromium (escritorio y celular emulado) |
 | Esquema, RLS y `claim_session` | Pruebas SQL contra Postgres 16 local (`scripts/verify-sql.sh`) |
-| Rutas `/api/s/*`, páginas del investigador, auth (email/Google), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
+| Rutas `/api/s/*`, páginas del investigador, auth (email/Google; el restablecimiento de contraseña sólo se probó contra un Supabase Auth simulado, sin correo real), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica
 Greenwald, A. G., Nosek, B. A., & Banaji, M. R. (2003). Understanding and using the Implicit Association Test: I. An improved scoring algorithm. *Journal of Personality and Social Psychology, 85*(2), 197–216.

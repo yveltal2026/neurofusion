@@ -7,7 +7,7 @@ import { parseWordList } from "../config";
 export function Recommendation({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-      <span className="font-medium text-primary">Recomendación: </span>
+      <span className="font-medium text-heading">Recomendación: </span>
       {children}
     </div>
   );
@@ -61,7 +61,7 @@ export function RadioCard({
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{title}</span>
-            {badge ? <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">{badge}</span> : null}
+            {badge ? <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-heading">{badge}</span> : null}
           </div>
           {children ? <div className="text-sm text-muted">{children}</div> : null}
         </div>
@@ -101,7 +101,7 @@ export function WordsInput({
     setRaw(value.join("\n"));
   }
   const count = value.length;
-  const status = count < min ? "text-amber-600" : count > max ? "text-red-600" : "text-muted";
+  const status = count < min ? "text-warning" : count > max ? "text-danger" : "text-muted";
   return (
     <div className="space-y-1">
       <textarea
@@ -112,7 +112,7 @@ export function WordsInput({
           onChange(parseWordList(e.target.value));
         }}
         rows={rows}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-heading focus:ring-2 focus:ring-primary"
         placeholder="Una palabra por línea"
       />
       <p className={`text-xs ${status}`}>

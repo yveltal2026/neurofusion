@@ -75,7 +75,7 @@ export function ParticipantForm({
     onSubmit(parsed.data);
   }
 
-  const err = (key: string) => (fieldErrors[key] ? <p className="text-sm text-red-600">{fieldErrors[key]}</p> : null);
+  const err = (key: string) => (fieldErrors[key] ? <p className="text-sm text-danger">{fieldErrors[key]}</p> : null);
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
