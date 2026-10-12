@@ -40,7 +40,9 @@ export function RadioCard({
   badge,
   children,
   name,
+  disabled = false,
 }: {
+  disabled?: boolean;
   checked: boolean;
   onChange: () => void;
   title: string;
@@ -50,12 +52,12 @@ export function RadioCard({
 }) {
   return (
     <label
-      className={`block cursor-pointer rounded-lg border p-4 transition ${
-        checked ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-      }`}
+      className={`block rounded-lg border p-4 transition ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${checked ? "border-primary bg-primary/5" : disabled ? "border-border" : "border-border hover:border-primary/50"}`}
     >
       <div className="flex items-start gap-3">
-        <input type="radio" name={name} checked={checked} onChange={onChange} className="mt-1 accent-[var(--primary)]" />
+        <input type="radio" name={name} checked={checked} onChange={onChange} disabled={disabled} className="mt-1 accent-[var(--primary)]" />
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{title}</span>

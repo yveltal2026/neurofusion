@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { fetchAll, loadStudyForResearcher } from "@/lib/studies";
 import { DEVICE_LABEL, FLAG_LABEL, STATUS_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
+import { formatExtraAnswer } from "@/tools/iat/participant";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import type { TrialExportRow } from "@/tools/iat/results/views";
 import { setSessionExcluded } from "../actions";
@@ -42,7 +43,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
     ["Preferencia explícita", explicitLabel],
     ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "—")]] as [string, string][]) : []),
     ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "—")]] as [string, string][]) : []),
-    ...config.participant.extraFields.map((f): [string, string] => [f.label, String(demo[f.id] ?? "—")]),
+    ...config.participant.extraFields.map((f): [string, string] => [f.label, formatExtraAnswer(f, demo[f.id])]),
   ];
 
   return (

@@ -1,7 +1,7 @@
 import { toCsv } from "@/lib/csv";
 import type { IatConfig } from "../config";
 import type { DeviceType, ExplicitPreference, SessionForStats } from "../engine/stats";
-import { sessionSegments } from "../participant";
+import { extraFieldColumns, sessionSegments } from "../participant";
 
 /** Filas tal como salen de Supabase. */
 export interface SessionRow {
@@ -112,13 +112,13 @@ const round = (n: number | null, digits = 4) => (n === null ? null : Math.round(
 
 /** session_summary.csv: una fila por sesión. No incluye device_id, IP ni user agent. */
 export function sessionSummaryCsv(config: IatConfig, views: SessionView[]): string {
-  const extraIds = config.participant.extraFields.map((f) => f.id);
+  const extraCols = extraFieldColumns(config);
   const dimHeaders = config.dimensions.flatMap((d) =>
     ["d", "strength", "direction", "valid", "flags", "error_rate", "pct_under_300ms", "n_used", "first_combo"].map((k) => `${d.id}_${k}`),
   );
   const headers = [
     "session_ref", "status", "started_at", "completed_at", "device_type", "input_mode", "screen_width", "screen_height",
-    "duplicate_flag", "excluded", "excluded_reason", "explicit_preference", "age", "gender", ...extraIds, ...dimHeaders,
+    "duplicate_flag", "excluded", "excluded_reason", "explicit_preference", "age", "gender", ...extraCols.map((c) => c.header), ...dimHeaders,
   ];
   const rows = views.map((v) => {
     const demo = v.demographics ?? {};
@@ -132,7 +132,7 @@ export function sessionSummaryCsv(config: IatConfig, views: SessionView[]): stri
       v.duplicate_flag, v.excluded, v.excluded_reason,
       v.explicit_preference === "A" ? config.conceptA.label : v.explicit_preference === "B" ? config.conceptB.label : v.explicit_preference,
       demo.age as number | undefined, demo.gender as string | undefined,
-      ...extraIds.map((id) => demo[id] as string | number | undefined),
+      ...extraCols.map((c) => c.value(demo)),
       ...dims,
     ];
   });

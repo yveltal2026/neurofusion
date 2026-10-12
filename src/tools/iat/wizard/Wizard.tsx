@@ -9,6 +9,10 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 import {
   DEFAULT_THANK_YOU,
   GENDER_OPTIONS,
+  LIKERT_DEFAULT_POINTS,
+  LIKERT_MAX_POINTS,
+  LIKERT_MIN_POINTS,
+  LIKERT_PRESETS,
   MAX_DIMENSIONS,
   MAX_EXTRA_FIELDS,
   MAX_WORDS_PER_POLE,
@@ -17,7 +21,7 @@ import {
   defaultConsentText,
   defaultIatConfig,
   normalizeWord,
-  parseWordList,
+  parseLines,
   slugify,
   type ExtraField,
   type IatConfig,
@@ -26,6 +30,7 @@ import {
 import { estimateMinutes, trialsPerDimension } from "../engine/protocol";
 import { EXAMPLE_DIMENSIONS, suggestWords } from "../suggestions";
 import { createIatStudy } from "./actions";
+import { StartGate } from "./StartGate";
 import { Recommendation, RadioCard, StepShell, WordsInput } from "./ui";
 import { WIZARD_STEPS, validateStep } from "./validation";
 
@@ -42,7 +47,7 @@ function uniqueId(base: string, taken: string[]): string {
   return `${base}_${i}`;
 }
 
-export function Wizard({ projectId, projectName }: { projectId: string; projectName: string }) {
+export function Wizard({ projectId, projectName, aiAvailable = false }: { projectId: string; projectName: string; aiAvailable?: boolean }) {
   const [config, setConfig] = useState<IatConfig>(defaultIatConfig);
   const [studyName, setStudyName] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
@@ -53,6 +58,9 @@ export function Wizard({ projectId, projectName }: { projectId: string; projectN
   const [pending, startTransition] = useTransition();
   // Sube cuando se carga una sugerencia para que WordsInput recargue su texto.
   const [wordsVersion, setWordsVersion] = useState(0);
+  // Antes del paso 1 se elige cómo diseñar el estudio: manualmente o asistido por IA.
+  const [started, setStarted] = useState(false);
+  const [aiNotes, setAiNotes] = useState<string | null>(null);
 
   const step = WIZARD_STEPS[stepIndex];
   const isLast = stepIndex === WIZARD_STEPS.length - 1;
@@ -92,6 +100,23 @@ export function Wizard({ projectId, projectName }: { projectId: string; projectN
   const trials = trialsPerDimension(config.protocol);
   const minutes = estimateMinutes(config.protocol, Math.max(1, config.dimensions.length));
 
+  if (!started) {
+    return (
+      <StartGate
+        projectName={projectName}
+        projectId={projectId}
+        aiAvailable={aiAvailable}
+        onManual={() => setStarted(true)}
+        onSuggested={(patch, notes) => {
+          setConfig((c) => ({ ...c, ...patch }));
+          setWordsVersion((v) => v + 1);
+          setAiNotes(notes || "Revisa la propuesta y ajústala a tu estudio.");
+          setStarted(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="grid gap-8 lg:grid-cols-[220px_1fr]">
       <nav aria-label="Pasos" className="hidden lg:block">
@@ -127,6 +152,12 @@ export function Wizard({ projectId, projectName }: { projectId: string; projectN
         <p className="text-xs text-muted">Proyecto: {projectName}</p>
 
         <Card className="space-y-5">
+          {aiNotes && ["product", "concepts", "dimensions", "words"].includes(step.id) ? (
+            <Alert tone="info">
+              <p className="font-medium">Propuesta generada por IA — revísala y edítala libremente.</p>
+              <p className="mt-1">{aiNotes}</p>
+            </Alert>
+          ) : null}
           {step.id === "product" && <ProductStep config={config} update={update} />}
           {step.id === "concepts" && <ConceptsStep config={config} update={update} />}
           {step.id === "dimensions" && (
@@ -492,6 +523,32 @@ function ProtocolStep({ config, update }: StepProps) {
 }
 
 // ---------------------------------------------------------------- 6. Participante
+const FIELD_TYPE_LABEL: Record<ExtraField["type"], string> = {
+  text: "Texto libre",
+  number: "Número",
+  select: "Opción única",
+  multiselect: "Opción múltiple",
+  likert: "Escala Likert",
+};
+
+/** Convierte un campo a otro tipo conservando pregunta, id, obligatoriedad y opciones. */
+function convertField(f: ExtraField, type: ExtraField["type"]): ExtraField {
+  const base = { id: f.id, label: f.label, required: f.required };
+  switch (type) {
+    case "select":
+    case "multiselect":
+      return { ...base, type, options: "options" in f ? f.options : ["", ""] };
+    case "likert": {
+      const preset = LIKERT_PRESETS[0];
+      return { ...base, type, points: LIKERT_DEFAULT_POINTS, minLabel: preset.minLabel, maxLabel: preset.maxLabel };
+    }
+    case "number":
+      return { ...base, type };
+    default:
+      return { ...base, type: "text" };
+  }
+}
+
 function ParticipantStep({ config, update }: StepProps) {
   const p = config.participant;
   const setParticipant = (patch: Partial<IatConfig["participant"]>) => update({ participant: { ...p, ...patch } });
@@ -500,10 +557,10 @@ function ParticipantStep({ config, update }: StepProps) {
     setParticipant({ extraFields: p.extraFields.map((f, i) => (i === index ? field : f)) });
   }
 
-  function addField() {
+  function addField(type: ExtraField["type"] = "text") {
     if (p.extraFields.length >= MAX_EXTRA_FIELDS) return;
     const id = uniqueId(`campo_${p.extraFields.length + 1}`, [...p.extraFields.map((f) => f.id), "age", "gender", "explicit"]);
-    setParticipant({ extraFields: [...p.extraFields, { id, label: "", type: "text", required: false }] });
+    setParticipant({ extraFields: [...p.extraFields, convertField({ id, label: "", type: "text", required: false }, type)] });
   }
 
   return (
@@ -536,45 +593,48 @@ function ParticipantStep({ config, update }: StepProps) {
         {p.extraFields.map((f, i) => (
           <div key={f.id} className="space-y-3 rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Campo adicional {i + 1}</span>
+              <span className="text-sm font-medium">Pregunta adicional {i + 1}</span>
               <Button type="button" variant="ghost" className="h-8 px-2 text-red-600" onClick={() => setParticipant({ extraFields: p.extraFields.filter((_, j) => j !== i) })}>
                 Quitar
               </Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Pregunta">
+              <Field label="Pregunta" hint={f.type === "likert" ? "Escribe la afirmación que el participante valorará en la escala." : undefined}>
                 <Input
                   value={f.label}
                   maxLength={80}
                   onChange={(e) => setField(i, { ...f, label: e.target.value })}
-                  placeholder="Ej. ¿Con qué frecuencia consumes café?"
+                  placeholder={f.type === "likert" ? "Ej. El café de especialidad vale lo que cuesta" : "Ej. ¿Con qué frecuencia consumes café?"}
                 />
               </Field>
               <Field label="Tipo de respuesta">
                 <select
                   value={f.type}
-                  onChange={(e) => {
-                    const type = e.target.value as ExtraField["type"];
-                    const base = { id: f.id, label: f.label, required: f.required };
-                    setField(i, type === "select" ? { ...base, type, options: ["", ""] } : type === "number" ? { ...base, type } : { ...base, type });
-                  }}
+                  onChange={(e) => setField(i, convertField(f, e.target.value as ExtraField["type"]))}
                   className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 >
-                  <option value="text">Texto libre</option>
-                  <option value="number">Número</option>
-                  <option value="select">Opción única</option>
+                  {(Object.keys(FIELD_TYPE_LABEL) as ExtraField["type"][]).map((t) => (
+                    <option key={t} value={t}>
+                      {FIELD_TYPE_LABEL[t]}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </div>
-            {f.type === "select" ? (
-              <Field label="Opciones (una por línea)">
+            {f.type === "select" || f.type === "multiselect" ? (
+              <Field
+                label="Opciones (una por línea)"
+                hint={f.type === "multiselect" ? "El participante podrá marcar varias de estas opciones." : "El participante elegirá una sola opción."}
+              >
                 <Textarea
+                  key={`${f.id}-${f.type}`}
                   defaultValue={f.options.join("\n")}
-                  rows={3}
-                  onChange={(e) => setField(i, { ...f, options: parseWordList(e.target.value) })}
+                  rows={4}
+                  onChange={(e) => setField(i, { ...f, options: parseLines(e.target.value) })}
                 />
               </Field>
             ) : null}
+            {f.type === "likert" ? <LikertEditor field={f} onChange={(next) => setField(i, next)} /> : null}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={f.required} onChange={(e) => setField(i, { ...f, required: e.target.checked })} />
               Obligatoria
@@ -582,18 +642,79 @@ function ParticipantStep({ config, update }: StepProps) {
           </div>
         ))}
         {p.extraFields.length < MAX_EXTRA_FIELDS ? (
-          <Button type="button" variant="secondary" onClick={addField}>
-            + Agregar pregunta
-          </Button>
-        ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" onClick={() => addField()}>
+              + Agregar pregunta
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => addField("likert")}>
+              + Agregar escala Likert
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted">Llegaste al máximo de {MAX_EXTRA_FIELDS} preguntas adicionales.</p>
+        )}
       </div>
 
       <Recommendation>
         Edad y género (opcionales) más la preferencia explícita (obligatoria): esta última permite el hallazgo central de
-        disonancia entre lo implícito y lo declarado. Agrega variables relevantes a tu categoría, como frecuencia de consumo
-        o marca actual.
+        disonancia entre lo implícito y lo declarado. Agrega variables relevantes a tu categoría (frecuencia de consumo,
+        marca actual) con opción única o múltiple, o mide actitudes con escalas Likert (cada afirmación es una pregunta).
       </Recommendation>
     </StepShell>
+  );
+}
+
+function LikertEditor({ field, onChange }: { field: Extract<ExtraField, { type: "likert" }>; onChange: (f: ExtraField) => void }) {
+  const set = (patch: Partial<typeof field>) => onChange({ ...field, ...patch });
+  return (
+    <div className="space-y-3 rounded-md bg-foreground/[0.03] p-3">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Puntos de la escala">
+          <select
+            value={field.points}
+            onChange={(e) => set({ points: Number(e.target.value) })}
+            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+          >
+            {Array.from({ length: LIKERT_MAX_POINTS - LIKERT_MIN_POINTS + 1 }, (_, i) => LIKERT_MIN_POINTS + i).map((n) => (
+              <option key={n} value={n}>
+                {n} puntos
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Etiqueta del extremo bajo (1)">
+          <Input value={field.minLabel ?? ""} maxLength={40} onChange={(e) => set({ minLabel: e.target.value || undefined })} />
+        </Field>
+        <Field label={`Etiqueta del extremo alto (${field.points})`}>
+          <Input value={field.maxLabel ?? ""} maxLength={40} onChange={(e) => set({ maxLabel: e.target.value || undefined })} />
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <span>Etiquetas frecuentes:</span>
+        {LIKERT_PRESETS.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => set({ minLabel: preset.minLabel, maxLabel: preset.maxLabel })}
+            className="rounded-full border border-border px-2.5 py-1 hover:border-primary hover:text-primary"
+          >
+            {preset.name}
+          </button>
+        ))}
+      </div>
+      <div className="space-y-1" aria-hidden>
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from({ length: field.points }, (_, i) => (
+            <span key={i} className="flex size-8 items-center justify-center rounded-md border border-border text-xs">
+              {i + 1}
+            </span>
+          ))}
+        </div>
+        <p className="text-xs text-muted">
+          1 = {field.minLabel || "—"} · {field.points} = {field.maxLabel || "—"}
+        </p>
+      </div>
+    </div>
   );
 }
 

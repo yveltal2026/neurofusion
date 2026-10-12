@@ -5,7 +5,7 @@ Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. **V1: m
 ## Qué hace
 
 1. El investigador crea un **proyecto** (un proyecto podrá agrupar varias herramientas).
-2. Crea un **estudio IAT** con un wizard de 7 pasos (producto, conceptos, dimensiones, palabras, rigor, datos del participante, identidad visual) que reproduce el interrogatorio de la skill `iat-study-builder`.
+2. Crea un **estudio IAT** con un wizard de 7 pasos (producto, conceptos, dimensiones, palabras, rigor, datos del participante, identidad visual) que reproduce el interrogatorio de la skill `iat-study-builder`. Antes del paso 1 eliges entre **capturar todo manualmente** o **diseño asistido por IA**: describes en pocas líneas qué quieres analizar y su contexto, y la IA propone categoría, dimensiones (pares de polos) y 5 palabras por polo con el criterio de la skill; todo queda editable. Las preguntas adicionales al participante pueden ser texto, número, opción única, **opción múltiple** (tú defines las opciones) o **escala Likert** (3–10 puntos con etiquetas en los extremos); en el CSV las opciones múltiples salen como columnas 0/1 por opción.
 3. Se genera una **liga mágica** que comparte con N participantes. Puede cerrarse, limitarse por número de respuestas o fecha, regenerarse o probarse en **vista previa** (no guarda datos).
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
