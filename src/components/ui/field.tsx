@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
 
 const control =
-  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40";
+  "w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm outline-none transition focus:border-heading focus:ring-2 focus:ring-primary";
 
 export function Field({
   label,
@@ -16,7 +16,7 @@ export function Field({
   return (
     <div className="space-y-1.5">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm font-medium text-heading">{label}</span>
         {children}
       </label>
       {hint ? <p className="text-xs text-muted">{hint}</p> : null}

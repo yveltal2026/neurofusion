@@ -1,40 +1,131 @@
 @import "tailwindcss";
 
+/*
+ * Tokens de marca: FRSKO · familia Neuro (Manual de marca v3.7).
+ * Dos modos de fondo: claro (crema, letras teal) y profundo (teal, letras crema).
+ * Proporción por pantalla: 60% fondo, 30% teal, 10% menta. La menta es acento: botones,
+ * burbujas y un dato destacado; nunca texto sobre fondo claro (para eso existe --heading).
+ *
+ * --primary / --primary-foreground los sobrescribe el corredor del IAT cuando un estudio
+ * define un color propio (src/tools/iat/runner/Runner.tsx); por eso el botón principal sigue usándolos.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
+  --background: #f6f4ec; /* crema */
+  --foreground: #17363a; /* tinta: texto corrido */
+  --heading: #0a4a4c; /* teal profundo: títulos, enlaces, bordes activos */
+  --surface: #ffffff;
+  --muted: #54706f; /* gris teal */
+  --border: #d9d5c6; /* línea */
+  --primary: #2ee0be; /* menta */
+  --primary-foreground: #0a4a4c;
+  --neuro: #8511c9; /* familia Neuro: burbuja grande */
+  --neuro-soft: #b57bea; /* familia Neuro: burbuja pequeña */
+  --success: #0b7a5b;
+  --warning: #9a6400;
+  --danger: #c2412d;
+  --danger-foreground: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #062e30;
+    --foreground: #dce9e4;
+    --heading: #f6f4ec;
+    --surface: #0a4a4c;
+    --muted: #9dbdb8;
+    --border: #1b6164;
+    --primary-foreground: #062e30;
+    --neuro: #b57bea; /* sobre fondo profundo, la familia usa sus tonos claros */
+    --neuro-soft: #ddc2f7;
+    --success: #5be0b4;
+    --warning: #f8c766;
+    --danger: #ff9a85;
+    --danger-foreground: #062e30;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-heading: var(--heading);
+  --color-surface: var(--surface);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  --color-neuro: var(--neuro);
+  --color-neuro-soft: var(--neuro-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  /* next/font inyecta --font-poppins y --font-jakarta en <html> (src/app/layout.tsx). */
+  --font-sans: var(--font-jakarta), "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-display: var(--font-poppins), "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --muted: #9ca3af;
-    --border: #27272a;
-    --primary: #818cf8;
-    --primary-foreground: #0a0a0a;
+@theme {
+  /* Formas: tarjetas 18 px, campos 12 px, botones y etiquetas en píldora. */
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bubble: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--heading);
+    text-wrap: balance;
+    letter-spacing: -0.012em;
+  }
+
+  /* El tabulado va en las cifras: tablas, datos y KPIs. */
+  table,
+  dl {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--heading);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+/* Entrada de la portada: sube 26 px y aparece; una sola vez. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation: rise 0.75s var(--ease-enter) both;
+  animation-delay: var(--rise-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-rise {
+    animation: none;
+  }
 }

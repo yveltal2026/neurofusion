@@ -35,7 +35,7 @@ export function AnalysisView({ result }: { result: AnalysisResult }) {
       <Card className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="font-medium">Implícito vs. explícito</h3>
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-primary">{CONSISTENCY_LABEL[result.implicitVsExplicit.consistency]}</span>
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-heading">{CONSISTENCY_LABEL[result.implicitVsExplicit.consistency]}</span>
         </div>
         <p className="text-sm leading-relaxed">{result.implicitVsExplicit.summary}</p>
       </Card>

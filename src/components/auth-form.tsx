@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { AuthHeading } from "@/components/auth-heading";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -13,23 +14,21 @@ export function AuthForm({
   mode,
   next,
   urlError,
+  resetOk,
 }: {
   mode: "login" | "signup";
   next?: string;
   urlError?: string;
+  resetOk?: boolean;
 }) {
   const [state, action, pending] = useActionState(mode === "login" ? signIn : signUp, initial);
   const isLogin = mode === "login";
 
   return (
     <div className="w-full max-w-sm space-y-6">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {isLogin ? "Iniciar sesión" : "Crear cuenta"}
-        </h1>
-        <p className="text-sm text-muted">NeuroFusion · estudios de neuromarketing</p>
-      </div>
+      <AuthHeading title={isLogin ? "Iniciar sesión" : "Crear cuenta"} />
 
+      {resetOk ? <Alert>Listo, actualizamos tu contraseña. Inicia sesión con la nueva.</Alert> : null}
       {urlError ? <Alert tone="error">No se pudo completar el inicio de sesión. Inténtalo de nuevo.</Alert> : null}
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
       {state.message ? <Alert>{state.message}</Alert> : null}
@@ -53,6 +52,13 @@ export function AuthForm({
             autoComplete={isLogin ? "current-password" : "new-password"}
           />
         </Field>
+        {isLogin ? (
+          <p className="-mt-1 text-right text-sm">
+            <Link href="/forgot-password" className="font-medium text-heading underline underline-offset-4">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+        ) : null}
         <Button type="submit" className="w-full" disabled={pending}>
           {pending ? "Procesando…" : isLogin ? "Entrar" : "Crear cuenta"}
         </Button>
@@ -73,14 +79,14 @@ export function AuthForm({
         {isLogin ? (
           <>
             ¿No tienes cuenta?{" "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
+            <Link href="/signup" className="font-medium text-heading underline underline-offset-4">
               Regístrate
             </Link>
           </>
         ) : (
           <>
             ¿Ya tienes cuenta?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-heading underline underline-offset-4">
               Inicia sesión
             </Link>
           </>

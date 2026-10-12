@@ -175,10 +175,12 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     [session, finishDimension],
   );
 
-  const theme: CSSProperties | undefined =
+  // Modo neutro: el acento es el color de texto de la marca (teal / crema), no la menta. BlockRunner pinta con
+  // `text-primary` los estímulos de concepto y la menta sobre crema no se lee (contraste ~1.4:1).
+  const theme: CSSProperties =
     config.theme.mode === "custom" && config.theme.accent
       ? ({ "--primary": config.theme.accent, "--primary-foreground": readableOn(config.theme.accent) } as CSSProperties)
-      : undefined;
+      : ({ "--primary": "var(--heading)", "--primary-foreground": "var(--background)" } as CSSProperties);
 
   let body: ReactNode = null;
 

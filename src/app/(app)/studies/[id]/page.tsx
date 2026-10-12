@@ -62,7 +62,7 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
           </p>
         </div>
         <CopyLink url={link} />
-        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-primary hover:underline">
+        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-heading underline underline-offset-4">
           Abrir vista previa (no guarda datos) ↗
         </a>
         {study.status !== "published" ? (
@@ -113,8 +113,8 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
         />
       </Card>
 
-      <Card className="space-y-4 border-red-500/30">
-        <h2 className="font-medium text-red-600">Zona de riesgo</h2>
+      <Card className="space-y-4 border-danger/30">
+        <h2 className="font-medium text-danger">Zona de riesgo</h2>
         <div className="flex flex-wrap gap-3">
           <form action={regenerateLink}>
             <input type="hidden" name="id" value={study.id} />

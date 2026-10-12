@@ -7,24 +7,32 @@ import { iatConfigSchema } from "../config";
 const createIatStudy = vi.fn<(input: unknown) => Promise<{ error?: string }>>(async () => ({}));
 vi.mock("./actions", () => ({ createIatStudy: (input: unknown) => createIatStudy(input) }));
 
+const suggestIatDesign = vi.fn<(brief: unknown) => Promise<unknown>>();
+vi.mock("./ai-actions", () => ({ suggestIatDesign: (brief: unknown) => suggestIatDesign(brief) }));
+
 import { Wizard } from "./Wizard";
 
 const PROJECT_ID = "00000000-0000-4000-8000-000000000001";
 
 function setup() {
   const user = userEvent.setup();
-  render(<Wizard projectId={PROJECT_ID} projectName="Proyecto de prueba" />);
+  render(<Wizard projectId={PROJECT_ID} projectName="Proyecto de prueba" aiAvailable />);
+  const start = () => user.click(screen.getByRole("button", { name: "Comenzar" }));
   const next = () => user.click(screen.getByRole("button", { name: "Continuar" }));
   const alerts = () => screen.queryAllByRole("alert").map((a) => a.textContent ?? "");
-  return { user, next, alerts };
+  return { user, start, next, alerts };
 }
 
-beforeEach(() => createIatStudy.mockClear());
+beforeEach(() => {
+  createIatStudy.mockClear();
+  suggestIatDesign.mockReset();
+});
 afterEach(cleanup);
 
 describe("Wizard IAT", () => {
   it("bloquea cada paso hasta que sus datos sean válidos", async () => {
-    const { user, next, alerts } = setup();
+    const { user, start, next, alerts } = setup();
+    await start();
 
     await next();
     expect(alerts().join()).toContain("Escribe el producto, servicio o categoría");
@@ -41,7 +49,8 @@ describe("Wizard IAT", () => {
   });
 
   it("recorre los 8 pasos y envía una configuración que el servidor aceptaría", async () => {
-    const { user, next, alerts } = setup();
+    const { user, start, next, alerts } = setup();
+    await start();
 
     // 1 · producto
     await user.type(screen.getByLabelText("Producto, servicio o categoría"), "café de especialidad");
@@ -106,7 +115,8 @@ describe("Wizard IAT", () => {
 
   it("muestra el error del servidor si la creación falla", async () => {
     createIatStudy.mockResolvedValueOnce({ error: "No se pudo crear el estudio" });
-    const { user, next } = setup();
+    const { user, start, next } = setup();
+    await start();
     await user.type(screen.getByLabelText("Producto, servicio o categoría"), "café");
     await next();
     await user.type(screen.getByLabelText("Concepto A (nombre exacto)"), "A");
@@ -124,7 +134,8 @@ describe("Wizard IAT", () => {
   });
 
   it("no deja pasar con palabras insuficientes ni repetidas", async () => {
-    const { user, next, alerts } = setup();
+    const { user, start, next, alerts } = setup();
+    await start();
     await user.type(screen.getByLabelText("Producto, servicio o categoría"), "café");
     await next();
     await user.type(screen.getByLabelText("Concepto A (nombre exacto)"), "A");
@@ -137,5 +148,119 @@ describe("Wizard IAT", () => {
     await user.type(pos, "Excelente{Enter}Genial");
     await next();
     expect(alerts().join()).toContain("Mínimo 5 palabras por polo");
+  });
+
+  it("permite preguntas de opción múltiple y escalas Likert, y el servidor las acepta", async () => {
+    const { user, start, next } = setup();
+    await start();
+    await user.type(screen.getByLabelText("Producto, servicio o categoría"), "café");
+    await next();
+    await user.type(screen.getByLabelText("Concepto A (nombre exacto)"), "A");
+    await user.type(screen.getByLabelText("Concepto B (nombre exacto)"), "B");
+    await next();
+    await user.click(screen.getByRole("button", { name: "Bueno / Malo" }));
+    await next();
+    await next(); // palabras
+    await next(); // protocolo
+
+    // 6 · una opción múltiple con comas dentro de una opción
+    await user.click(screen.getByRole("button", { name: "+ Agregar pregunta" }));
+    await user.type(screen.getByLabelText("Pregunta", { selector: "input" }), "¿Dónde compras café?");
+    await user.selectOptions(screen.getByLabelText("Tipo de respuesta"), "multiselect");
+    await user.type(screen.getByLabelText("Opciones (una por línea)"), "Tienda, en línea{Enter}Cafetería{Enter}Supermercado");
+
+    // y una escala Likert de 7 puntos con etiquetas frecuentes
+    await user.click(screen.getByRole("button", { name: "+ Agregar escala Likert" }));
+    const questions = screen.getAllByLabelText("Pregunta", { selector: "input" });
+    await user.type(questions[1], "El café vale lo que cuesta");
+    await user.selectOptions(screen.getByLabelText("Puntos de la escala"), "7");
+    await user.click(screen.getByRole("button", { name: "Satisfacción" }));
+    expect((screen.getByLabelText("Etiqueta del extremo bajo (1)") as HTMLInputElement).value).toBe("Muy insatisfecho");
+    expect(screen.getByLabelText("Etiqueta del extremo alto (7)")).toBeTruthy();
+
+    await next(); // participante
+    await next(); // tema
+    await user.click(screen.getByRole("button", { name: "Generar estudio" }));
+
+    const payload = createIatStudy.mock.calls[0][0] as { config: unknown };
+    const parsed = iatConfigSchema.safeParse(payload.config);
+    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true);
+    expect(parsed.data!.participant.extraFields).toMatchObject([
+      { type: "multiselect", options: ["Tienda, en línea", "Cafetería", "Supermercado"] },
+      { type: "likert", points: 7, minLabel: "Muy insatisfecho", maxLabel: "Muy satisfecho", label: "El café vale lo que cuesta" },
+    ]);
+  });
+
+  it("no deja pasar opciones repetidas en una opción múltiple", async () => {
+    const { user, start, next, alerts } = setup();
+    await start();
+    await user.type(screen.getByLabelText("Producto, servicio o categoría"), "café");
+    await next();
+    await user.type(screen.getByLabelText("Concepto A (nombre exacto)"), "A");
+    await user.type(screen.getByLabelText("Concepto B (nombre exacto)"), "B");
+    await next();
+    await user.click(screen.getByRole("button", { name: "Bueno / Malo" }));
+    await next();
+    await next();
+    await next();
+    await user.click(screen.getByRole("button", { name: "+ Agregar pregunta" }));
+    await user.type(screen.getByLabelText("Pregunta", { selector: "input" }), "¿Dónde?");
+    await user.selectOptions(screen.getByLabelText("Tipo de respuesta"), "multiselect");
+    await user.type(screen.getByLabelText("Opciones (una por línea)"), "Tienda{Enter}tienda");
+    await next();
+    expect(alerts().join()).toContain("repetida");
+  });
+
+  describe("modo asistido por IA", () => {
+    const aiPatch = {
+      product: "café de especialidad",
+      conceptA: { label: "Starbucks", stimuli: ["Starbucks"] },
+      conceptB: { label: "Punta del Cielo", stimuli: ["Punta del Cielo"] },
+      dimensions: [
+        {
+          id: "confianza",
+          name: "Confianza",
+          positiveLabel: "Confiable",
+          negativeLabel: "Poco confiable",
+          positiveWords: ["Seguro", "Honesto", "Sólido", "Estable", "Fiable"],
+          negativeWords: ["Riesgoso", "Engañoso", "Frágil", "Inestable", "Dudoso"],
+        },
+      ],
+    };
+
+    it("rellena producto, conceptos, dimensiones y palabras, y permite editarlos", async () => {
+      suggestIatDesign.mockResolvedValue({ ok: true, patch: aiPatch, notes: "Dimensiones elegidas por relevancia." });
+      const { user, next } = setup();
+      await user.click(screen.getByRole("radio", { name: /asistido por ia/i }));
+      const button = screen.getByRole("button", { name: "Sugerir diseño con IA" }) as HTMLButtonElement;
+      expect(button.disabled).toBe(true); // descripción demasiado corta
+      await user.type(screen.getByLabelText("¿Qué quieres analizar y en qué contexto?"), "Percepción de Starbucks vs Punta del Cielo entre universitarios");
+      await user.click(button);
+
+      expect(suggestIatDesign).toHaveBeenCalledWith("Percepción de Starbucks vs Punta del Cielo entre universitarios");
+      expect(await screen.findByText(/Propuesta generada por IA/)).toBeTruthy();
+      expect(screen.getByText("Dimensiones elegidas por relevancia.")).toBeTruthy();
+      expect((screen.getByLabelText("Producto, servicio o categoría") as HTMLInputElement).value).toBe("café de especialidad");
+
+      await next();
+      expect((screen.getByLabelText("Concepto A (nombre exacto)") as HTMLInputElement).value).toBe("Starbucks");
+      await next();
+      expect((screen.getByLabelText("Nombre de la dimensión") as HTMLInputElement).value).toBe("Confianza");
+      await next();
+      expect((screen.getByLabelText("Palabras de Confiable") as HTMLTextAreaElement).value).toBe("Seguro\nHonesto\nSólido\nEstable\nFiable");
+    });
+
+    it("muestra el error de la IA y deja continuar manualmente", async () => {
+      suggestIatDesign.mockResolvedValue({ ok: false, error: "La API key de Anthropic no es válida." });
+      const { user, start, alerts } = setup();
+      await user.click(screen.getByRole("radio", { name: /asistido por ia/i }));
+      await user.type(screen.getByLabelText("¿Qué quieres analizar y en qué contexto?"), "Quiero analizar bancos digitales en México");
+      await user.click(screen.getByRole("button", { name: "Sugerir diseño con IA" }));
+      expect(await screen.findByText("La API key de Anthropic no es válida.")).toBeTruthy();
+      expect(alerts()).toHaveLength(1);
+      await user.click(screen.getByRole("radio", { name: /capturar todo manualmente/i }));
+      await start();
+      expect(screen.getByLabelText("Producto, servicio o categoría")).toBeTruthy();
+    });
   });
 });

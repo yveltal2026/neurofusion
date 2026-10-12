@@ -23,7 +23,9 @@ describe("cookie de dispositivo", () => {
     const cookie = signDeviceId(id, SECRET);
     expect(verifyDeviceCookie(cookie, "otro-secreto-distinto-1234567890")).toBeNull();
     expect(verifyDeviceCookie(`${newDeviceId()}.${cookie.split(".")[1]}`, SECRET)).toBeNull();
-    expect(verifyDeviceCookie(cookie.slice(0, -1) + "x", SECRET)).toBeNull();
+    // El último carácter debe cambiar siempre; con "x" fijo la cookie quedaba igual 1 de cada 64 veces.
+    const swap = cookie.at(-1) === "x" ? "y" : "x";
+    expect(verifyDeviceCookie(cookie.slice(0, -1) + swap, SECRET)).toBeNull();
     expect(verifyDeviceCookie(cookie + "0", SECRET)).toBeNull();
     expect(verifyDeviceCookie("no-es-uuid.abc", SECRET)).toBeNull();
     expect(verifyDeviceCookie("sinpunto", SECRET)).toBeNull();

@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { fetchAll, loadStudyForResearcher } from "@/lib/studies";
 import { DEVICE_LABEL, FLAG_LABEL, STATUS_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
+import { formatExtraAnswer } from "@/tools/iat/participant";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import type { TrialExportRow } from "@/tools/iat/results/views";
 import { setSessionExcluded } from "../actions";
@@ -42,7 +43,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
     ["Preferencia explícita", explicitLabel],
     ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "—")]] as [string, string][]) : []),
     ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "—")]] as [string, string][]) : []),
-    ...config.participant.extraFields.map((f): [string, string] => [f.label, String(demo[f.id] ?? "—")]),
+    ...config.participant.extraFields.map((f): [string, string] => [f.label, formatExtraAnswer(f, demo[f.id])]),
   ];
 
   return (
@@ -65,7 +66,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             </div>
           ))}
         </dl>
-        {view.duplicate_flag ? <p className="text-sm text-amber-700 dark:text-amber-300">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
+        {view.duplicate_flag ? <p className="text-sm text-warning">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
       </Card>
 
       <Card className="space-y-3">
@@ -146,7 +147,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             </thead>
             <tbody>
               {trials.map((t) => (
-                <tr key={`${t.dimension_idx}-${t.block}-${t.trial_idx}`} className={t.error ? "bg-red-500/10" : undefined}>
+                <tr key={`${t.dimension_idx}-${t.block}-${t.trial_idx}`} className={t.error ? "bg-danger/10" : undefined}>
                   <td className="py-0.5 pr-3">{config.dimensions[t.dimension_idx]?.name}</td>
                   <td className="py-0.5 pr-3">{t.block}</td>
                   <td className="py-0.5 pr-3">{t.trial_idx}</td>
