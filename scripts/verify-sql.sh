@@ -15,4 +15,5 @@ for t in supabase/tests/[0-9][0-9]_*.sql; do
 done
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/rls.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/claim_session.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/tools.sql
 echo "SQL OK: migraciones y RLS verificadas"

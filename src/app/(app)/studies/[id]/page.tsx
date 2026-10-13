@@ -13,7 +13,12 @@ import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
+import { SeoOverview } from "@/tools/seo/ui/overview";
+import { VisualOverview } from "@/tools/visual/ui/overview";
 import { deleteStudy, regenerateLink } from "./actions";
+
+// La auditoría SEO en vivo y el análisis visual con IA se ejecutan desde esta página.
+export const maxDuration = 120;
 
 const STATUS_LABEL = { draft: "Borrador", published: "Publicado", closed: "Cerrado" } as const;
 
@@ -33,26 +38,33 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   if (!study) notFound();
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", study.project_id).maybeSingle();
 
+  if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "visual") return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+}
+
+async function IatOverview({ study, projectName, created }: { study: StudyRow; projectName: string | null; created: boolean }) {
+  const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
-  const link = magicLinkUrl(await requestOrigin(), study.access_token);
+  const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline">
-            ← {project?.name ?? "Proyecto"}
+            ← {projectName ?? "Proyecto"}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
           <p className="mt-1 text-xs uppercase text-muted">
-            {study.tool_type} · {STATUS_LABEL[study.status]}
+            IAT · {STATUS_LABEL[study.status]}
           </p>
         </div>
       </div>
 
       <StudyTabs id={id} active="overview" />
 
-      {sp.created === "1" ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
+      {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
 
       <Card className="space-y-3">
         <div>

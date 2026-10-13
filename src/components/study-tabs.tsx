@@ -1,24 +1,43 @@
 import Link from "next/link";
 
-const TABS = [
-  { key: "overview", label: "Resumen", href: (id: string) => `/studies/${id}` },
-  { key: "data", label: "Datos", href: (id: string) => `/studies/${id}/data` },
-  { key: "analysis", label: "Análisis", href: (id: string) => `/studies/${id}/analysis` },
-] as const;
+type TabKey = "overview" | "data" | "analysis" | "compare" | "ratings" | "results" | "report" | "settings";
+interface Tab {
+  key: TabKey;
+  label: string;
+  href: (id: string) => string;
+}
 
-export function StudyTabs({ id, active }: { id: string; active: (typeof TABS)[number]["key"] }) {
+const t = (key: TabKey, label: string, path = ""): Tab => ({ key, label, href: (id) => `/studies/${id}${path}` });
+
+/** Pestañas por herramienta (y por modo, en la herramienta visual). */
+const TABS = {
+  iat: [t("overview", "Resumen"), t("data", "Datos", "/data"), t("analysis", "Análisis", "/analysis")],
+  seo: [t("overview", "Auditorías"), t("settings", "Ajustes", "/settings")],
+  pieces: [t("overview", "Piezas"), t("compare", "Comparativa", "/compare"), t("report", "Informe", "/report"), t("settings", "Ajustes", "/settings")],
+  journey: [
+    t("overview", "Capturas"),
+    t("ratings", "Calificación", "/ratings"),
+    t("results", "Resultados IFD", "/results"),
+    t("report", "Informe", "/report"),
+    t("settings", "Ajustes", "/settings"),
+  ],
+} satisfies Record<string, Tab[]>;
+
+export type TabsVariant = keyof typeof TABS;
+
+export function StudyTabs({ id, active, variant = "iat" }: { id: string; active: TabKey; variant?: TabsVariant }) {
   return (
-    <nav aria-label="Secciones del estudio" className="flex gap-1 border-b border-border">
-      {TABS.map((t) => (
+    <nav aria-label="Secciones del estudio" className="flex gap-1 overflow-x-auto border-b border-border print:hidden">
+      {TABS[variant].map((tab) => (
         <Link
-          key={t.key}
-          href={t.href(id)}
-          aria-current={t.key === active ? "page" : undefined}
-          className={`-mb-px border-b-2 px-4 py-2 text-sm ${
-            t.key === active ? "border-primary font-medium" : "border-transparent text-muted hover:text-foreground"
+          key={tab.key}
+          href={tab.href(id)}
+          aria-current={tab.key === active ? "page" : undefined}
+          className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm ${
+            tab.key === active ? "border-primary font-medium" : "border-transparent text-muted hover:text-foreground"
           }`}
         >
-          {t.label}
+          {tab.label}
         </Link>
       ))}
     </nav>

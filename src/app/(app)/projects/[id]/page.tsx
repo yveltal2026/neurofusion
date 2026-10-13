@@ -4,7 +4,10 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
+import { getTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
+
+const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
 
 export default async function ProjectPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
@@ -59,7 +62,8 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                   <Card className="flex items-center justify-between transition hover:border-primary">
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs uppercase text-muted">
-                      {s.tool_type} · {s.status}
+                      {getTool(s.tool_type)?.shortName ?? s.tool_type}
+                      {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
                   </Card>
                 </Link>

@@ -1,6 +1,14 @@
 # NeuroFusion
 
-Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. **V1: módulo IAT** (Test de Asociación Implícita). Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS.
+Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Tres herramientas:
+
+| Herramienta | Para qué |
+|---|---|
+| **IAT** (Test de Asociación Implícita) | Asociaciones implícitas con participantes reales vía liga mágica |
+| **Auditoría SEO** | Rastreo, on-page, datos estructurados, enlaces y Core Web Vitals; plan de acción redactado por IA |
+| **Análisis visual con IA** | Piezas gráficas y capturas web (mapa de atención estimado, recorrido, zonas ciegas, métricas de imagen) y modo journey con rúbrica e Índice de Fricción Digital (IFD) |
+
+SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en [`docs/HERRAMIENTAS_SEO_VISUAL.md`](docs/HERRAMIENTAS_SEO_VISUAL.md). Lo que sigue en «Qué hace» describe el flujo del IAT.
 
 ## Qué hace
 
@@ -16,7 +24,7 @@ Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. **V1: m
 - **El servidor no confía en el cliente.** El servidor decide el contrabalanceo y una semilla por dimensión; con ellas regenera exactamente el plan de ensayos, valida lo que envía el cliente (sólo tiempos y teclas) y recalcula el D-score.
 - **Privacidad por defecto.** No se pide correo ni nombre al participante; la IP sólo se guarda como HMAC por estudio; los CSV no incluyen identificadores de dispositivo.
 
-Detalles metodológicos en [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md).
+Detalles metodológicos en [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md) (IAT) y [`docs/HERRAMIENTAS_SEO_VISUAL.md`](docs/HERRAMIENTAS_SEO_VISUAL.md) (SEO y Visual).
 
 ## Stack
 
@@ -26,7 +34,7 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 
 ### 1. Supabase
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor).
+2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor). La migración `20261013000000_seo_visual_tools.sql` también crea el bucket privado de Storage `study-assets` y sus políticas.
 3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
 
@@ -43,7 +51,8 @@ Completa las de Supabase, `PARTICIPANT_LOCK_SECRET` (`openssl rand -hex 32`) y e
 | `PARTICIPANT_LOCK_SECRET` | Firma de la cookie de dispositivo y HMAC de IP |
 | `AI_PROVIDER` | `anthropic` (default) u `openai` |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Modelo por defecto: `claude-opus-5-5` |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` | El modelo se exige explícitamente |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | El modelo se exige explícitamente. Para la herramienta visual debe ser un modelo con visión |
+| `PAGESPEED_API_KEY` | Opcional. Clave de PageSpeed Insights (Google Cloud) para Core Web Vitals en la auditoría SEO; sin ella la cuota es muy baja |
 
 ### 3. Correr
 ```bash
@@ -53,7 +62,7 @@ npm run seed:demo -- tu@correo.com   # opcional: estudio de demo con 36 particip
 ```
 
 ### 4. Desplegar en Vercel
-Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PUBLIC_APP_URL` con la URL pública. El análisis con IA puede tardar: la ruta declara `maxDuration = 120`.
+Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PUBLIC_APP_URL` con la URL pública. El análisis con IA, la auditoría SEO en vivo y la visión pueden tardar: esas rutas declaran `maxDuration = 120` (requiere un plan de Vercel que lo permita).
 
 - **Rama de producción: `main`.** Vercel publica producción desde `main` (Settings → Environments → Production → Branch Tracking). Las demás ramas generan sólo *previews*. Para publicar algo, se mergea a `main`.
 - **Variables obligatorias en el proyecto de Vercel** (no en las del equipo), con los entornos Production y Preview marcados: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (la integración de Supabase las crea) y `PARTICIPANT_LOCK_SECRET` (a mano). Tras cambiar variables hay que redesplegar: las `NEXT_PUBLIC_*` se fijan al construir.
@@ -82,6 +91,10 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | Motor IAT, configuración, sesión, estadísticos, CSV, IA (con proveedor falso), demo | Pruebas unitarias (Vitest) |
 | Wizard y runner del participante (teclado, táctil, errores, reintentos, bloqueos) | Pruebas de componente con servidor falso + recorrido real en Chromium (escritorio y celular emulado) |
 | Esquema, RLS y `claim_session` | Pruebas SQL contra Postgres 16 local (`scripts/verify-sql.sh`) |
+| SEO: reglas, robots, sitemaps, PageSpeed, puntuación, rastreador (sitio simulado), protección SSRF, prompt | Pruebas unitarias |
+| Visual: métricas de imagen (sharp), formatos, AOI y mapa de atención, franjas para IA, modelo journey/IFD, configuración, visor (componente) | Pruebas unitarias y de componente |
+| Tablas SEO/Visual, RLS y políticas del bucket | Pruebas SQL (`supabase/tests/tools.sql`) |
+| Rastreo contra sitios reales, subida a Storage, visión con Anthropic/OpenAI, PageSpeed real | **Tipado y compilado, sin ejecutar contra servicios reales** (requieren credenciales y red abierta) |
 | Rutas `/api/s/*`, páginas del investigador, auth (email/Google), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica

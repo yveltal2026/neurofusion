@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { AiError, type AnalysisProvider, type ChatMessage } from "./types";
+import { AiError, type AnalysisProvider, type ChatMessage, type ContentPart } from "./types";
 
 /** Extrae un objeto JSON de una respuesta de texto (admite cercas ```json y texto alrededor). */
 export function extractJson(text: string): unknown {
@@ -31,7 +31,8 @@ export interface StructuredResult<T> {
 export async function generateStructured<S extends z.ZodType>(opts: {
   provider: AnalysisProvider;
   system: string;
-  user: string;
+  /** Texto, o texto + imágenes para análisis visual. */
+  user: string | ContentPart[];
   schema: S;
 }): Promise<StructuredResult<z.infer<S>>> {
   const messages: ChatMessage[] = [{ role: "user", content: opts.user }];

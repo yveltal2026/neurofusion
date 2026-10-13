@@ -22,10 +22,10 @@ export interface LoadedStudy {
   config: IatConfig;
 }
 
-/** Estudio + configuración validada, respetando RLS. Responde 404 si no existe o no es del usuario. */
+/** Estudio IAT + configuración validada, respetando RLS. Responde 404 si no existe o no es del usuario. */
 export async function loadStudyForResearcher(supabase: SupabaseClient, id: string): Promise<LoadedStudy> {
   const { data: study } = await supabase.from("studies").select("*").eq("id", id).maybeSingle<StudyRow>();
-  if (!study) notFound();
+  if (!study || study.tool_type !== "iat") notFound();
   const config = iatConfigSchema.safeParse(study.config);
   if (!config.success) throw new Error("La configuración guardada del estudio no es válida");
   return { study, config: config.data };

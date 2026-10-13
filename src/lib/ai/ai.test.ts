@@ -92,3 +92,40 @@ describe("getAnalysisProvider", () => {
     expect(() => getAnalysisProvider({ AI_PROVIDER: "otro" })).toThrow(/inválido/);
   });
 });
+
+describe("mensajes con imágenes", () => {
+  const img = { type: "image" as const, mediaType: "image/png" as const, data: "AAAA" };
+
+  it("Anthropic recibe bloques image con fuente base64", async () => {
+    const { toAnthropicMessages } = await import("./anthropic");
+    const out = toAnthropicMessages([{ role: "user", content: [{ type: "text", text: "mira" }, img] }]);
+    expect(out[0].content).toEqual([
+      { type: "text", text: "mira" },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } },
+    ]);
+  });
+
+  it("OpenAI recibe la imagen como data URL y el asistente sólo texto", async () => {
+    const { toOpenAiMessages } = await import("./openai");
+    const out = toOpenAiMessages([
+      { role: "user", content: [img, { type: "text", text: "describe" }] },
+      { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      { role: "user", content: "sigue" },
+    ]);
+    expect(out[0]).toEqual({
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: "data:image/png;base64,AAAA" } },
+        { type: "text", text: "describe" },
+      ],
+    });
+    expect(out[1]).toEqual({ role: "assistant", content: "ok" });
+    expect(out[2]).toEqual({ role: "user", content: "sigue" });
+  });
+
+  it("generateStructured acepta partes multimodales", async () => {
+    const p = fakeProvider(['{"a":1,"b":"x"}']);
+    await generateStructured({ provider: p, system: "s", user: [img, { type: "text", text: "u" }], schema });
+    expect(Array.isArray(p.calls[0].messages[0].content)).toBe(true);
+  });
+});

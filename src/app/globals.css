@@ -38,3 +38,20 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Informes: impresión limpia (el navegador guarda como PDF). */
+@media print {
+  @page {
+    size: letter;
+    margin: 14mm;
+  }
+  header {
+    display: none;
+  }
+  body {
+    background: #fff;
+    color: #111;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

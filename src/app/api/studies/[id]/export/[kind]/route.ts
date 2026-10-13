@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const { data: study } = await supabase.from("studies").select("id, config").eq("id", id).maybeSingle();
+  const { data: study } = await supabase.from("studies").select("id, config").eq("id", id).eq("tool_type", "iat").maybeSingle();
   if (!study) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   const config = iatConfigSchema.safeParse(study.config);
   if (!config.success) return NextResponse.json({ error: "Configuración inválida" }, { status: 500 });

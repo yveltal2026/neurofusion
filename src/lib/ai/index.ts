@@ -4,7 +4,7 @@ import { createOpenAiProvider } from "./openai";
 import { AiError, type AnalysisProvider } from "./types";
 
 export { AiError } from "./types";
-export type { AnalysisProvider } from "./types";
+export type { AnalysisProvider, ContentPart, ImagePart } from "./types";
 export { generateStructured } from "./structured";
 
 /** Elige el proveedor según AI_PROVIDER (anthropic por defecto). */

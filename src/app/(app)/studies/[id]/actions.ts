@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
+import { removeStudyFiles } from "@/lib/study-files";
 
 export interface SettingsState {
   error?: string;
@@ -54,7 +55,7 @@ export async function regenerateLink(formData: FormData) {
   const id = idSchema.safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
-  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data);
+  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).eq("tool_type", "iat");
   revalidatePath(`/studies/${id.data}`);
 }
 
@@ -62,8 +63,21 @@ export async function deleteStudy(formData: FormData) {
   const id = idSchema.safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
-  const { data: study } = await supabase.from("studies").select("project_id").eq("id", id.data).maybeSingle();
-  // Borra también sesiones, ensayos y resultados (ON DELETE CASCADE).
+  const { data: study } = await supabase.from("studies").select("project_id, tool_type").eq("id", id.data).maybeSingle();
+  if (study?.tool_type === "visual") await removeStudyFiles(supabase, id.data);
+  // Borra también sesiones, ensayos, resultados, auditorías y piezas (ON DELETE CASCADE).
   await supabase.from("studies").delete().eq("id", id.data);
   redirect(study ? `/projects/${study.project_id}` : "/projects");
+}
+
+const renameSchema = z.object({ id: idSchema, name: z.string().trim().min(1, "Escribe un nombre").max(160, "Máximo 160 caracteres") });
+
+export async function renameStudy(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
+  const parsed = renameSchema.safeParse({ id: formData.get("id"), name: formData.get("name") });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  const { supabase } = await requireUser();
+  const { data, error } = await supabase.from("studies").update({ name: parsed.data.name }).eq("id", parsed.data.id).select("id");
+  if (error || !data?.length) return { error: "No se pudo renombrar el estudio" };
+  revalidatePath(`/studies/${parsed.data.id}`, "layout");
+  return { saved: true };
 }
