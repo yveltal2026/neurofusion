@@ -2,25 +2,36 @@ import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
 import { Card } from "@/components/ui/card";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
-import { CATEGORY_LABEL, SEVERITY_LABEL, type AuditSummary, type PageSummary, type PerformanceResult } from "../engine";
+import { SeverityBadge } from "./findings-table";
+import { CATEGORY_LABEL, type AuditSummary, type PageSummary, type PerformanceResult } from "../engine";
 
+/** Resumen de la auditoría: la puntuación con su banda y el desglose por severidad en una sola franja. */
 export function SummaryCards({ summary }: { summary: AuditSummary }) {
+  const band = scoreBand(summary.score);
+  const total = summary.counts.critical + summary.counts.high + summary.counts.medium + summary.counts.ok;
   return (
-    <div className="grid gap-3 sm:grid-cols-5">
-      <Card className="sm:col-span-1">
-        <p className="text-xs uppercase text-muted">Puntuación</p>
-        <p className="text-3xl font-semibold tabular-nums" style={{ color: scoreColor(summary.score) }}>
+    <Card className="flex flex-wrap items-center gap-x-10 gap-y-4">
+      <div className="flex items-baseline gap-3">
+        <p className="font-display text-5xl font-bold tabular-nums leading-none" style={{ color: band.color }}>
           {summary.score}
         </p>
-        <p className="text-xs text-muted">{summary.scoreVersion}</p>
-      </Card>
-      {(["critical", "high", "medium", "ok"] as const).map((k) => (
-        <Card key={k}>
-          <p className="text-xs uppercase text-muted">{SEVERITY_LABEL[k]}</p>
-          <p className="text-3xl font-semibold tabular-nums">{summary.counts[k]}</p>
-        </Card>
-      ))}
-    </div>
+        <div>
+          <p className="font-medium text-heading">Puntuación · {band.label.toLowerCase()}</p>
+          <p className="text-xs text-muted">de 100 · {summary.scoreVersion}</p>
+        </div>
+      </div>
+      <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        {(["critical", "high", "medium", "ok"] as const).map((k) => (
+          <div key={k} className="flex items-center gap-2">
+            <dt>
+              <SeverityBadge severity={k} />
+            </dt>
+            <dd className="font-semibold tabular-nums">{summary.counts[k]}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-sm text-muted">{total} evaluaciones en {summary.pagesAudited} página(s)</p>
+    </Card>
   );
 }
 

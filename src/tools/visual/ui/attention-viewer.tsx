@@ -387,7 +387,7 @@ export function AttentionViewer({
                 </button>
               </div>
             ) : null}
-            <Button type="button" onClick={save} disabled={saving || !dirty} className="w-full">
+            <Button type="button" variant={dirty ? "primary" : "secondary"} onClick={save} disabled={saving || !dirty} className="w-full">
               {saving ? "Guardando…" : dirty ? "Guardar áreas revisadas" : reviewed ? "Revisadas por el analista" : "Sin cambios"}
             </Button>
           </div>

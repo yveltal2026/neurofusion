@@ -25,7 +25,7 @@ export function AnalyzeAssetForm({ studyId, assetId, hasAnalysis }: { studyId: s
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="assetId" value={assetId} />
       <State state={state} />
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" variant={hasAnalysis ? "secondary" : "primary"} disabled={pending}>
         {pending ? "Analizando la imagen… (puede tardar un minuto)" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
       </Button>
     </form>
@@ -223,7 +223,7 @@ export function RatingItemForm({
       ) : null}
 
       <State state={state} okText="Calificación guardada." />
-      <Button type="submit" disabled={pending} className="print:hidden">
+      <Button type="submit" variant="secondary" disabled={pending} className="print:hidden">
         {pending ? "Guardando…" : current ? "Actualizar" : "Guardar calificación"}
       </Button>
     </form>

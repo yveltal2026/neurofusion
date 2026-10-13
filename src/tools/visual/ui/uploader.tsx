@@ -80,7 +80,7 @@ export function AssetUploader({
             ))}
           </select>
         ) : null}
-        <Button type="button" onClick={upload} disabled={busy || files.length === 0} className={compact ? "h-8 px-3" : ""}>
+        <Button type="button" variant={compact ? "secondary" : "primary"} onClick={upload} disabled={busy || files.length === 0}>
           {busy ? "Subiendo…" : `Subir${files.length ? ` (${files.length})` : ""}`}
         </Button>
       </div>

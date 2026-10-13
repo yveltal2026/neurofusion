@@ -9,12 +9,13 @@ import { getPlacement } from "../engine/placements";
 import { loadAssets, signedUrls, type VisualAsset } from "../results";
 import { AssetUploader } from "./uploader";
 
-function Thumb({ studyId, asset, url }: { studyId: string; asset: VisualAsset; url?: string }) {
+function Thumb({ studyId, asset, url, plain = false }: { studyId: string; asset: VisualAsset; url?: string; plain?: boolean }) {
   const { row } = asset;
+  const Frame = plain ? PlainFrame : Card;
   return (
     <Link href={`/studies/${studyId}/assets/${row.id}`} className="group block">
-      <Card className="h-full space-y-2 p-3 transition group-hover:border-primary">
-        <div className="relative aspect-[4/3] overflow-hidden rounded bg-foreground/5">
+      <Frame className={plain ? "space-y-1.5" : "h-full space-y-2 p-3 transition group-hover:border-primary"}>
+        <div className={`relative aspect-[4/3] overflow-hidden rounded bg-foreground/5 ${plain ? "ring-1 ring-border transition group-hover:ring-2 group-hover:ring-heading" : ""}`}>
           {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage */}
           {url ? <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain object-top" loading="lazy" /> : null}
         </div>
@@ -27,9 +28,13 @@ function Thumb({ studyId, asset, url }: { studyId: string; asset: VisualAsset; u
           {asset.ai ? <span className="text-success">Analizada</span> : <span className="text-muted">Sin analizar</span>}
           {row.aois_source === "analyst" ? " · AOI revisadas" : ""}
         </p>
-      </Card>
+      </Frame>
     </Link>
   );
+}
+
+function PlainFrame({ className, children }: { className?: string; children: React.ReactNode }) {
+  return <div className={className}>{children}</div>;
 }
 
 export async function VisualOverview({ study, projectName, created }: { study: StudyRow; projectName: string | null; created: boolean }) {
@@ -127,7 +132,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
                   {items.length ? (
                     <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
                       {items.map((a) => (
-                        <Thumb key={a.row.id} studyId={study.id} asset={a} url={urls[a.row.storage_path]} />
+                        <Thumb key={a.row.id} studyId={study.id} asset={a} url={urls[a.row.storage_path]} plain />
                       ))}
                     </div>
                   ) : null}

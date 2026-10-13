@@ -122,7 +122,7 @@ export function SeoPlanForm({ studyId, auditId, hasPlan }: { studyId: string; au
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="auditId" value={auditId} />
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" variant={hasPlan ? "secondary" : "primary"} disabled={pending}>
         {pending ? "Redactando… (puede tardar un minuto)" : hasPlan ? "Volver a generar el plan con IA" : "Generar plan de acción con IA"}
       </Button>
     </form>
