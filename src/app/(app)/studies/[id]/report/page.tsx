@@ -7,7 +7,7 @@ import type { FrictionRatingRow, IfdMeasurementRow } from "@/lib/db/types";
 import { loadVisualStudyPage } from "@/tools/visual/load";
 import type { SiteSummary } from "@/tools/visual/journey/model";
 import { rubricItems } from "@/tools/visual/journey/rubric";
-import { loadAssets, signedUrls } from "@/tools/visual/results";
+import { assetUrls, loadAssets } from "@/tools/visual/results";
 import { AiReading, MetricsPanel } from "@/tools/visual/ui/asset-panels";
 import { AttentionViewer } from "@/tools/visual/ui/attention-viewer";
 import { MethodNote } from "@/tools/visual/ui/journey-views";
@@ -20,7 +20,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
   const { supabase } = await requireUser();
   const { study, config, projectName } = await loadVisualStudyPage(supabase, id);
   const assets = await loadAssets(supabase, id);
-  const urls = await signedUrls(supabase, assets.map((a) => a.row.storage_path));
+  const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "view");
   const today = new Date().toLocaleDateString("es-MX", { dateStyle: "long" });
   const variant = config.mode === "journey" ? "journey" : "pieces";
 

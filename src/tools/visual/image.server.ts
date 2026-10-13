@@ -69,3 +69,34 @@ export async function imageForVision(buf: Buffer): Promise<{ plan: TilePlan; par
   }
   return { plan, parts };
 }
+
+/** Ancho de la miniatura y de la versión de visualización (el original se conserva para IA y métricas). */
+const THUMB_WIDTH = 480;
+const THUMB_MAX_HEIGHT = 640;
+const VIEW_WIDTH = 1400;
+/** Límite de WebP por lado. */
+const WEBP_MAX_SIDE = 16_383;
+
+/**
+ * Versiones ligeras para la interfaz: miniatura (parte superior, para capturas largas) y
+ * versión de visualización con la MISMA proporción que el original (las AOI son relativas).
+ */
+export async function imageRenditions(buf: Buffer): Promise<{ thumb: Buffer; view: Buffer }> {
+  const base = () => sharp(buf, { limitInputPixels: MAX_PIXELS }).rotate().flatten({ background: "#ffffff" });
+  const meta = await sharp(buf, { limitInputPixels: MAX_PIXELS }).rotate().metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+
+  const tw = Math.min(THUMB_WIDTH, w);
+  const th = Math.max(1, Math.round((h * tw) / w));
+  let thumbPipe = base().resize({ width: tw, height: th, fit: "fill" });
+  if (th > THUMB_MAX_HEIGHT) thumbPipe = sharp(await thumbPipe.png().toBuffer()).extract({ left: 0, top: 0, width: tw, height: THUMB_MAX_HEIGHT });
+  const thumb = await thumbPipe.webp({ quality: 72 }).toBuffer();
+
+  const scale = Math.min(1, VIEW_WIDTH / w, WEBP_MAX_SIDE / h);
+  const view = await base()
+    .resize({ width: Math.max(1, Math.round(w * scale)), height: Math.max(1, Math.round(h * scale)), fit: "fill" })
+    .webp({ quality: 80 })
+    .toBuffer();
+  return { thumb, view };
+}

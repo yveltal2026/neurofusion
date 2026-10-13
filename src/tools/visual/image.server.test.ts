@@ -36,3 +36,23 @@ describe("procesamiento de imágenes (sharp)", () => {
     expect(c.ratio).toBeGreaterThan(15);
   });
 });
+
+describe("versiones ligeras", () => {
+  it("miniatura recortada arriba y versión de visualización con la misma proporción", async () => {
+    const { imageRenditions } = await import("./image.server");
+    const { thumb, view } = await imageRenditions(await png(1366, 6000));
+    const t = await sharp(thumb).metadata();
+    const v = await sharp(view).metadata();
+    expect(t).toMatchObject({ format: "webp", width: 480, height: 640 });
+    expect(v.format).toBe("webp");
+    expect(v.width).toBe(1366);
+    expect(Math.abs((v.width ?? 0) / (v.height ?? 1) - 1366 / 6000)).toBeLessThan(0.002);
+    expect(view.byteLength).toBeLessThan(2_000_000);
+  });
+  it("no amplía imágenes pequeñas", async () => {
+    const { imageRenditions } = await import("./image.server");
+    const { thumb, view } = await imageRenditions(await png(300, 250));
+    expect((await sharp(thumb).metadata()).width).toBe(300);
+    expect((await sharp(view).metadata()).width).toBe(300);
+  });
+});

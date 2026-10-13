@@ -14,11 +14,11 @@ import { journeyConfigSchema, siteKey, visualConfigSchema, type JourneyConfig, t
 import { aoiListSchema } from "./engine/aoi";
 import { METRICS_VERSION } from "./engine/metrics";
 import { getPlacement } from "./engine/placements";
-import { imageForVision, imageMetrics, inspectImage, textContrasts } from "./image.server";
+import { imageForVision, imageMetrics, imageRenditions, inspectImage, textContrasts } from "./image.server";
 import { buildRatings, missingRatings } from "./journey/ratings";
 import { DEFAULT_PANEL_N, ENGINE_VERSION, generatePanel, IFD_VERSION, runSite, sensitivity } from "./journey/model";
 import { RUBRIC_VERSION, rubricItems } from "./journey/rubric";
-import { storedAiSchema, toVisualAsset, type StoredAi } from "./results";
+import { renditionPath, storedAiSchema, toVisualAsset, type StoredAi } from "./results";
 
 export interface VisualFormState {
   error?: string;
@@ -192,6 +192,16 @@ export async function registerAsset(raw: unknown): Promise<VisualFormState> {
     metrics_version: METRICS_VERSION,
   });
   if (error) return fail("No se pudo registrar la imagen");
+  // Versiones ligeras para la interfaz. Si fallan no se pierde nada: se muestra el original.
+  try {
+    const { thumb, view } = await imageRenditions(buf);
+    await Promise.all([
+      bucket.upload(renditionPath(input.path, "thumb"), thumb, { contentType: "image/webp", upsert: false }),
+      bucket.upload(renditionPath(input.path, "view"), view, { contentType: "image/webp", upsert: false }),
+    ]);
+  } catch {
+    // sin versiones ligeras
+  }
   revalidatePath(`/studies/${input.studyId}`);
   return { ok: true };
 }
@@ -218,7 +228,9 @@ export async function deleteAsset(fd: FormData) {
   const { supabase } = await requireUser();
   const { data } = await supabase.from("visual_assets").select("storage_path").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle();
   if (!data) return;
-  await supabase.storage.from(ASSETS_BUCKET).remove([data.storage_path]);
+  await supabase.storage
+    .from(ASSETS_BUCKET)
+    .remove([data.storage_path, renditionPath(data.storage_path, "thumb"), renditionPath(data.storage_path, "view")]);
   await supabase.from("visual_assets").delete().eq("id", assetId.data);
   redirect(`/studies/${studyId.data}`);
 }

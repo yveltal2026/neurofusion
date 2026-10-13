@@ -56,3 +56,11 @@ describe("calificaciones", () => {
     expect(r.baseSuccess.T1).toBe(0.8);
   });
 });
+
+describe("rutas de versiones ligeras", () => {
+  it("deriva la ruta en la misma carpeta del estudio", async () => {
+    const { renditionPath } = await import("./results");
+    expect(renditionPath("aaaa/bbbb.png", "thumb")).toBe("aaaa/thumb-bbbb.webp");
+    expect(renditionPath("aaaa/bbbb.jpeg", "view")).toBe("aaaa/view-bbbb.webp");
+  });
+});

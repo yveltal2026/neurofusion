@@ -54,6 +54,27 @@ export async function loadAssets(supabase: SupabaseClient, studyId: string): Pro
   return (data ?? []).map(toVisualAsset);
 }
 
+export type Rendition = "thumb" | "view";
+
+/** Ruta de una versión ligera: "{study}/{uuid}.png" → "{study}/thumb-{uuid}.webp". */
+export function renditionPath(storagePath: string, kind: Rendition): string {
+  const slash = storagePath.lastIndexOf("/");
+  const stem = storagePath.slice(slash + 1).replace(/\.[a-z0-9]+$/i, "");
+  return `${storagePath.slice(0, slash)}/${kind}-${stem}.webp`;
+}
+
+/**
+ * URL firmada por imagen, prefiriendo la versión ligera; si no existe (imágenes subidas
+ * antes de que se generaran versiones), usa el original.
+ */
+export async function assetUrls(supabase: SupabaseClient, paths: string[], kind: Rendition): Promise<Record<string, string>> {
+  const urls = await signedUrls(supabase, [...paths.map((p) => renditionPath(p, kind)), ...paths]);
+  return Object.fromEntries(paths.flatMap((p) => {
+    const u = urls[renditionPath(p, kind)] ?? urls[p];
+    return u ? [[p, u]] : [];
+  }));
+}
+
 /** URLs firmadas (1 h) para mostrar imágenes privadas del bucket. */
 export async function signedUrls(supabase: SupabaseClient, paths: string[]): Promise<Record<string, string>> {
   if (!paths.length) return {};

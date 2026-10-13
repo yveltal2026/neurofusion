@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 import type { VisualAssetRow } from "@/lib/db/types";
 import { deleteAsset, restoreAiAois } from "@/tools/visual/actions";
 import { loadVisualStudyPage } from "@/tools/visual/load";
-import { signedUrls, toVisualAsset } from "@/tools/visual/results";
+import { assetUrls, toVisualAsset } from "@/tools/visual/results";
 import { AiReading, MetricsPanel } from "@/tools/visual/ui/asset-panels";
 import { AttentionViewer } from "@/tools/visual/ui/attention-viewer";
 import { AnalyzeAssetForm, AssetMetaForm } from "@/tools/visual/ui/forms";
@@ -24,7 +24,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId).eq("study_id", id).maybeSingle<VisualAssetRow>();
   if (!row) notFound();
   const asset = toVisualAsset(row);
-  const url = (await signedUrls(supabase, [row.storage_path]))[row.storage_path];
+  const url = (await assetUrls(supabase, [row.storage_path], "view"))[row.storage_path];
   const site = config.mode === "journey" ? config.sites.find((s) => s.key === row.site_key) : null;
   const task = config.mode === "journey" ? config.tasks.find((t) => t.id === row.task_id) : null;
   const variant = config.mode === "journey" ? "journey" : "pieces";

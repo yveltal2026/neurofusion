@@ -6,7 +6,7 @@ import type { StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { visualConfigSchema } from "../config";
 import { getPlacement } from "../engine/placements";
-import { loadAssets, signedUrls, type VisualAsset } from "../results";
+import { assetUrls, loadAssets, type VisualAsset } from "../results";
 import { AssetUploader } from "./uploader";
 
 function Thumb({ studyId, asset, url, plain = false }: { studyId: string; asset: VisualAsset; url?: string; plain?: boolean }) {
@@ -50,7 +50,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
   }
   const config = parsed.data;
   const assets = await loadAssets(supabase, study.id);
-  const urls = await signedUrls(supabase, assets.map((a) => a.row.storage_path));
+  const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "thumb");
 
   if (config.mode === "pieces") {
     return (

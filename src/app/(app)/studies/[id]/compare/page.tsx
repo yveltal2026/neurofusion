@@ -7,7 +7,7 @@ import { blindZones } from "@/tools/visual/engine/aoi";
 import { describeMetrics } from "@/tools/visual/engine/metrics";
 import { checkPlacement, getPlacement } from "@/tools/visual/engine/placements";
 import { loadVisualStudyPage } from "@/tools/visual/load";
-import { loadAssets, signedUrls } from "@/tools/visual/results";
+import { assetUrls, loadAssets } from "@/tools/visual/results";
 import { ScoreDots } from "@/tools/visual/ui/asset-panels";
 
 export const metadata = { title: "Comparativa · NeuroFusion" };
@@ -19,7 +19,7 @@ export default async function ComparePage({ params }: PageProps<"/studies/[id]/c
   const { supabase } = await requireUser();
   const { study, projectName } = await loadVisualStudyPage(supabase, id, "pieces");
   const assets = await loadAssets(supabase, id);
-  const urls = await signedUrls(supabase, assets.map((a) => a.row.storage_path));
+  const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "thumb");
   const avg = (a: (typeof assets)[number]) => (a.result ? KEYS.reduce((s, k) => s + a.result!.criteria[k].score, 0) / KEYS.length : null);
   const sorted = [...assets].sort((a, b) => (avg(b) ?? -1) - (avg(a) ?? -1));
 
