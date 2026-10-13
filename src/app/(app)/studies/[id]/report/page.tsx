@@ -76,6 +76,8 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
   const latest = (rows ?? []).filter((m) => m.run_id === rows?.[0]?.run_id).sort((a, b) => a.ifd - b.ifd);
   const { data: ratingRows } = await supabase.from("friction_ratings").select("*").eq("study_id", id).returns<FrictionRatingRow[]>();
   const items = rubricItems(config.tasks);
+  const colorOf = (key: string) => Math.max(0, config.sites.findIndex((s) => s.key === key));
+  const byConfigOrder = (ms: IfdMeasurementRow[]) => [...ms].sort((a, b) => colorOf(a.site_key) - colorOf(b.site_key));
   const assetTitle = new Map(assets.map((a) => [a.row.id, `${a.row.task_id} · ${a.row.title}`]));
 
   return (
@@ -97,10 +99,10 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
         <section className="space-y-4">
           <h2 className="text-lg font-medium">Índice de Fricción Digital</h2>
           <div className="grid gap-4 md:grid-cols-2">
-            <IfdChart rows={latest.map((m) => ({ site: m.site_name, ifd: m.ifd, reading: m.reading }))} />
+            <IfdChart rows={latest.map((m) => ({ site: m.site_name, ifd: m.ifd, reading: m.reading, colorIndex: colorOf(m.site_key) }))} />
             <TaskSuccessChart
               rows={config.tasks.map((t) => ({ task: t.id, ...Object.fromEntries(latest.map((m) => [m.site_name, (m.summary as SiteSummary).successByTask[t.id] ?? 0])) }))}
-              sites={latest.map((m) => m.site_name)}
+              sites={byConfigOrder(latest).map((m) => ({ name: m.site_name, colorIndex: colorOf(m.site_key) }))}
             />
           </div>
           <MethodNote measurement={latest[0]} />

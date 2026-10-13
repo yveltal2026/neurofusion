@@ -1,7 +1,7 @@
 "use client";
 
 import { scoreColor } from "./score-color";
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const AXIS = { fill: "currentColor", fontSize: 12 } as const;
 const tooltipStyle = { background: "var(--background)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 };
@@ -25,12 +25,13 @@ export function CategoryScoreChart({ rows }: { rows: { label: string; score: num
   return (
     <Frame title="Puntuación por categoría" caption="0–100. Promedio ponderado de las reglas de cada categoría." height={Math.max(200, rows.length * 30 + 40)}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+        <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 32, left: 8, bottom: 4 }}>
           <CartesianGrid stroke="currentColor" strokeOpacity={0.12} horizontal={false} />
           <XAxis type="number" domain={[0, 100]} tick={AXIS} />
           <YAxis type="category" dataKey="label" tick={AXIS} width={140} interval={0} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Bar dataKey="score" name="Puntuación" maxBarSize={22} isAnimationActive={false}>
+          <Bar dataKey="score" name="Puntuación" maxBarSize={22} radius={[0, 4, 4, 0]} isAnimationActive={false}>
+            <LabelList dataKey="score" position="right" fill="var(--foreground)" fontSize={12} />
             {rows.map((r) => (
               <Cell key={r.label} fill={scoreColor(r.score)} />
             ))}
@@ -50,7 +51,7 @@ export function ScoreTrendChart({ rows }: { rows: { label: string; score: number
           <XAxis dataKey="label" tick={AXIS} />
           <YAxis domain={[0, 100]} tick={AXIS} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Line dataKey="score" name="Puntuación" stroke="#0072B2" strokeWidth={2} dot isAnimationActive={false} />
+          <Line dataKey="score" name="Puntuación" stroke="var(--chart-1)" strokeWidth={2} dot={{ r: 4 }} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </Frame>

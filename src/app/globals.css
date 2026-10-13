@@ -24,6 +24,18 @@
   --warning: #9a6400;
   --danger: #c2412d;
   --danger-foreground: #ffffff;
+  /*
+   * Paleta categórica de gráficas (un matiz fijo por posición: el sitio principal siempre es
+   * el 1). Validada con el método dataviz contra la superficie de cada modo: en claro pasa
+   * todo (3:1 incluido); en oscuro el contraste queda < 3:1 sobre el teal, así que las
+   * gráficas llevan valores visibles y tabla de datos.
+   */
+  --chart-1: #2a78d6;
+  --chart-2: #c4501f;
+  --chart-3: #12825a;
+  --chart-4: #a86f00;
+  --chart-5: #c2457a;
+  --chart-6: #6250d6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,6 +53,12 @@
     --warning: #f8c766;
     --danger: #ff9a85;
     --danger-foreground: #062e30;
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
+    --chart-6: #9085e9;
   }
 }
 
@@ -144,6 +162,17 @@
     color: #111;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+}
+
+/* Acento de marca en controles nativos (casillas, radios, deslizadores). Teal, no menta:
+   la menta no alcanza 3:1 sobre crema. */
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: var(--heading);
   }
 }
 

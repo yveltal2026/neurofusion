@@ -47,6 +47,9 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
     : { data: [] as IfdMeasurementRow[] };
   const studyName = new Map((siblings ?? []).map((s) => [s.id, s.name as string]));
 
+  // El color sigue al sitio (posición en el diseño), no a su lugar en el ranking.
+  const colorOf = (key: string) => Math.max(0, config.sites.findIndex((s) => s.key === key));
+  const byConfigOrder = (ms: IfdMeasurementRow[]) => [...ms].sort((a, b) => colorOf(a.site_key) - colorOf(b.site_key));
   const taskRows = config.tasks.map((t) => ({
     task: t.id,
     ...Object.fromEntries(latest.map((m) => [m.site_name, (m.summary as SiteSummary).successByTask[t.id] ?? 0])),
@@ -122,9 +125,41 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
               </table>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
-              <IfdChart rows={latest.map((m) => ({ site: m.site_name, ifd: m.ifd, reading: m.reading }))} />
-              <TaskSuccessChart rows={taskRows} sites={latest.map((m) => m.site_name)} />
+              <IfdChart rows={latest.map((m) => ({ site: m.site_name, ifd: m.ifd, reading: m.reading, colorIndex: colorOf(m.site_key) }))} />
+              <TaskSuccessChart rows={taskRows} sites={byConfigOrder(latest).map((m) => ({ name: m.site_name, colorIndex: colorOf(m.site_key) }))} />
             </div>
+            <details className="rounded-lg border border-border p-3 text-sm">
+              <summary className="cursor-pointer font-medium text-heading">Ver los datos de las gráficas en tabla</summary>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <caption className="sr-only">Éxito estimado por tarea y sitio</caption>
+                  <thead className="text-xs uppercase text-muted">
+                    <tr>
+                      <th className="py-1 pr-3">Tarea</th>
+                      {byConfigOrder(latest).map((m) => (
+                        <th key={m.id} className="py-1 pr-3">
+                          {m.site_name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {config.tasks.map((t) => (
+                      <tr key={t.id}>
+                        <td className="py-1 pr-3">
+                          {t.id} · {t.name}
+                        </td>
+                        {byConfigOrder(latest).map((m) => (
+                          <td key={m.id} className="py-1 pr-3 tabular-nums">
+                            {((m.summary as SiteSummary).successByTask[t.id] ?? 0).toFixed(1)} %
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
             {latest.flatMap((m) => (m.summary as SiteSummary).alerts.map((a) => `${m.site_name}: ${a}`)).map((a) => (
               <Alert key={a} tone="warning">
                 {a}
