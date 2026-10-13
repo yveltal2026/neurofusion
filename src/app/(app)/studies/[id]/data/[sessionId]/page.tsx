@@ -49,7 +49,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/studies/${id}/data`} className="text-sm text-muted hover:underline">
+        <Link href={`/studies/${id}/data`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Datos
         </Link>
         <h1 className="mt-1 font-mono text-xl font-semibold">{view.participant_ref}</h1>

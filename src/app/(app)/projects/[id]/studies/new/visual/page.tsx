@@ -14,7 +14,7 @@ export default async function NewVisualStudyPage({ params }: PageProps<"/project
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${id}/studies/new`} className="text-sm text-muted hover:underline">
+        <Link href={`/projects/${id}/studies/new`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Elegir herramienta
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nuevo análisis visual con IA</h1>

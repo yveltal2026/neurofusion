@@ -249,13 +249,13 @@ export function AttentionViewer({
               type="button"
               aria-pressed={mode === m.id}
               onClick={() => setMode(m.id)}
-              className={`rounded-full border px-3 py-1 text-sm ${mode === m.id ? "border-primary bg-primary/10 font-medium" : "border-border text-muted hover:text-foreground"}`}
+              className={`min-h-8 rounded-full border px-3 py-1 text-sm ${mode === m.id ? "border-primary bg-primary/10 font-medium" : "border-border text-muted hover:text-foreground"}`}
             >
               {m.label}
               {m.id === "blind" && blind ? ` (${blind})` : ""}
             </button>
           ))}
-          <button type="button" onClick={exportPng} className="ml-auto text-sm text-heading underline underline-offset-4">
+          <button type="button" onClick={exportPng} className="ml-auto px-1 py-1.5 text-sm text-heading underline underline-offset-4">
             Descargar PNG
           </button>
         </div>

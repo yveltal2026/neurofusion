@@ -31,7 +31,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/projects" className="text-sm text-muted hover:underline">
+          <Link href="/projects" className="inline-block py-1 text-sm text-muted hover:underline">
             ← Proyectos
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.name}</h1>

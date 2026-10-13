@@ -92,7 +92,7 @@ export function StartGate({
       </Card>
 
       <div className="flex items-center justify-between">
-        <Link href={`/projects/${projectId}`} className="text-sm text-muted hover:underline">
+        <Link href={`/projects/${projectId}`} className="inline-block py-1 text-sm text-muted hover:underline">
           Cancelar
         </Link>
         {mode === "ai" ? (

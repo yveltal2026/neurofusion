@@ -34,7 +34,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
       <StudyHeader study={study} projectName={projectName} active="overview" variant={variant} subtitle={site && task ? `${site.name} · ${task.id} ${task.name}` : row.title} />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-medium">{row.title}</h2>
-        <Link href={`/studies/${id}`} className="text-sm text-muted hover:underline">
+        <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Volver
         </Link>
       </div>
@@ -69,7 +69,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
           <form action={restoreAiAois}>
             <input type="hidden" name="studyId" value={id} />
             <input type="hidden" name="assetId" value={assetId} />
-            <button type="submit" className="text-heading underline underline-offset-4">
+            <button type="submit" className="py-1 text-heading underline underline-offset-4">
               Restaurar la propuesta de la IA
             </button>
           </form>

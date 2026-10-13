@@ -23,7 +23,7 @@ export function StudyHeader({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline print:hidden">
+          <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline print:hidden">
             ← {projectName ?? "Proyecto"}
           </Link>
           <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>

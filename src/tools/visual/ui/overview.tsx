@@ -109,7 +109,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
             <h2 className="font-medium">
               {site.name} <span className="text-sm font-normal text-muted">{site.competitor ? "· competidor" : "· principal"}</span>
             </h2>
-            <a href={site.url} target="_blank" rel="noreferrer" className="text-sm text-heading underline underline-offset-4">
+            <a href={site.url} target="_blank" rel="noreferrer" className="inline-block break-all py-1 text-sm text-heading underline underline-offset-4">
               {site.url} ↗
             </a>
           </div>

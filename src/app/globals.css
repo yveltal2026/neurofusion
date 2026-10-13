@@ -146,3 +146,17 @@
     print-color-adjust: exact;
   }
 }
+
+/* Controles nativos con área táctil mínima (WCAG 2.5.8: 24 × 24 px con su etiqueta). */
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    min-height: 1.5rem;
+  }
+}

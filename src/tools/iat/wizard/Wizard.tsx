@@ -192,7 +192,7 @@ export function Wizard({ projectId, projectName, aiAvailable = false }: { projec
 
         <div className="flex items-center justify-between">
           {stepIndex === 0 ? (
-            <Link href={`/projects/${projectId}`} className="text-sm text-muted hover:underline">
+            <Link href={`/projects/${projectId}`} className="inline-block py-1 text-sm text-muted hover:underline">
               Cancelar
             </Link>
           ) : (

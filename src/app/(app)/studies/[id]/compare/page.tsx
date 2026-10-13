@@ -53,14 +53,14 @@ export default async function ComparePage({ params }: PageProps<"/studies/[id]/c
                 const score = avg(a);
                 return (
                   <tr key={a.row.id} className="align-middle">
-                    <td className="px-3 py-2">
-                      <Link href={`/studies/${id}/assets/${a.row.id}`} className="flex items-center gap-2 hover:underline">
+                    <td className="min-w-56 px-3 py-2">
+                      <Link href={`/studies/${id}/assets/${a.row.id}`} className="flex items-center gap-3 hover:underline">
                         {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage */}
-                        {urls[a.row.storage_path] ? <img src={urls[a.row.storage_path]} alt="" className="h-10 w-10 rounded object-cover" /> : null}
+                        {urls[a.row.storage_path] ? <img src={urls[a.row.storage_path]} alt="" className="size-10 shrink-0 rounded object-cover" /> : null}
                         <span className="font-medium">{a.row.title}</span>
                       </Link>
                     </td>
-                    <td className="px-3 py-2 tabular-nums">{score === null ? "—" : score.toFixed(1)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 tabular-nums">{score === null ? "—" : score.toFixed(1)}</td>
                     {KEYS.map((k) => (
                       <td key={k} className="px-3 py-2">
                         {a.result ? <ScoreDots score={a.result.criteria[k].score} /> : "—"}

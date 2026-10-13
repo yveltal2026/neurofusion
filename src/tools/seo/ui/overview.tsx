@@ -34,18 +34,18 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
 
       {config.success ? (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="space-y-3">
+          <Card className="min-w-0 space-y-3">
             <div>
               <h2 className="font-medium">Auditoría en vivo</h2>
               <p className="text-sm text-muted">
-                Rastrea <strong className="text-foreground">{config.data.siteUrl}</strong> (hasta {config.data.maxPages} páginas
+                Rastrea <strong className="break-all text-foreground">{config.data.siteUrl}</strong> (hasta {config.data.maxPages} páginas
                 {config.data.extraUrls.length ? ` + ${config.data.extraUrls.length} URLs adicionales` : ""}), revisa robots.txt, sitemaps y
                 enlaces{config.data.checkPerformance ? `, y mide Core Web Vitals (${config.data.strategy === "mobile" ? "móvil" : "escritorio"})` : ""}.
               </p>
             </div>
             <LiveAuditForm studyId={study.id} />
           </Card>
-          <Card className="space-y-3">
+          <Card className="min-w-0 space-y-3">
             <div>
               <h2 className="font-medium">Modo asistido</h2>
               <p className="text-sm text-muted">
@@ -71,7 +71,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
                   <Link href={`/studies/${study.id}/audits/${a.id}`} className="block">
                     <Card className="flex flex-wrap items-center justify-between gap-3 transition hover:border-primary">
                       <div>
-                        <p className="font-medium">
+                        <p className="break-all font-medium">
                           {s.score}/100 · {a.site_url}
                         </p>
                         <p className="text-xs text-muted">

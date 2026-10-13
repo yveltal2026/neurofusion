@@ -52,7 +52,7 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline">
+          <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
             ← {projectName ?? "Proyecto"}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
