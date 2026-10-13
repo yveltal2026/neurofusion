@@ -1,5 +1,6 @@
 "use client";
 
+import { scoreColor } from "./score-color";
 import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const AXIS = { fill: "currentColor", fontSize: 12 } as const;
@@ -19,8 +20,6 @@ function Frame({ title, caption, height = 240, children }: { title: string; capt
   );
 }
 
-/** Rojo → ámbar → verde según puntuación (con texto siempre visible: no depende sólo del color). */
-export const scoreColor = (s: number) => (s >= 85 ? "#009E73" : s >= 60 ? "#E69F00" : "#D55E00");
 
 export function CategoryScoreChart({ rows }: { rows: { label: string; score: number }[] }) {
   return (

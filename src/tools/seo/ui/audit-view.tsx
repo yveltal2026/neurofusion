@@ -1,4 +1,5 @@
-import { CategoryScoreChart, scoreColor } from "@/components/charts/seo-charts";
+import { scoreColor } from "@/components/charts/score-color";
+import { CategoryScoreChart } from "@/components/charts/seo-charts";
 import { Card } from "@/components/ui/card";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
 import { CATEGORY_LABEL, SEVERITY_LABEL, type AuditSummary, type PageSummary, type PerformanceResult } from "../engine";
