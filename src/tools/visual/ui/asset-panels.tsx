@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CRITERIA_LABEL, type PieceAiResult } from "../analysis/piece";
 import { AOI_KIND_LABEL, blindZones, type Aoi } from "../engine/aoi";
 import { describeMetrics } from "../engine/metrics";
@@ -6,7 +7,7 @@ import { checkPlacement, getPlacement } from "../engine/placements";
 import type { StoredMetrics } from "../results";
 
 const SEV = { high: "Alta", medium: "Media", low: "Baja" } as const;
-const SEV_STYLE = { high: "bg-red-600 text-white", medium: "bg-amber-400/80 text-black", low: "bg-foreground/10" } as const;
+const SEV_TONE = { high: "danger", medium: "warning", low: "neutral" } as const;
 
 export function ScoreDots({ score }: { score: number }) {
   return (
@@ -52,8 +53,7 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
           <ul className="space-y-2 text-sm">
             {result.issues.map((i) => (
               <li key={i.problem} className="space-y-0.5">
-                <span className={`mr-2 rounded px-1.5 py-0.5 text-xs ${SEV_STYLE[i.severity]}`}>{SEV[i.severity]}</span>
-                {i.problem}
+                <StatusBadge tone={SEV_TONE[i.severity]}>Prioridad {SEV[i.severity].toLowerCase()}</StatusBadge> {i.problem}
                 <span className="block text-muted">→ {i.recommendation}</span>
               </li>
             ))}
@@ -139,8 +139,11 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
           <ul className="mt-1 space-y-0.5 text-sm">
             {metrics.textContrast.map((t) => (
               <li key={t.id}>
-                {t.label}: <strong className={t.ratio < 3 ? "text-danger" : t.ratio < 4.5 ? "text-warning" : ""}>{t.ratio}:1</strong>
-                {t.ratio < 3 ? " · insuficiente" : t.ratio < 4.5 ? " · sólo para texto grande" : " · adecuado"}
+                {t.label}: <strong>{t.ratio}:1</strong>
+{" "}
+                <StatusBadge tone={t.ratio < 3 ? "danger" : t.ratio < 4.5 ? "warning" : "success"}>
+                  {t.ratio < 3 ? "Insuficiente" : t.ratio < 4.5 ? "Sólo texto grande" : "Adecuado"}
+                </StatusBadge>
               </li>
             ))}
           </ul>
@@ -153,7 +156,7 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
           <ul className="mt-1 space-y-0.5 text-sm">
             {checks.map((c) => (
               <li key={c.label}>
-                <span className={c.ok ? "text-success" : "text-danger"}>{c.ok ? "✓" : "✗"}</span> {c.label}: {c.detail}
+                <StatusBadge tone={c.ok ? "success" : "danger"}>{c.ok ? "Cumple" : "No cumple"}</StatusBadge> {c.label}: {c.detail}
               </li>
             ))}
           </ul>

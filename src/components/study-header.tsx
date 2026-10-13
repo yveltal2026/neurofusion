@@ -26,7 +26,7 @@ export function StudyHeader({
           <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline print:hidden">
             ← {projectName ?? "Proyecto"}
           </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+          <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>
           <p className="mt-1 text-xs uppercase text-muted">
             {getTool(study.tool_type)?.name ?? study.tool_type}
             {subtitle ? <> · {subtitle}</> : null}

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
+import { FilePicker } from "@/components/ui/file-picker";
 import {
   createSeoStudy,
   generateSeoPlan,
@@ -98,9 +99,11 @@ export function UploadAuditForm({ studyId }: { studyId: string }) {
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="studyId" value={studyId} />
-      <Field label="Archivos HTML" hint="En Chrome: clic derecho → «Ver código fuente» → Guardar como .html. Máx. 10 archivos de 1.5 MB.">
-        <input name="files" type="file" accept=".html,.htm,text/html" multiple required className="block text-sm" />
-      </Field>
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium">Archivos HTML</p>
+        <FilePicker name="files" label="Elegir archivos HTML" accept=".html,.htm,text/html" multiple required />
+        <p className="text-xs text-muted">En Chrome: clic derecho → «Ver código fuente» → Guardar como .html. Máx. 10 archivos de 1.5 MB.</p>
+      </div>
       <Field label="URL de cada archivo" hint="Una por línea, en el mismo orden en que seleccionaste los archivos.">
         <Textarea name="urls" required placeholder="https://www.ejemplo.com.mx/" />
       </Field>

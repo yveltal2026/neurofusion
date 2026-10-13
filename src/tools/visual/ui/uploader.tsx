@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { FilePicker } from "@/components/ui/file-picker";
 import { createClient } from "@/lib/supabase/client";
 import { registerAsset } from "../actions";
 import { PLACEMENTS } from "../engine/placements";
@@ -68,15 +69,7 @@ export function AssetUploader({
   return (
     <div className={compact ? "space-y-2" : "space-y-3"}>
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="file"
-          accept={ACCEPT.join(",")}
-          multiple
-          aria-label="Elegir imágenes"
-          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-          className="max-w-full text-sm"
-          disabled={busy}
-        />
+        <FilePicker key={log.length ? "after" : "before"} label="Elegir imágenes" accept={ACCEPT.join(",")} multiple onFiles={setFiles} disabled={busy} />
         {withPlacement ? (
           <select value={placement} onChange={(e) => setPlacement(e.target.value)} className="rounded-md border border-border bg-background px-2 py-1.5 text-sm" aria-label="Formato">
             <option value="">Formato (opcional)</option>

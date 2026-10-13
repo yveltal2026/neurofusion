@@ -1,17 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { CATEGORY_LABEL, ruleDef, SEVERITY_LABEL, type Finding, type Severity } from "../engine";
 
-export const SEVERITY_STYLE: Record<Severity, string> = {
-  critical: "bg-red-600 text-white",
-  high: "bg-orange-500/90 text-white",
-  medium: "bg-amber-400/80 text-black",
-  ok: "bg-emerald-600/90 text-white",
-};
+const SEVERITY_TONE: Record<Severity, StatusTone> = { critical: "strong", high: "danger", medium: "warning", ok: "success" };
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
-  return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${SEVERITY_STYLE[severity]}`}>{SEVERITY_LABEL[severity]}</span>;
+  return <StatusBadge tone={SEVERITY_TONE[severity]}>{SEVERITY_LABEL[severity]}</StatusBadge>;
 }
 
 /** Tabla de hallazgos con filtro por severidad (por defecto oculta los correctos). */
@@ -39,6 +35,7 @@ export function FindingsTable({ findings }: { findings: Finding[] }) {
         <input
           type="search"
           placeholder="Filtrar por texto o URL"
+          aria-label="Filtrar hallazgos por texto o URL"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="ml-auto rounded-md border border-border bg-background px-3 py-1.5 text-sm"

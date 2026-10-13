@@ -242,13 +242,12 @@ export function AttentionViewer({
   return (
     <div className="space-y-3">
       {showControls ? (
-        <div className="flex flex-wrap items-center gap-2 print:hidden" role="tablist" aria-label="Capa">
+        <div className="flex flex-wrap items-center gap-2 print:hidden" role="group" aria-label="Capa sobre la imagen">
           {MODES.map((m) => (
             <button
               key={m.id}
               type="button"
-              role="tab"
-              aria-selected={mode === m.id}
+              aria-pressed={mode === m.id}
               onClick={() => setMode(m.id)}
               className={`rounded-full border px-3 py-1 text-sm ${mode === m.id ? "border-primary bg-primary/10 font-medium" : "border-border text-muted hover:text-foreground"}`}
             >
@@ -280,7 +279,20 @@ export function AttentionViewer({
 
         {editable && mode === "boxes" ? (
           <div className="space-y-3 text-sm">
-            <p className="text-xs text-muted">Arrastra sobre la imagen para agregar un área; haz clic en una para editarla.</p>
+            <p className="text-xs text-muted">Arrastra sobre la imagen para agregar un área (o usa «Agregar área»); haz clic en una para editarla.</p>
+            <button
+              type="button"
+              className="text-sm font-medium text-heading underline underline-offset-4"
+              onClick={() => {
+                if (aois.length >= 30) return setMsg({ tone: "error", text: "Máximo 30 áreas de interés." });
+                const id = nextId(aois);
+                setAois((xs) => [...xs, { id, label: "Nueva área", kind: "other", box: [0.35, 0.35, 0.65, 0.65], attention: 0.5, importance: 3, order: null }]);
+                setSelected(id);
+                setDirty(true);
+              }}
+            >
+              + Agregar área
+            </button>
             <ul className="max-h-72 space-y-1 overflow-y-auto">
               {aois.map((a) => (
                 <li key={a.id}>
@@ -336,6 +348,32 @@ export function AttentionViewer({
                     />
                   </label>
                 </div>
+                <fieldset className="space-y-1">
+                  <legend className="text-xs font-medium">Posición y tamaño (% de la imagen)</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["Izquierda", "Arriba", "Derecha", "Abajo"] as const).map((name, i) => (
+                      <label key={name} className="flex items-center gap-1 text-xs">
+                        <span className="w-16">{name}</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={Math.round(sel.box[i] * 100)}
+                          onChange={(e) => {
+                            const v = Math.min(100, Math.max(0, Number(e.target.value))) / 100;
+                            const box = [...sel.box] as Aoi["box"];
+                            box[i] = v;
+                            // Mantiene la caja válida (izquierda < derecha, arriba < abajo).
+                            if (box[2] - box[0] < 0.01 || box[3] - box[1] < 0.01) return;
+                            update(sel.id, { box });
+                          }}
+                          className="w-full rounded border border-border bg-background px-2 py-1"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 <button
                   type="button"
                   className="text-xs text-danger hover:underline"

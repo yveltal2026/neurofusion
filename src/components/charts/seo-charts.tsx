@@ -23,12 +23,12 @@ function Frame({ title, caption, height = 240, children }: { title: string; capt
 
 export function CategoryScoreChart({ rows }: { rows: { label: string; score: number }[] }) {
   return (
-    <Frame title="Puntuación por categoría" caption="0–100. Promedio ponderado de las reglas de cada categoría.">
+    <Frame title="Puntuación por categoría" caption="0–100. Promedio ponderado de las reglas de cada categoría." height={Math.max(200, rows.length * 30 + 40)}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
           <CartesianGrid stroke="currentColor" strokeOpacity={0.12} horizontal={false} />
           <XAxis type="number" domain={[0, 100]} tick={AXIS} />
-          <YAxis type="category" dataKey="label" tick={AXIS} width={130} />
+          <YAxis type="category" dataKey="label" tick={AXIS} width={140} interval={0} />
           <Tooltip contentStyle={tooltipStyle} />
           <Bar dataKey="score" name="Puntuación" maxBarSize={22} isAnimationActive={false}>
             {rows.map((r) => (

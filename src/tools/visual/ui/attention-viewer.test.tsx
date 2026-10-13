@@ -23,15 +23,15 @@ const AOIS: Aoi[] = [
 describe("AttentionViewer", () => {
   it("muestra las capas y cuenta las zonas ciegas", () => {
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} />);
-    expect(screen.getByRole("tab", { name: "Mapa de atención" }).getAttribute("aria-selected")).toBe("true");
-    expect(screen.getByRole("tab", { name: "Zonas ciegas (1)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mapa de atención" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Zonas ciegas (1)" })).toBeTruthy();
     expect(screen.getByText(/No es eye tracking/)).toBeTruthy();
   });
 
   it("el analista edita un área y la guarda como revisada", async () => {
     const user = userEvent.setup();
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} studyId="s" assetId="a" editable />);
-    await user.click(screen.getByRole("tab", { name: "Áreas de interés" }));
+    await user.click(screen.getByRole("button", { name: "Áreas de interés" }));
     expect((screen.getByRole("button", { name: "Sin cambios" }) as HTMLButtonElement).disabled).toBe(true);
     await user.click(screen.getByRole("button", { name: "E2 · Logo" }));
     const label = screen.getByRole("textbox", { name: "Etiqueta" });
@@ -52,5 +52,21 @@ describe("AttentionViewer", () => {
     await user.click(screen.getByRole("button", { name: "Eliminar área" }));
     await user.click(screen.getByRole("button", { name: "Guardar áreas revisadas" }));
     expect((saveAois.mock.calls[0][0] as { aois: Aoi[] }).aois.map((a) => a.id)).toEqual(["E2"]);
+  });
+});
+
+describe("AttentionViewer · teclado", () => {
+  it("agrega un área sin mouse y ajusta su posición con campos numéricos", async () => {
+    const user = userEvent.setup();
+    saveAois.mockClear();
+    render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} studyId="s" assetId="a" editable initialMode="boxes" />);
+    await user.click(screen.getByRole("button", { name: "+ Agregar área" }));
+    const left = screen.getByRole("spinbutton", { name: "Izquierda" });
+    await user.clear(left);
+    await user.type(left, "10");
+    await user.click(screen.getByRole("button", { name: "Guardar áreas revisadas" }));
+    const saved = (saveAois.mock.calls[0][0] as { aois: Aoi[] }).aois;
+    expect(saved).toHaveLength(3);
+    expect(saved[2].box[0]).toBeCloseTo(0.1, 5);
   });
 });

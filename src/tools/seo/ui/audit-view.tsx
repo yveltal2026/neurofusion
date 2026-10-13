@@ -1,4 +1,4 @@
-import { scoreColor } from "@/components/charts/score-color";
+import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
 import { Card } from "@/components/ui/card";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
@@ -41,10 +41,11 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
   return (
     <Card className="space-y-3 break-inside-avoid">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-medium">Rendimiento ({perf.strategy === "mobile" ? "móvil" : "escritorio"})</h3>
+        <h2 className="font-medium">Rendimiento ({perf.strategy === "mobile" ? "móvil" : "escritorio"})</h2>
         {perf.performanceScore !== null ? (
           <p className="text-sm">
-            Lighthouse: <strong style={{ color: scoreColor(perf.performanceScore) }}>{perf.performanceScore}/100</strong>
+            Lighthouse: <strong style={{ color: scoreColor(perf.performanceScore) }}>{perf.performanceScore}/100</strong> ·{" "}
+            {scoreBand(perf.performanceScore).label.toLowerCase()}
           </p>
         ) : null}
       </div>

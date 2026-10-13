@@ -24,6 +24,8 @@ export const COLORS = {
 } as const;
 
 const AXIS = { fill: "currentColor", fontSize: 12 } as const;
+/** El texto de la leyenda va en tinta (el color de la serie está en la muestra), por contraste. */
+const legendText = (value: string) => <span style={{ color: "var(--foreground)" }}>{value}</span>;
 const GRID = "currentColor";
 const tooltipStyle = { background: "var(--background)", border: "1px solid var(--border)", borderRadius: 6, fontSize: 12 };
 
@@ -110,7 +112,7 @@ function StackedPercent({
             <XAxis type="number" tick={AXIS} tickFormatter={(v: number) => `${Math.round(v * 100)} %`} />
             <YAxis type="category" dataKey="label" tick={AXIS} width={110} />
             <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${typeof v === "number" ? v : Number(v)} %`} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} formatter={legendText} />
             {series.map((s) => (
               <Bar key={s.key} dataKey={s.key} name={s.name} stackId="p" fill={s.color} />
             ))}
