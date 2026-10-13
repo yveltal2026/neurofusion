@@ -133,6 +133,26 @@ describe("CSV", () => {
     expect(row2.split(",").length).toBe(header.split(",").length);
   });
 
+  it("session_summary: opción múltiple en columnas 0/1 y Likert numérica", () => {
+    const cfg2 = {
+      ...config,
+      participant: {
+        ...config.participant,
+        extraFields: [
+          { id: "canales", label: "Dónde", type: "multiselect" as const, options: ["Tienda", "En línea"], required: false },
+          { id: "valor", label: "Valor", type: "likert" as const, points: 5, required: false },
+        ],
+      },
+    };
+    const v = buildSessionViews(cfg2, [session("1", { demographics: { canales: ["En línea"], valor: 4 } })], []);
+    const [h, r] = sessionSummaryCsv(cfg2, v).replace("﻿", "").trim().split("\r\n");
+    const cols = h.split(",");
+    const cells = r.split(",");
+    expect(cells.length).toBe(cols.length);
+    const at = (name: string) => cells[cols.indexOf(name)];
+    expect([at("canales_tienda"), at("canales_en_linea"), at("valor")]).toEqual(["0", "1", "4"]);
+  });
+
   it("raw_trials: una fila por ensayo con ids de dimensión", () => {
     const out = rawTrialsCsv(config, new Map([["s1", "p-1"]]), [
       { session_id: "s1", dimension_idx: 1, block: 3, trial_idx: 0, category: "P1", stimulus: "Seguro, firme", correct_side: "left", pressed_side: "right", rt_ms: 612.349, error: true },

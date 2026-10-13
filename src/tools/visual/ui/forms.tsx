@@ -150,9 +150,9 @@ export function RatingItemForm({
           <p className="text-xs text-muted">Afecta: {item.affects}</p>
         </div>
         {current ? (
-          <span className="rounded-full bg-emerald-600/10 px-2 py-0.5 text-xs text-emerald-700 dark:text-emerald-300">Calificado{current.source === "ai_assisted" ? " · con IA" : ""}</span>
+          <span className="rounded-full bg-success/10 px-2 py-0.5 text-xs text-success">Calificado{current.source === "ai_assisted" ? " · con IA" : ""}</span>
         ) : (
-          <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs">Pendiente</span>
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs">Pendiente</span>
         )}
       </div>
 
@@ -209,7 +209,7 @@ export function RatingItemForm({
           </p>
           <button
             type="button"
-            className="mt-1 text-sm font-medium text-primary hover:underline"
+            className="mt-1 text-sm font-medium text-heading underline underline-offset-4"
             onClick={() => {
               setValue(suggestion.value);
               setJustification(suggestion.justification);

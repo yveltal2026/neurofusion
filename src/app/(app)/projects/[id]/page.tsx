@@ -39,7 +39,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         </div>
         <form action={deleteProject}>
           <input type="hidden" name="id" value={project.id} />
-          <Button type="submit" variant="ghost" className="text-red-600">
+          <Button type="submit" variant="ghost" className="text-danger">
             Eliminar proyecto
           </Button>
         </form>

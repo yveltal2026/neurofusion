@@ -256,7 +256,7 @@ export function AttentionViewer({
               {m.id === "blind" && blind ? ` (${blind})` : ""}
             </button>
           ))}
-          <button type="button" onClick={exportPng} className="ml-auto text-sm text-primary hover:underline">
+          <button type="button" onClick={exportPng} className="ml-auto text-sm text-heading underline underline-offset-4">
             Descargar PNG
           </button>
         </div>
@@ -338,7 +338,7 @@ export function AttentionViewer({
                 </div>
                 <button
                   type="button"
-                  className="text-xs text-red-600 hover:underline"
+                  className="text-xs text-danger hover:underline"
                   onClick={() => {
                     setAois((xs) => xs.filter((x) => x.id !== sel.id));
                     setSelected(null);

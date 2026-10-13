@@ -24,7 +24,7 @@ function Thumb({ studyId, asset, url }: { studyId: string; asset: VisualAsset; u
           {getPlacement(row.placement) ? ` · ${getPlacement(row.placement)?.label}` : ""}
         </p>
         <p className="text-xs">
-          {asset.ai ? <span className="text-emerald-700 dark:text-emerald-300">Analizada</span> : <span className="text-muted">Sin analizar</span>}
+          {asset.ai ? <span className="text-success">Analizada</span> : <span className="text-muted">Sin analizar</span>}
           {row.aois_source === "analyst" ? " · AOI revisadas" : ""}
         </p>
       </Card>
@@ -109,7 +109,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
             <h2 className="font-medium">
               {site.name} <span className="text-sm font-normal text-muted">{site.competitor ? "· competidor" : "· principal"}</span>
             </h2>
-            <a href={site.url} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
+            <a href={site.url} target="_blank" rel="noreferrer" className="text-sm text-heading underline underline-offset-4">
               {site.url} ↗
             </a>
           </div>

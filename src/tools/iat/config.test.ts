@@ -103,6 +103,26 @@ describe("iatConfigSchema", () => {
     expect(issuePaths(iatConfigSchema.safeParse(c))).toEqual(["participant.extraFields.0.options"]);
   });
 
+  it("acepta opción múltiple y Likert; valida opciones repetidas y rango de puntos", () => {
+    const c = validConfig();
+    c.participant.extraFields = [
+      { id: "canales", label: "¿Dónde compras?", type: "multiselect", options: ["Tienda", "En línea", "Cafetería"], required: false },
+      { id: "valor", label: "Vale lo que cuesta", type: "likert", points: 7, minLabel: "Nada de acuerdo", maxLabel: "Muy de acuerdo", required: true },
+    ];
+    expect(iatConfigSchema.safeParse(c).success).toBe(true);
+
+    c.participant.extraFields = [{ id: "canales", label: "Dónde", type: "multiselect", options: ["Tienda", "tienda"], required: false }];
+    expect(issuePaths(iatConfigSchema.safeParse(c))).toEqual(["participant.extraFields.0.options.1"]);
+
+    c.participant.extraFields = [{ id: "canales", label: "Dónde", type: "multiselect", options: ["Una"], required: false }];
+    expect(issuePaths(iatConfigSchema.safeParse(c))).toEqual(["participant.extraFields.0.options"]);
+
+    for (const points of [2, 11, 5.5]) {
+      c.participant.extraFields = [{ id: "valor", label: "Valor", type: "likert", points, required: false }];
+      expect(issuePaths(iatConfigSchema.safeParse(c)), `points=${points}`).toEqual(["participant.extraFields.0.points"]);
+    }
+  });
+
   it("el tema personalizado exige color hexadecimal", () => {
     const c = validConfig();
     c.theme = { mode: "custom" };

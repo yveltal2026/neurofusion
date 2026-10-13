@@ -69,7 +69,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
           <form action={restoreAiAois}>
             <input type="hidden" name="studyId" value={id} />
             <input type="hidden" name="assetId" value={assetId} />
-            <button type="submit" className="text-primary hover:underline">
+            <button type="submit" className="text-heading underline underline-offset-4">
               Restaurar la propuesta de la IA
             </button>
           </form>
@@ -109,7 +109,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
           <form action={deleteAsset}>
             <input type="hidden" name="studyId" value={id} />
             <input type="hidden" name="assetId" value={assetId} />
-            <Button type="submit" variant="ghost" className="text-red-600">
+            <Button type="submit" variant="ghost" className="text-danger">
               Eliminar imagen
             </Button>
           </form>

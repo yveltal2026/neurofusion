@@ -33,8 +33,8 @@ export function StudyTabs({ id, active, variant = "iat" }: { id: string; active:
           key={tab.key}
           href={tab.href(id)}
           aria-current={tab.key === active ? "page" : undefined}
-          className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2 text-sm ${
-            tab.key === active ? "border-primary font-medium" : "border-transparent text-muted hover:text-foreground"
+          className={`-mb-px whitespace-nowrap border-b-[3px] px-4 py-2.5 font-display text-sm font-semibold ${
+            tab.key === active ? "border-primary text-heading" : "border-transparent text-muted hover:text-heading"
           }`}
         >
           {tab.label}

@@ -45,8 +45,8 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
           <VisualContextForm studyId={study.id} config={visual.data} />
         </Card>
       ) : null}
-      <Card className="space-y-4 border-red-500/30">
-        <h2 className="font-medium text-red-600">Zona de riesgo</h2>
+      <Card className="space-y-4 border-danger/30">
+        <h2 className="font-medium text-danger">Zona de riesgo</h2>
         <form action={deleteStudy}>
           <input type="hidden" name="id" value={study.id} />
           <Button type="submit" variant="danger">

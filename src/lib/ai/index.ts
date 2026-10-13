@@ -21,3 +21,13 @@ export function getAnalysisProvider(env: Record<string, string | undefined> = pr
   }
   throw new AiError(`AI_PROVIDER inválido: «${which}». Usa «anthropic» u «openai».`, "config");
 }
+
+/** ¿Hay un proveedor de IA configurado? (para ofrecer o no las funciones asistidas) */
+export function isAiConfigured(env: Record<string, string | undefined> = process.env): boolean {
+  try {
+    getAnalysisProvider(env);
+    return true;
+  } catch {
+    return false;
+  }
+}

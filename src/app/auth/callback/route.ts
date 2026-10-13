@@ -13,5 +13,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${next}`);
   }
+  // Un enlace de restablecimiento vencido o ya usado se resuelve pidiendo otro, no con un error de login.
+  if (next.startsWith("/reset-password")) return NextResponse.redirect(`${origin}/forgot-password?error=expired`);
   return NextResponse.redirect(`${origin}/login?error=callback`);
 }

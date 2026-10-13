@@ -3,7 +3,10 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { authErrorMessage } from "@/lib/auth/errors";
+import { newPasswordSchema, resetRequestSchema } from "@/lib/auth/password-reset";
 import { publicEnv } from "@/lib/env";
+import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export interface AuthState {
@@ -58,7 +61,10 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
       emailRedirectTo: `${await origin()}/auth/callback`,
     },
   });
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("signUp falló", { code: error.code, status: error.status });
+    return { error: authErrorMessage(error, "No pudimos crear tu cuenta. Inténtalo de nuevo en unos minutos.") };
+  }
   // Con confirmación de correo activa no hay sesión todavía.
   if (!data.session) {
     return { message: "Te enviamos un correo para confirmar tu cuenta. Ábrelo y vuelve a iniciar sesión." };
@@ -75,6 +81,63 @@ export async function signInWithGoogle(formData: FormData) {
   });
   if (error || !data.url) redirect("/login?error=oauth");
   redirect(data.url);
+}
+
+const RESET_WINDOW_MS = 15 * 60_000;
+
+/**
+ * Envía el enlace para restablecer la contraseña. La respuesta es la misma exista o no la cuenta,
+ * para no revelar qué correos están registrados.
+ */
+export async function requestPasswordReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = resetRequestSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const email = parsed.data.email.toLowerCase();
+
+  // Freno básico contra correos masivos: por cuenta y por IP (en memoria, ver rate-limit.ts).
+  const h = await headers();
+  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || "desconocida";
+  const byEmail = rateLimit(`pwreset:email:${email}`, 3, RESET_WINDOW_MS);
+  const byIp = rateLimit(`pwreset:ip:${ip}`, 10, RESET_WINDOW_MS);
+  if (!byEmail.ok || !byIp.ok) {
+    return { error: "Hiciste varios intentos seguidos. Espera unos minutos e inténtalo de nuevo." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${await origin()}/auth/callback?next=/reset-password`,
+  });
+  if (error) {
+    console.error("resetPasswordForEmail falló", { code: error.code, status: error.status });
+    return { error: authErrorMessage(error, "No pudimos enviar el correo. Inténtalo de nuevo en unos minutos.") };
+  }
+  return {
+    message:
+      "Si hay una cuenta con ese correo, te enviamos un enlace para crear una contraseña nueva. Revisa también tu carpeta de spam.",
+  };
+}
+
+/** Guarda la contraseña nueva. Requiere la sesión de recuperación que abre el enlace del correo. */
+export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/forgot-password?error=expired");
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    return { error: authErrorMessage(error, "No pudimos actualizar tu contraseña. Inténtalo de nuevo.") };
+  }
+  // Se cierra la sesión de recuperación: la persona entra con la contraseña nueva y confirma que funciona.
+  await supabase.auth.signOut();
+  redirect("/login?reset=ok");
 }
 
 export async function signOut() {

@@ -139,7 +139,7 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
           <ul className="mt-1 space-y-0.5 text-sm">
             {metrics.textContrast.map((t) => (
               <li key={t.id}>
-                {t.label}: <strong className={t.ratio < 3 ? "text-red-600" : t.ratio < 4.5 ? "text-amber-600" : ""}>{t.ratio}:1</strong>
+                {t.label}: <strong className={t.ratio < 3 ? "text-danger" : t.ratio < 4.5 ? "text-warning" : ""}>{t.ratio}:1</strong>
                 {t.ratio < 3 ? " · insuficiente" : t.ratio < 4.5 ? " · sólo para texto grande" : " · adecuado"}
               </li>
             ))}
@@ -153,7 +153,7 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
           <ul className="mt-1 space-y-0.5 text-sm">
             {checks.map((c) => (
               <li key={c.label}>
-                <span className={c.ok ? "text-emerald-700 dark:text-emerald-300" : "text-red-600"}>{c.ok ? "✓" : "✗"}</span> {c.label}: {c.detail}
+                <span className={c.ok ? "text-success" : "text-danger"}>{c.ok ? "✓" : "✗"}</span> {c.label}: {c.detail}
               </li>
             ))}
           </ul>

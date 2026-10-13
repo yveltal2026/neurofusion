@@ -13,7 +13,7 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 ## Qué hace
 
 1. El investigador crea un **proyecto** (un proyecto podrá agrupar varias herramientas).
-2. Crea un **estudio IAT** con un wizard de 7 pasos (producto, conceptos, dimensiones, palabras, rigor, datos del participante, identidad visual) que reproduce el interrogatorio de la skill `iat-study-builder`.
+2. Crea un **estudio IAT** con un wizard de 7 pasos (producto, conceptos, dimensiones, palabras, rigor, datos del participante, identidad visual) que reproduce el interrogatorio de la skill `iat-study-builder`. Antes del paso 1 eliges entre **capturar todo manualmente** o **diseño asistido por IA**: describes en pocas líneas qué quieres analizar y su contexto, y la IA propone categoría, dimensiones (pares de polos) y 5 palabras por polo con el criterio de la skill; todo queda editable. Las preguntas adicionales al participante pueden ser texto, número, opción única, **opción múltiple** (tú defines las opciones) o **escala Likert** (3–10 puntos con etiquetas en los extremos); en el CSV las opciones múltiples salen como columnas 0/1 por opción.
 3. Se genera una **liga mágica** que comparte con N participantes. Puede cerrarse, limitarse por número de respuestas o fecha, regenerarse o probarse en **vista previa** (no guarda datos).
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
@@ -35,8 +35,19 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 ### 1. Supabase
 1. Crea un proyecto en [supabase.com](https://supabase.com).
 2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor). La migración `20261013000000_seo_visual_tools.sql` también crea el bucket privado de Storage `study-assets` y sus políticas.
-3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*.
+3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*. Ese mismo callback sirve para confirmar el correo, Google y el **restablecimiento de contraseña** (`/forgot-password` → correo → `/reset-password`); la plantilla *Reset Password* de *Authentication → Email Templates* debe conservar `{{ .ConfirmationURL }}`.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
+
+#### Correo (SMTP propio): obligatorio para producción
+El correo integrado de Supabase es sólo para pruebas: tiene un tope muy bajo por hora y **sólo entrega a direcciones de los miembros del equipo** de la organización de Supabase. Con él, crear cuentas, confirmar el correo y restablecer la contraseña fallan con `email rate limit exceeded` o `Email address not authorized`. Configura un SMTP propio en *Authentication → Emails → SMTP Settings* (Resend, SendGrid, Amazon SES, etc.) con un remitente de tu dominio (p. ej. `noreply@frsko.com`) y publica en el DNS los registros SPF/DKIM que indique el proveedor. Con SMTP propio el tope por defecto es de 30 usuarios nuevos por hora y se ajusta en *Authentication → Rate Limits*. Mientras tanto, «Continuar con Google» no envía correos.
+
+#### Iniciar sesión con Google
+El botón «Continuar con Google» ya está en `/login` y `/signup`; sólo falta configurarlo (el código no cambia):
+1. En [Google Cloud Console](https://console.cloud.google.com) → *APIs & Services → OAuth consent screen*: tipo **External**, nombre «NeuroFusion», correo de soporte y de contacto. Con sólo los permisos básicos (correo y perfil) no pide verificación; pasa la pantalla de *Testing* a **In production**, o sólo podrán entrar los usuarios de prueba que listes.
+2. *Credentials → Create credentials → OAuth client ID → Web application*. En **Authorized redirect URIs** pon la URI de callback de Supabase: `https://<ref-del-proyecto>.supabase.co/auth/v1/callback` (la muestra Supabase en *Authentication → Providers → Google*).
+3. Copia el *Client ID* y el *Client secret* a Supabase (*Authentication → Providers → Google*), activa el proveedor y guarda. El secreto va sólo ahí: nunca en el repo ni en variables de Vercel.
+4. En *Authentication → URL Configuration*: **Site URL** = la URL de producción y, en *Redirect URLs*, `https://<tu-dominio>/**` y `http://localhost:3000/**`. El callback lleva `?next=` y la lista debe aceptarlo; si Google devuelve a la portada en lugar de `/projects`, falta este paso.
+
 
 ### 2. Variables de entorno
 ```bash
@@ -95,7 +106,7 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | Visual: métricas de imagen (sharp), formatos, AOI y mapa de atención, franjas para IA, modelo journey/IFD, configuración, visor (componente) | Pruebas unitarias y de componente |
 | Tablas SEO/Visual, RLS y políticas del bucket | Pruebas SQL (`supabase/tests/tools.sql`) |
 | Rastreo contra sitios reales, subida a Storage, visión con Anthropic/OpenAI, PageSpeed real | **Tipado y compilado, sin ejecutar contra servicios reales** (requieren credenciales y red abierta) |
-| Rutas `/api/s/*`, páginas del investigador, auth (email/Google), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
+| Rutas `/api/s/*`, páginas del investigador, auth (email/Google; el restablecimiento de contraseña sólo se probó contra un Supabase Auth simulado, sin correo real), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica
 Greenwald, A. G., Nosek, B. A., & Banaji, M. R. (2003). Understanding and using the Implicit Association Test: I. An improved scoring algorithm. *Journal of Personality and Social Psychology, 85*(2), 197–216.

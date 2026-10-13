@@ -119,14 +119,14 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
                 {i === 0 ? (
                   <span className="text-xs text-muted">Principal</span>
                 ) : (
-                  <button type="button" className="text-sm text-red-600 hover:underline" onClick={() => setSites((xs) => xs.filter((_, j) => j !== i))}>
+                  <button type="button" className="text-sm text-danger hover:underline" onClick={() => setSites((xs) => xs.filter((_, j) => j !== i))}>
                     Quitar
                   </button>
                 )}
               </div>
             ))}
             {sites.length < 6 ? (
-              <button type="button" className="text-sm font-medium text-primary hover:underline" onClick={() => setSites((xs) => [...xs, { name: "", url: "", competitor: true }])}>
+              <button type="button" className="text-sm font-medium text-heading underline underline-offset-4" onClick={() => setSites((xs) => [...xs, { name: "", url: "", competitor: true }])}>
                 + Agregar competidor
               </button>
             ) : null}
@@ -149,7 +149,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
                   ))}
                 </select>
                 {tasks.length > 1 ? (
-                  <button type="button" className="text-sm text-red-600 hover:underline" onClick={() => setTasks((xs) => xs.filter((_, j) => j !== i))}>
+                  <button type="button" className="text-sm text-danger hover:underline" onClick={() => setTasks((xs) => xs.filter((_, j) => j !== i))}>
                     Quitar
                   </button>
                 ) : null}
@@ -158,7 +158,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
             {tasks.length < 8 ? (
               <button
                 type="button"
-                className="text-sm font-medium text-primary hover:underline"
+                className="text-sm font-medium text-heading underline underline-offset-4"
                 onClick={() => setTasks((xs) => [...xs, { id: nextTaskId(), name: "", instruction: "", kind: "otra" }])}
               >
                 + Agregar tarea

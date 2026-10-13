@@ -95,7 +95,7 @@ export default async function AuditPage({ params }: PageProps<"/studies/[id]/aud
       <form action={deleteSeoAudit} className="print:hidden">
         <input type="hidden" name="studyId" value={id} />
         <input type="hidden" name="auditId" value={auditId} />
-        <Button type="submit" variant="ghost" className="text-red-600">
+        <Button type="submit" variant="ghost" className="text-danger">
           Eliminar esta auditoría
         </Button>
       </form>
