@@ -64,7 +64,7 @@ export function TaskSuccessChart({ rows, sites }: { rows: Record<string, string 
           <XAxis dataKey="task" tick={AXIS} interval={0} />
           <YAxis domain={[0, 100]} tick={AXIS} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Legend wrapperStyle={{ fontSize: 12 }} formatter={legendText} />
+          <Legend wrapperStyle={{ fontSize: 12 }} formatter={legendText} itemSorter={null} />
           {sites.map((s) => (
             <Bar key={s.name} dataKey={s.name} fill={seriesColor(s.colorIndex)} maxBarSize={28} radius={[4, 4, 0, 0]} isAnimationActive={false} />
           ))}
@@ -85,7 +85,7 @@ export function SensitivityChart({ rows, title }: { rows: { label: string; down:
           <YAxis type="category" dataKey="label" tick={AXIS} width={180} interval={0} />
           <Tooltip contentStyle={tooltipStyle} formatter={(v) => (typeof v === "number" ? v.toFixed(1) : String(v))} />
           <ReferenceLine x={0} stroke="currentColor" />
-          <Legend wrapperStyle={{ fontSize: 12 }} formatter={legendText} />
+          <Legend wrapperStyle={{ fontSize: 12 }} formatter={legendText} itemSorter={null} />
           <Bar dataKey="down" name="Calificación −0.1" fill="var(--chart-2)" isAnimationActive={false} />
           <Bar dataKey="up" name="Calificación +0.1" fill="var(--chart-1)" isAnimationActive={false} />
         </BarChart>

@@ -53,6 +53,11 @@ Cercana, directa, con datos; sin promesas sin cifra. Frase de marca instituciona
 
 ## Fuera de alcance (a propósito)
 
-- **Gráficas del análisis** (`src/components/charts/iat-charts.tsx`): usan la paleta Okabe-Ito, apta para daltonismo. Cambiarla a
-  colores de marca requiere validar contraste y distinción entre series; se decide aparte.
+- **Gráficas del análisis IAT** (`src/components/charts/iat-charts.tsx`): usan la paleta Okabe-Ito, apta para daltonismo. Cambiarla a
+  colores de marca requiere validar contraste y distinción entre series; se decide aparte. Sus leyendas ya van en tinta.
+- **Gráficas de SEO y Visual** usan los tokens `--chart-1` … `--chart-6` de `globals.css` (validados con el método dataviz en claro y
+  oscuro). La posición es fija: el sitio principal siempre es el 1 y el color sigue al sitio en todas las gráficas. En modo profundo
+  el contraste de las series contra el teal queda por debajo de 3:1, por eso llevan valores visibles y tabla de datos.
+- **Etiquetas de estado** (`src/components/ui/status-badge.tsx`): como el `Alert`, texto en tinta sobre tinte del color de estado con
+  un punto; la versión sólida sólo para «Crítico».
 - **Estímulo de error del IAT** (la «X» roja) y el acento personalizado por estudio: son parte del método del estudio, no de la identidad.

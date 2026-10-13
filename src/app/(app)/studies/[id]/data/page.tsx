@@ -8,6 +8,8 @@ import { loadSessionViews } from "@/tools/iat/results/load";
 import { DEVICE_LABEL, STATUS_LABEL, validityText } from "@/tools/iat/results/labels";
 import { filterViews, type ViewFilters } from "@/tools/iat/results/views";
 
+export const metadata = { title: "Datos · NeuroFusion" };
+
 const PAGE_SIZE = 25;
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);

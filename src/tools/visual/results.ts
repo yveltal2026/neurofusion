@@ -60,7 +60,7 @@ export type Rendition = "thumb" | "view";
 export function renditionPath(storagePath: string, kind: Rendition): string {
   const slash = storagePath.lastIndexOf("/");
   const stem = storagePath.slice(slash + 1).replace(/\.[a-z0-9]+$/i, "");
-  return `${storagePath.slice(0, slash)}/${kind}-${stem}.webp`;
+  return slash < 0 ? `${kind}-${stem}.webp` : `${storagePath.slice(0, slash)}/${kind}-${stem}.webp`;
 }
 
 /**

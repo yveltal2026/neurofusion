@@ -168,7 +168,7 @@ export function RatingItemForm({
       ) : (
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <input type="range" min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="flex-1" aria-label={item.label} />
+            <input type="range" min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="h-6 flex-1" aria-label={item.label} />
             <input name="value" type="number" aria-label={`${item.label}: valor numérico`} min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm tabular-nums" />
           </div>
           <p className="text-xs text-muted">Ancla más cercana: {nearest.value} · {nearest.label}</p>
@@ -205,11 +205,11 @@ export function RatingItemForm({
       {suggestion ? (
         <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm print:hidden">
           <p>
-            <strong>Sugerencia de IA:</strong> {suggestion.value} (confianza {CONF[suggestion.confidence]}) — {suggestion.justification}
+            <strong>Sugerencia de IA:</strong> {suggestion.value} (confianza {CONF[suggestion.confidence]}). {suggestion.justification}
           </p>
           <button
             type="button"
-            className="mt-1 text-sm font-medium text-heading underline underline-offset-4"
+            className="mt-1 py-1 text-sm font-medium text-heading underline underline-offset-4"
             onClick={() => {
               setValue(suggestion.value);
               setJustification(suggestion.justification);

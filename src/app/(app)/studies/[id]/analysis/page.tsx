@@ -15,6 +15,8 @@ import { STRENGTH_LABEL } from "@/tools/iat/results/labels";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import { toStatsSessions } from "@/tools/iat/results/views";
 
+export const metadata = { title: "Análisis · NeuroFusion" };
+
 // El análisis con IA puede tardar; las acciones de servidor heredan este límite.
 export const maxDuration = 120;
 

@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import type { StudyRow } from "@/lib/db/types";
 import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
@@ -16,6 +17,13 @@ import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol
 import { SeoOverview } from "@/tools/seo/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
 import { deleteStudy, regenerateLink } from "./actions";
+
+export async function generateMetadata({ params }: PageProps<"/studies/[id]">) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("studies").select("name").eq("id", id).maybeSingle();
+  return { title: data?.name ? `${data.name} · NeuroFusion` : "Estudio · NeuroFusion" };
+}
 
 // La auditoría SEO en vivo y el análisis visual con IA se ejecutan desde esta página.
 export const maxDuration = 120;
