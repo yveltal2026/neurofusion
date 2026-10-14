@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { linkStepSession } from "@/lib/battery-link";
 import { serverEnv } from "@/lib/env";
 import { apiError, availabilityError, loadStudyByToken, noStore, readJson } from "@/lib/participant-api";
 import {
@@ -20,6 +21,8 @@ import { newCounterbalance } from "@/tools/iat/session";
 const bodySchema = z.object({
   participant: z.unknown(),
   consent: z.literal(true),
+  /** Sólo si el IAT corre como paso de una batería. */
+  batterySessionId: z.string().uuid().optional(),
   device: z.object({
     inputMode: z.enum(["keyboard", "touch"]),
     deviceType: z.enum(["desktop", "mobile", "tablet", "unknown"]),
@@ -81,6 +84,11 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   const row = (data as { outcome: string; new_session_id: string | null }[] | null)?.[0];
   switch (row?.outcome) {
     case "ok": {
+      // Dentro de una batería: la base de datos valida el paso y el orden; si no se puede, no deja sesión huérfana.
+      if (body.batterySessionId && row.new_session_id) {
+        const linked = await linkStepSession(admin, row.new_session_id, body.batterySessionId);
+        if (!linked.ok) return apiError(linked.code);
+      }
       const response = NextResponse.json(
         { ok: true, sessionId: row.new_session_id, counterbalance },
         { headers: noStore },
