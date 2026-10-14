@@ -24,6 +24,7 @@ import { ItemField } from "./ItemField";
 
 type Stage =
   | { kind: "welcome" }
+  | { kind: "starting" }
   | { kind: "block"; index: number }
   | { kind: "submitting" }
   | { kind: "thanks" }
@@ -78,16 +79,27 @@ function cleanAnswers(answers: SurveyAnswers): SurveyAnswers {
   );
 }
 
+/**
+ * Modo incrustado (paso de una batería): omite bienvenida, consentimiento y pantalla final. El consentimiento de la
+ * batería cubre el paso; al terminar se llama a `onComplete`.
+ */
+export interface EmbeddedMode {
+  batterySessionId: string;
+  onComplete: () => void;
+}
+
 export function SurveyRunner({
   token,
   config,
   preview,
+  embedded,
 }: {
   token: string;
   config: SurveyConfig;
   preview: boolean;
+  embedded?: EmbeddedMode;
 }) {
-  const [stage, setStage] = useState<Stage>({ kind: "welcome" });
+  const [stage, setStage] = useState<Stage>(embedded ? { kind: "starting" } : { kind: "welcome" });
   const [consent, setConsent] = useState(false);
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -101,8 +113,9 @@ export function SurveyRunner({
   const blocks = config.blocks;
 
   // Pre-chequeo: avisa de inmediato si ya participó o la encuesta cerró.
+  const embeddedActive = Boolean(embedded);
   useEffect(() => {
-    if (preview) return;
+    if (preview || embeddedActive) return;
     let cancelled = false;
     surveyApi.check(token).then((res) => {
       if (!cancelled && !res.ok && BLOCKING.includes(res.code))
@@ -111,7 +124,7 @@ export function SurveyRunner({
     return () => {
       cancelled = true;
     };
-  }, [token, preview]);
+  }, [token, preview, embeddedActive]);
 
   // Al cambiar de bloque, vuelve al inicio de la página.
   useEffect(() => {
@@ -125,7 +138,7 @@ export function SurveyRunner({
     setStarting(true);
     setStartError(null);
     if (!preview) {
-      const res = await withRetry(() => surveyApi.start(token, info), {
+      const res = await withRetry(() => surveyApi.start(token, info, embedded?.batterySessionId), {
         retries: 2,
       });
       if (!res.ok) {
@@ -141,7 +154,7 @@ export function SurveyRunner({
     }
     setStarting(false);
     setStage({ kind: "block", index: 0 });
-  }, [preview, token]);
+  }, [preview, token, embedded?.batterySessionId]);
 
   const submit = useCallback(async () => {
     if (!sessionId) return;
@@ -168,6 +181,26 @@ export function SurveyRunner({
     }
     setStage({ kind: "thanks" });
   }, [sessionId, preview, token, answers, blocks.length]);
+
+  // Incrustado: empieza sola (el consentimiento ya lo dio la batería). La referencia evita doble arranque en modo estricto.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (embeddedActive && !autoStarted.current) {
+      autoStarted.current = true;
+      void start();
+    }
+  }, [embeddedActive, start]);
+
+  // Incrustado: al terminar el paso avisa a la batería (una sola vez).
+  const onCompleteRef = useRef(embedded?.onComplete);
+  onCompleteRef.current = embedded?.onComplete;
+  const notifiedRef = useRef(false);
+  useEffect(() => {
+    if (stage.kind === "thanks" && onCompleteRef.current && !notifiedRef.current) {
+      notifiedRef.current = true;
+      onCompleteRef.current();
+    }
+  }, [stage.kind]);
 
   function next(index: number) {
     const block = blocks[index];
@@ -313,6 +346,22 @@ export function SurveyRunner({
             </p>
           )}
         </div>
+      </Screen>
+    );
+  } else if (stage.kind === "starting") {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status">
+          Preparando…
+        </p>
+      </Screen>
+    );
+  } else if (stage.kind === "thanks" && embedded) {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status" data-testid="embedded-done">
+          Guardando tu avance…
+        </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {

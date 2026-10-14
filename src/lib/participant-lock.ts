@@ -55,3 +55,30 @@ export function clientIp(headers: Pick<Headers, "get">): string | null {
 }
 
 export const DEVICE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+
+// ---------------------------------------------------------------- sesión de batería
+
+/** Cookie (httpOnly) con el id de la sesión de batería: permite reanudar y autoriza a los pasos a enlazarse a ella. */
+export const BATTERY_SESSION_COOKIE = "nf_bsess";
+
+function signRef(ref: string, secret: string): string {
+  return createHmac("sha256", secret).update(`battery-session:${ref}`).digest("base64url").slice(0, 32);
+}
+
+export function signBatterySession(sessionId: string, secret: string): string {
+  return `${sessionId}.${signRef(sessionId, secret)}`;
+}
+
+/** Devuelve el id de la sesión de batería si la cookie es auténtica; null si falta o fue alterada. */
+export function verifyBatterySession(value: string | undefined, secret: string): string | null {
+  if (!value) return null;
+  const dot = value.indexOf(".");
+  if (dot === -1) return null;
+  const id = value.slice(0, dot);
+  const given = value.slice(dot + 1);
+  if (!UUID_RE.test(id)) return null;
+  const a = Buffer.from(given);
+  const b = Buffer.from(signRef(id, secret));
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  return id;
+}

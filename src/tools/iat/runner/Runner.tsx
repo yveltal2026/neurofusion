@@ -48,8 +48,17 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-export function Runner({ token, config, preview }: { token: string; config: IatConfig; preview: boolean }) {
-  const [stage, setStage] = useState<Stage>({ kind: "welcome" });
+/**
+ * Modo incrustado (paso de una batería): omite bienvenida, consentimiento y pantalla final. El consentimiento de la
+ * batería cubre el paso; al terminar se llama a `onComplete`. El resto (formulario, instrucciones, bloques) es idéntico.
+ */
+export interface EmbeddedMode {
+  batterySessionId: string;
+  onComplete: () => void;
+}
+
+export function Runner({ token, config, preview, embedded }: { token: string; config: IatConfig; preview: boolean; embedded?: EmbeddedMode }) {
+  const [stage, setStage] = useState<Stage>(embedded ? { kind: "form" } : { kind: "welcome" });
   const [consent, setConsent] = useState(false);
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -63,9 +72,15 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
   const totalTrials = session ? session.plans.reduce((n, dim) => n + dim.reduce((m, b) => m + b.trials.length, 0), 0) : 0;
   const blockCount = session?.plans[0]?.length ?? 0;
 
+  // Incrustado: no hay pantalla de bienvenida que detecte el dispositivo, así que se detecta al montar.
+  const embeddedActive = Boolean(embedded);
+  useEffect(() => {
+    if (embeddedActive) setDevice(detectDevice());
+  }, [embeddedActive]);
+
   // Pre-chequeo: avisa de inmediato si ya participó o el estudio cerró.
   useEffect(() => {
-    if (preview) return;
+    if (preview || embeddedActive) return;
     let cancelled = false;
     participantApi.check(token).then((res) => {
       if (!cancelled && !res.ok && ["already_participated", "closed", "full", "not_available", "invalid_link"].includes(res.code)) {
@@ -75,7 +90,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     return () => {
       cancelled = true;
     };
-  }, [token, preview]);
+  }, [token, preview, embeddedActive]);
 
   // Bloquea el scroll mientras se responde el test.
   const running = stage.kind === "block";
@@ -113,7 +128,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
       let id = "preview";
       let counterbalance = newCounterbalance(nDims, cryptoRng());
       if (!preview) {
-        const res = await withRetry(() => participantApi.start(token, participant, device), { retries: 2 });
+        const res = await withRetry(() => participantApi.start(token, participant, device, embedded?.batterySessionId), { retries: 2 });
         if (!res.ok) {
           setStarting(false);
           if (["already_participated", "closed", "full", "not_available", "invalid_link"].includes(res.code)) {
@@ -132,7 +147,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
       setStarting(false);
       setStage(device.inputMode === "touch" ? { kind: "device-notice" } : { kind: "intro" });
     },
-    [device, nDims, preview, token, config],
+    [device, nDims, preview, token, config, embedded?.batterySessionId],
   );
 
   const finishDimension = useCallback(
@@ -182,6 +197,17 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     config.theme.mode === "custom" && config.theme.accent
       ? ({ "--primary": config.theme.accent, "--primary-foreground": readableOn(config.theme.accent) } as CSSProperties)
       : ({ "--primary": "var(--heading)", "--primary-foreground": "var(--background)" } as CSSProperties);
+
+  // Incrustado: al terminar el paso avisa a la batería (una sola vez).
+  const onCompleteRef = useRef(embedded?.onComplete);
+  onCompleteRef.current = embedded?.onComplete;
+  const notifiedRef = useRef(false);
+  useEffect(() => {
+    if (stage.kind === "thanks" && onCompleteRef.current && !notifiedRef.current) {
+      notifiedRef.current = true;
+      onCompleteRef.current();
+    }
+  }, [stage.kind]);
 
   let body: ReactNode = null;
 
@@ -326,6 +352,14 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
             </p>
           )}
         </div>
+      </Screen>
+    );
+  } else if (stage.kind === "thanks" && embedded) {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status" data-testid="embedded-done">
+          Guardando tu avance…
+        </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {
