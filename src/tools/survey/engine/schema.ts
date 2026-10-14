@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GG_NO, GG_YES, MAX_GG_PRICES, MIN_GG_PRICES, PRICE_METHODS, VW_QUESTIONS } from "./price";
 import {
   INSTRUMENT_IDS,
   getInstrument,
@@ -107,7 +108,37 @@ export const blockSchema = z.discriminatedUnion("kind", [
     subject: text(80).optional(),
     required: z.boolean(),
   }),
+  z
+    .object({
+      kind: z.literal("price"),
+      /** Prefijo de los ítems (`${id}_1`, …). */
+      id: idSchema,
+      method: z.enum(PRICE_METHODS),
+      /** Frase nominal completa que sustituye a «{subject}» (p. ej. «esta suscripción»). */
+      subject: text(80).optional(),
+      /** Moneda que se muestra junto al precio (p. ej. «MXN»). */
+      currency: text(8).optional(),
+      /** Precios a probar (sólo Gabor-Granger). */
+      prices: z.array(z.number().positive("El precio debe ser mayor a 0").max(1e9)).max(MAX_GG_PRICES).optional(),
+      required: z.boolean(),
+    })
+    .superRefine((b, ctx) => {
+      if (b.method !== "gabor_granger") return;
+      const prices = b.prices ?? [];
+      if (prices.length < MIN_GG_PRICES)
+        ctx.addIssue({ code: "custom", path: ["prices"], message: `Agrega al menos ${MIN_GG_PRICES} precios para probar` });
+      if (new Set(prices).size !== prices.length)
+        ctx.addIssue({ code: "custom", path: ["prices"], message: "Hay precios repetidos" });
+    }),
 ]);
+
+/** Identificador del ítem n (1..) de un bloque de precio. */
+export const priceItemId = (blockId: string, n: number) => `${blockId}_${n}`;
+
+/** Cantidad de ítems de un bloque de precio. */
+export function priceItemCount(b: Extract<z.infer<typeof blockSchema>, { kind: "price" }>): number {
+  return b.method === "van_westendorp" ? VW_QUESTIONS.length : (b.prices?.length ?? 0);
+}
 
 /** Texto de consentimiento por defecto; el investigador puede editarlo antes de publicar. */
 export function defaultConsentText(title: string): string {
@@ -157,6 +188,8 @@ export const surveyConfigSchema = z
         b.questions.forEach((q, qi) =>
           claim(q.id, ["blocks", bi, "questions", qi, "id"]),
         );
+      } else if (b.kind === "price") {
+        for (let n = 1; n <= priceItemCount(b); n++) claim(priceItemId(b.id, n), ["blocks", bi, "id"]);
       } else {
         getInstrument(b.instrumentId).items.forEach((item) =>
           claim(instrumentItemId(b.id, item.n), ["blocks", bi, "id"]),
@@ -227,6 +260,34 @@ function scaleLabelsOf(
 export function listItems(config: SurveyConfig): SurveyItem[] {
   const out: SurveyItem[] = [];
   for (const b of config.blocks) {
+    if (b.kind === "price") {
+      const subject = b.subject ?? "este producto";
+      const currency = b.currency ?? "MXN";
+      if (b.method === "van_westendorp") {
+        VW_QUESTIONS.forEach((q, i) =>
+          out.push({
+            id: priceItemId(b.id, i + 1),
+            blockId: b.id,
+            label: `${q.text.replaceAll("{subject}", subject)} (precio en ${currency})`,
+            required: b.required,
+            type: "number",
+            min: 0,
+          }),
+        );
+      } else {
+        (b.prices ?? []).forEach((price, i) =>
+          out.push({
+            id: priceItemId(b.id, i + 1),
+            blockId: b.id,
+            label: `Si ${subject} costara ${price} ${currency}, ¿lo comprarías?`,
+            required: b.required,
+            type: "select",
+            options: [GG_YES, GG_NO],
+          }),
+        );
+      }
+      continue;
+    }
     if (b.kind === "instrument") {
       const inst = getInstrument(b.instrumentId);
       const subject = b.subject ?? inst.defaultSubject;

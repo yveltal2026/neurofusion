@@ -74,3 +74,15 @@ Se admite teclado (E/I) y botones táctiles. El RT táctil se toma en `pointerdo
 | Priming afectivo | media incongruente − media congruente (ms), sólo aciertos | Fazio et al. (1986) | rango válido 200–2000 ms; mínimo 4 ensayos por condición |
 
 Las tres conservan las advertencias de validez del IAT (tasa de error > 30 % y > 10 % de respuestas rápidas).
+
+## Precio en encuestas (Van Westendorp y Gabor-Granger)
+
+Disponibles como bloques de la encuesta («Precio: Van Westendorp» y «Precio: Gabor-Granger» en el constructor). Motor en `src/tools/survey/engine/price.ts`, con pruebas calculadas a mano.
+
+- **Van Westendorp.** Cuatro preguntas (muy barato, ganga, caro, demasiado caro). Se excluyen las respuestas incoherentes (muy barato ≤ ganga ≤ caro ≤ demasiado caro). Puntos de corte: **PMC** = «muy barato» × «no es barato»; **OPP** = «muy barato» × «demasiado caro»; **IPP** = «no es barato» × «no es caro»; **PME** = «demasiado caro» × «no es caro». Los cruces se interpolan linealmente sobre la rejilla de precios reportados. Se advierte con menos de 30 respuestas válidas (se recomiendan 100 o más) y si el rango sale invertido (PMC > PME).
+- **Gabor-Granger.** Sí o no a cada precio, mostrados de menor a mayor. Se excluyen las respuestas no monótonas (sí a un precio mayor y no a uno menor). Reporta demanda con intervalo de Wilson al 95 %, ingreso esperado por persona (precio × proporción) y el precio que lo maximiza entre los probados. Mostrar siempre en orden ascendente puede sesgar la curva (efecto de anclaje); aleatorizar el orden queda pendiente.
+- **Honestidad.** Ambos miden intención declarada, que sobreestima la compra real. El informe lo dice y no lo presenta como pronóstico de ventas. Los resultados de precio todavía no se entregan a la IA que redacta conclusiones.
+
+## Pruebas de estímulos (motor, sin runner todavía)
+
+`src/tools/stimuli/engine.ts`: asignación reproducible por bloques permutados desde una semilla (balanceada y sin estado), comparación de dos proporciones (IC de Newcombe, z agrupada, h de Cohen), t de Welch (IC, d de Cohen y g de Hedges) y agregación de clics por rejilla o área de interés con intervalo de Wilson. **Faltan** el runner (5 segundos, primer clic, preferencia, A/B), su API y las pantallas del investigador; ver `docs/ROADMAP_MODULOS.md`, módulo 4.

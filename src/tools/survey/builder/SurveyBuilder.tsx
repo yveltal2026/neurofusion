@@ -14,6 +14,8 @@ import {
 import { createSurveyStudy } from "./actions";
 import {
   addInstrumentBlock,
+  addPriceBlock,
+  parsePrices,
   addQuestion,
   addQuestionsBlock,
   buildConfig,
@@ -39,6 +41,7 @@ const SELECT_CLASS =
 
 type QuestionsBlock = Extract<DraftBlock, { kind: "questions" }>;
 type InstrumentBlock = Extract<DraftBlock, { kind: "instrument" }>;
+type PriceBlock = Extract<DraftBlock, { kind: "price" }>;
 
 function IconButton({
   label,
@@ -219,6 +222,38 @@ function BlockShell({
   );
 }
 
+function PriceEditor({ block, onChange }: { block: PriceBlock; onChange: (patch: Partial<PriceBlock>) => void }) {
+  const gg = block.method === "gabor_granger";
+  const prices = parsePrices(block.pricesText);
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Sobre qué se pregunta" hint="Frase completa. Ejemplo: «esta suscripción mensual». Por defecto: «este producto».">
+          <Input value={block.subject} onChange={(e) => onChange({ subject: e.target.value })} placeholder="este producto" maxLength={80} />
+        </Field>
+        <Field label="Moneda" hint="Se muestra junto a los precios.">
+          <Input value={block.currency} onChange={(e) => onChange({ currency: e.target.value })} placeholder="MXN" maxLength={8} />
+        </Field>
+      </div>
+      {gg ? (
+        <Field label="Precios a probar" hint="Entre 3 y 10, separados por comas (decimales con punto). Se muestran de menor a mayor.">
+          <Input value={block.pricesText} onChange={(e) => onChange({ pricesText: e.target.value })} placeholder="100, 150, 200, 250, 300" />
+        </Field>
+      ) : null}
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input type="checkbox" checked={block.required} onChange={(e) => onChange({ required: e.target.checked })} />
+        Obligatorio
+      </label>
+      <p className="text-xs text-muted">
+        {gg
+          ? `El participante responde sí o no a cada uno de los ${prices.filter((p) => Number.isFinite(p)).length} precios. `
+          : "El participante escribe cuatro precios: muy barato, ganga, caro y demasiado caro. "}
+        Es intención declarada: sobreestima la compra real y no es un pronóstico de ventas. Se recomiendan 100 respuestas o más.
+      </p>
+    </div>
+  );
+}
+
 function InstrumentEditor({
   block,
   onChange,
@@ -376,7 +411,18 @@ export function SurveyBuilder({
         </p>
 
         {draft.blocks.map((block, index) =>
-          block.kind === "instrument" ? (
+          block.kind === "price" ? (
+            <BlockShell
+              key={block.id}
+              title={block.method === "van_westendorp" ? "Precio · Van Westendorp" : "Precio · Gabor-Granger"}
+              index={index}
+              count={draft.blocks.length}
+              onMove={(delta) => patch((d) => moveBlock(d, block.id, delta))}
+              onRemove={() => patch((d) => removeBlock(d, block.id))}
+            >
+              <PriceEditor block={block} onChange={(p) => patch((d) => updateBlock(d, block.id, p))} />
+            </BlockShell>
+          ) : block.kind === "instrument" ? (
             <BlockShell
               key={block.id}
               title={getInstrument(block.instrumentId).name}
@@ -438,6 +484,12 @@ export function SurveyBuilder({
                 {getInstrument(id).name}
               </Button>
             ))}
+            <Button type="button" variant="secondary" onClick={() => patch((d) => addPriceBlock(d, "van_westendorp"))}>
+              Precio: Van Westendorp
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => patch((d) => addPriceBlock(d, "gabor_granger"))}>
+              Precio: Gabor-Granger
+            </Button>
           </div>
         </Card>
       </section>

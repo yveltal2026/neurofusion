@@ -1,7 +1,17 @@
 import { mean, sampleSd, tQuantile } from "@/tools/iat/engine/math";
 import { getInstrument, type InstrumentId } from "./instruments";
 import {
+  analyzeGaborGranger,
+  analyzeVanWestendorp,
+  GG_YES,
+  VW_QUESTIONS,
+  type GgResult,
+  type PriceMethod,
+  type VwResult,
+} from "./price";
+import {
   listItems,
+  priceItemId,
   SURVEY_ENGINE_VERSION,
   type SurveyAnswers,
   type SurveyConfig,
@@ -189,6 +199,11 @@ export type InstrumentAggregate =
       alpha: number | null;
     };
 
+/** Resultado de un bloque de precio. Intención declarada: no es un pronóstico de ventas. */
+export type PriceAggregate =
+  | { blockId: string; method: Extract<PriceMethod, "van_westendorp">; currency: string; result: VwResult }
+  | { blockId: string; method: Extract<PriceMethod, "gabor_granger">; currency: string; result: GgResult };
+
 export interface SurveyAggregates {
   engineVersion: string;
   /** Respuestas recibidas (incluye las excluidas). */
@@ -197,6 +212,7 @@ export interface SurveyAggregates {
   nIncluded: number;
   items: ItemAggregate[];
   instruments: InstrumentAggregate[];
+  prices: PriceAggregate[];
 }
 
 function numbersOf(responses: readonly SurveyResponse[], id: string): number[] {
@@ -214,9 +230,11 @@ export function computeSurveyAggregates(
 ): SurveyAggregates {
   const included = responses.filter((r) => !r.excluded);
 
+  const priceBlockIds = new Set(config.blocks.filter((b) => b.kind === "price").map((b) => b.id));
+
   const items: ItemAggregate[] = listItems(config)
-    // Los ítems de instrumentos se reportan por instrumento, no uno a uno.
-    .filter((it) => !(it.type === "scale" && it.instrument))
+    // Los ítems de instrumentos y de precio se reportan por bloque, no uno a uno.
+    .filter((it) => !(it.type === "scale" && it.instrument) && !priceBlockIds.has(it.blockId))
     .map((it): ItemAggregate => {
       const common = { id: it.id, label: it.label };
       switch (it.type) {
@@ -273,12 +291,33 @@ export function computeSurveyAggregates(
     instruments.push(aggregateInstrument(b.instrumentId, b.id, included));
   }
 
+  const prices: PriceAggregate[] = [];
+  for (const b of config.blocks) {
+    if (b.kind !== "price") continue;
+    const currency = b.currency ?? "MXN";
+    if (b.method === "van_westendorp") {
+      const rows = included
+        .map((r) => VW_QUESTIONS.map((_, i) => r.answers[priceItemId(b.id, i + 1)]))
+        .filter((v): v is number[] => v.every((x) => typeof x === "number" && Number.isFinite(x)))
+        .map(([tooCheap, cheap, expensive, tooExpensive]) => ({ tooCheap: tooCheap!, cheap: cheap!, expensive: expensive!, tooExpensive: tooExpensive! }));
+      prices.push({ blockId: b.id, method: "van_westendorp", currency, result: analyzeVanWestendorp(rows) });
+    } else {
+      const list = b.prices ?? [];
+      const rows = included
+        .map((r) => list.map((_, i) => r.answers[priceItemId(b.id, i + 1)]))
+        .filter((v) => v.every((x) => typeof x === "string"))
+        .map((v) => ({ buys: v.map((x) => x === GG_YES) }));
+      prices.push({ blockId: b.id, method: "gabor_granger", currency, result: analyzeGaborGranger(list, rows) });
+    }
+  }
+
   return {
     engineVersion: SURVEY_ENGINE_VERSION,
     nTotal: responses.length,
     nIncluded: included.length,
     items,
     instruments,
+    prices,
   };
 }
 

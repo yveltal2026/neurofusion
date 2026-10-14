@@ -4,6 +4,7 @@ import {
   getInstrument,
   surveyConfigSchema,
   type InstrumentId,
+  type PriceMethod,
   type SurveyConfig,
   type SurveyQuestion,
 } from "../engine";
@@ -46,6 +47,16 @@ export type DraftBlock =
       id: string;
       instrumentId: InstrumentId;
       subject: string;
+      required: boolean;
+    }
+  | {
+      kind: "price";
+      id: string;
+      method: PriceMethod;
+      subject: string;
+      currency: string;
+      /** Precios a probar, separados por comas o saltos de línea (sólo Gabor-Granger). */
+      pricesText: string;
       required: boolean;
     };
 
@@ -127,6 +138,36 @@ export function addInstrumentBlock(
   };
 }
 
+export function addPriceBlock(d: SurveyDraft, method: PriceMethod): SurveyDraft {
+  const [next, n] = nextCounter(d);
+  const base = method === "van_westendorp" ? "vw" : "gg";
+  const taken = new Set(next.blocks.map((b) => b.id));
+  const id = taken.has(base) ? `${base}${n}` : base;
+  return {
+    ...next,
+    blocks: [
+      ...next.blocks,
+      {
+        kind: "price",
+        id,
+        method,
+        subject: "",
+        currency: "MXN",
+        pricesText: method === "gabor_granger" ? "100, 150, 200, 250, 300" : "",
+        required: true,
+      },
+    ],
+  };
+}
+
+/** Lista de precios escrita como texto: números separados por comas, punto y coma, espacios o saltos de línea (decimales con punto). */
+export function parsePrices(text: string): number[] {
+  return text
+    .split(/[\s,;]+/)
+    .filter(Boolean)
+    .map((t) => Number(t));
+}
+
 export function addQuestion(
   d: SurveyDraft,
   blockId: string,
@@ -148,12 +189,16 @@ export function addQuestion(
 export function updateBlock(
   d: SurveyDraft,
   blockId: string,
-  patch: Partial<Extract<DraftBlock, { kind: "instrument" }>>,
+  patch:
+    | Partial<Extract<DraftBlock, { kind: "instrument" }>>
+    | Partial<Extract<DraftBlock, { kind: "price" }>>,
 ): SurveyDraft {
   return {
     ...d,
     blocks: d.blocks.map((b) =>
-      b.id === blockId && b.kind === "instrument" ? { ...b, ...patch } : b,
+      b.id === blockId && b.kind !== "questions"
+        ? ({ ...b, ...patch } as DraftBlock)
+        : b,
     ),
   };
 }
@@ -383,6 +428,17 @@ function toQuestion(q: DraftQuestion): unknown {
 }
 
 function toBlock(b: DraftBlock): unknown {
+  if (b.kind === "price") {
+    return {
+      kind: "price",
+      id: b.id,
+      method: b.method,
+      subject: b.subject.trim() || undefined,
+      currency: b.currency.trim() || undefined,
+      prices: b.method === "gabor_granger" ? parsePrices(b.pricesText).sort((a, c) => a - c) : undefined,
+      required: b.required,
+    };
+  }
   if (b.kind === "instrument") {
     return {
       kind: "instrument",
@@ -425,6 +481,8 @@ function describeIssue(
   const where = [`Bloque ${path[1] + 1}`];
   if (block?.kind === "instrument")
     where.push(getInstrument(block.instrumentId).name);
+  if (block?.kind === "price")
+    where.push(block.method === "van_westendorp" ? "Van Westendorp" : "Gabor-Granger");
   if (path[2] === "questions" && typeof path[3] === "number")
     where.push(`pregunta ${path[3] + 1}`);
   return `${where.join(" · ")}: ${message}`;

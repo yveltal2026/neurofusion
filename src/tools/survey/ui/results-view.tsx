@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
+import { GgChart, VwChart } from "@/components/charts/price-charts";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import {
   getInstrument,
   type InstrumentAggregate,
   type ItemAggregate,
   type NumericSummary,
+  type PriceAggregate,
   type SurveyAggregates,
   type SurveyConfig,
 } from "../engine";
@@ -339,6 +342,82 @@ function ItemCard({ item }: { item: ItemAggregate }) {
   );
 }
 
+function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) {
+  const { result } = agg;
+  const money = (v: number | null) => (v === null ? "—" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
+  return (
+    <Card className="space-y-4">
+      <div>
+        <h3 className="font-medium">
+          {agg.method === "van_westendorp" ? "Sensibilidad al precio (Van Westendorp)" : "Curva de demanda (Gabor-Granger)"}
+        </h3>
+        <p className="text-xs text-muted">
+          {result.n} {result.n === 1 ? "respuesta válida" : "respuestas válidas"}
+          {subject ? ` · ${subject}` : ""}
+        </p>
+      </div>
+      {agg.method === "van_westendorp" ? (
+        <>
+          {agg.result.curves.length ? <VwChart curves={agg.result.curves} optimal={agg.result.opp} currency={agg.currency} /> : null}
+          <dl className="grid gap-4 sm:grid-cols-4">
+            <Stat label="Muy barato × no es barato (PMC)" value={money(agg.result.pmc)} />
+            <Stat label="Precio óptimo (OPP)" value={money(agg.result.opp)} />
+            <Stat label="Indiferencia (IPP)" value={money(agg.result.ipp)} />
+            <Stat label="Demasiado caro × no es caro (PME)" value={money(agg.result.pme)} />
+          </dl>
+          {agg.result.pmc !== null && agg.result.pme !== null ? (
+            <p className="text-sm">
+              Rango aceptable: <strong>{money(agg.result.pmc)}</strong> a <strong>{money(agg.result.pme)}</strong>.
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <>
+          {agg.result.points.length ? <GgChart points={agg.result.points} currency={agg.currency} /> : null}
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase text-muted">
+                <tr>
+                  <th className="px-3 py-2">Precio</th>
+                  <th className="px-3 py-2">Compraría</th>
+                  <th className="px-3 py-2">IC95 %</th>
+                  <th className="px-3 py-2">Ingreso por persona</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {agg.result.points.map((p) => (
+                  <tr key={p.price} className={p.price === agg.result.optimalPrice ? "bg-primary/10 font-medium" : undefined}>
+                    <td className="px-3 py-2 tabular-nums">{money(p.price)}</td>
+                    <td className="px-3 py-2 tabular-nums">{pct(p.share)}</td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {pct(p.ci95[0])} a {pct(p.ci95[1])}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{num(p.revenue, 2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {agg.result.optimalPrice !== null ? (
+            <p className="text-sm">
+              Precio que maximiza el ingreso entre los probados: <strong>{money(agg.result.optimalPrice)}</strong>.
+            </p>
+          ) : null}
+        </>
+      )}
+      {agg.result.warnings.length ? (
+        <ul className="space-y-2">
+          {agg.result.warnings.map((w) => (
+            <li key={w}>
+              <Alert tone="warning">{w}</Alert>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
+
 export function SurveyResultsView({
   config,
   aggregates,
@@ -349,7 +428,7 @@ export function SurveyResultsView({
   const subjects = new Map(
     config.blocks.map((b) => [
       b.id,
-      b.kind === "instrument" ? b.subject : undefined,
+      b.kind === "instrument" || b.kind === "price" ? b.subject : undefined,
     ]),
   );
   const excluded = aggregates.nTotal - aggregates.nIncluded;
@@ -395,6 +474,17 @@ export function SurveyResultsView({
               agg={agg}
               subject={subjects.get(agg.blockId)}
             />
+          ))}
+        </section>
+      ) : null}
+
+      {aggregates.prices.length ? (
+        <section className="space-y-4" aria-label="Precio">
+          <SectionTitle icon="target" className="text-lg font-semibold">
+            Precio
+          </SectionTitle>
+          {aggregates.prices.map((agg) => (
+            <PriceCard key={agg.blockId} agg={agg} subject={subjects.get(agg.blockId)} />
           ))}
         </section>
       ) : null}

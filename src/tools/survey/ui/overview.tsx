@@ -94,6 +94,11 @@ export function SurveyOverview({
                           <span className="text-muted"> · {b.subject}</span>
                         ) : null}
                       </>
+                    ) : b.kind === "price" ? (
+                      <>
+                        {b.method === "van_westendorp" ? "Van Westendorp (sensibilidad al precio)" : "Gabor-Granger (curva de demanda)"}
+                        {b.subject ? <span className="text-muted"> · {b.subject}</span> : null}
+                      </>
                     ) : (
                       <>
                         {b.questions.length}{" "}
