@@ -9,6 +9,7 @@ import {
   buildBatteryReport,
   EXPLORATORY_BELOW_N,
   holmAdjust,
+  readD,
   MIN_CORRELATION_N,
   ranks,
   spearman,
@@ -46,7 +47,11 @@ const steps: ReportStep[] = [
     kind: "iat",
     studyId: "iat1",
     name: "IAT café",
-    dimensions: [{ id: "calidad", name: "Calidad" }],
+    conceptA: "Marca A",
+    conceptB: "Marca B",
+    dimensions: [
+      { id: "calidad", name: "Calidad", positiveLabel: "Confiable" },
+    ],
   },
   {
     kind: "survey",
@@ -81,6 +86,28 @@ const ds = NPS.map((_, i) => -0.6 + i * 0.1);
 const sample = () =>
   ds.map((d, i) => person(i, d, NPS[i]!, { confianza: 1 + (i % 5) }));
 const npsMetric = "sv1:nps";
+
+describe("lectura del D-score", () => {
+  it("D > 0 favorece al concepto A, D < 0 al B, y cerca de 0 no hay preferencia", () => {
+    expect(readD(0.5, "Marca A", "Marca B", "Confiable")).toBe(
+      "Moderada · Marca A más asociada a «Confiable»",
+    );
+    expect(readD(-0.8, "Marca A", "Marca B", "Confiable")).toBe(
+      "Fuerte · Marca B más asociada a «Confiable»",
+    );
+    expect(readD(0.1, "Marca A", "Marca B", "Confiable")).toBe(
+      "Sin preferencia clara",
+    );
+  });
+
+  it("el informe la incluye en cada dimensión (null sin datos)", () => {
+    const r = buildBatteryReport(steps, sample());
+    expect(r.iat[0]!.reading).toBe(
+      readD(r.iat[0]!.mean!, "Marca A", "Marca B", "Confiable"),
+    );
+    expect(buildBatteryReport(steps, []).iat[0]!.reading).toBeNull();
+  });
+});
 
 describe("estadística de apoyo", () => {
   it("rangos medios para empates", () => {

@@ -37,7 +37,10 @@ export type ReportStep =
       kind: "iat";
       studyId: string;
       name: string;
-      dimensions: { id: string; name: string }[];
+      /** Nombres de los conceptos comparados (A es el de D > 0 con el polo positivo). */
+      conceptA: string;
+      conceptB: string;
+      dimensions: { id: string; name: string; positiveLabel: string }[];
     }
   | { kind: "survey"; studyId: string; name: string; config: SurveyConfig };
 
@@ -71,6 +74,8 @@ export interface DimensionReport {
   p: number | null;
   cohenD: number | null;
   interpretation: DInterpretation | null;
+  /** Lectura en palabras: «Leve · Marca A más asociada a «Confiable»». */
+  reading: string | null;
 }
 
 export interface SurveyStepReport {
@@ -124,6 +129,25 @@ export interface BatteryReport {
   }[];
   rows: ParticipantRow[];
   notes: string[];
+}
+
+const STRENGTH_TEXT = {
+  none: "Sin preferencia clara",
+  slight: "Leve",
+  moderate: "Moderada",
+  strong: "Fuerte",
+} as const;
+
+/** D > 0 ⇒ el concepto A se asocia más al polo positivo; D < 0 ⇒ lo hace el B. */
+export function readD(
+  d: number,
+  conceptA: string,
+  conceptB: string,
+  positiveLabel: string,
+): string {
+  const { strength, direction } = interpretD(d);
+  if (strength === "none") return STRENGTH_TEXT.none;
+  return `${STRENGTH_TEXT[strength]} · ${direction === "A" ? conceptA : conceptB} más asociada a «${positiveLabel}»`;
 }
 
 // ------------------------------------------------------------------ estadística
@@ -242,6 +266,10 @@ export function buildBatteryReport(
         p: test?.p ?? null,
         cohenD: test?.cohenD ?? null,
         interpretation: m === null ? null : interpretD(m),
+        reading:
+          m === null
+            ? null
+            : readD(m, step.conceptA, step.conceptB, dim.positiveLabel),
       });
     });
   }

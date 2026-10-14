@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CopyLink } from "@/components/copy-link";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   deleteBattery,
@@ -66,20 +66,28 @@ export function BatteryOverview({
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Link
+            href={`/projects/${battery.project_id}`}
+            className="inline-block py-1 text-sm text-muted hover:underline"
+          >
+            ← {projectName ?? "Proyecto"}
+          </Link>
+          <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
+            {battery.name}
+          </h1>
+          <p className="mt-1 text-xs text-muted">
+            <span className="uppercase tracking-wide">Batería</span> ·{" "}
+            {STATUS_LABEL[battery.status]}
+          </p>
+        </div>
         <Link
-          href={`/projects/${battery.project_id}`}
-          className="inline-block py-1 text-sm text-muted hover:underline"
+          href={`/batteries/${battery.id}/report`}
+          className={buttonClass("secondary")}
         >
-          ← {projectName ?? "Proyecto"}
+          Informe integrado
         </Link>
-        <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
-          {battery.name}
-        </h1>
-        <p className="mt-1 text-xs text-muted">
-          <span className="uppercase tracking-wide">Batería</span> ·{" "}
-          {STATUS_LABEL[battery.status]}
-        </p>
       </div>
 
       {created ? (
