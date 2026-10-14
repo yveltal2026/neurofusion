@@ -81,3 +81,50 @@ export async function renameStudy(_prev: SettingsState, formData: FormData): Pro
   revalidatePath(`/studies/${parsed.data.id}`, "layout");
   return { saved: true };
 }
+
+const duplicateSchema = z.object({
+  id: idSchema,
+  projectId: idSchema,
+  name: z.string().trim().max(160).optional(),
+});
+
+/**
+ * Copia un estudio con participantes (IAT o encuesta) en el mismo proyecto o en otro de la organización:
+ * misma configuración, liga nueva y estado «borrador», sin respuestas. Sirve de plantilla (el docente prepara
+ * un estudio base y cada equipo lo copia). El copiado es de configuración, no de datos.
+ */
+export async function duplicateStudy(formData: FormData) {
+  const parsed = duplicateSchema.safeParse({
+    id: formData.get("id"),
+    projectId: formData.get("projectId"),
+    name: formData.get("name") || undefined,
+  });
+  if (!parsed.success) return;
+  const { id, projectId, name } = parsed.data;
+
+  const { supabase } = await requireUser();
+  const { data: source } = await supabase
+    .from("studies")
+    .select("name, tool_type, config, duplicate_policy")
+    .eq("id", id)
+    .in("tool_type", ["iat", "survey"])
+    .maybeSingle();
+  if (!source) return;
+
+  const { data: copy, error } = await supabase
+    .from("studies")
+    .insert({
+      project_id: projectId,
+      tool_type: source.tool_type,
+      name: (name || `${source.name} (copia)`).slice(0, 160),
+      status: "draft",
+      config: source.config,
+      duplicate_policy: source.duplicate_policy,
+      access_token: generateMagicToken(),
+    })
+    .select("id")
+    .single();
+  // RLS rechaza el insert si el proyecto destino no es de la organización del usuario.
+  if (error || !copy) return;
+  redirect(`/studies/${copy.id}?copied=1`);
+}

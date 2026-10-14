@@ -1,5 +1,6 @@
 import { deleteStudy, regenerateLink } from "@/app/(app)/studies/[id]/actions";
 import { CopyLink } from "@/components/copy-link";
+import { DuplicateStudyForm } from "@/components/duplicate-study-form";
 import { StudyHeader } from "@/components/study-header";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
@@ -21,11 +22,13 @@ export function SurveyOverview({
   projectName,
   link,
   created,
+  copied = false,
 }: {
   study: StudyRow;
   projectName: string | null;
   link: string;
   created: boolean;
+  copied?: boolean;
 }) {
   const config = surveyConfigSchema.safeParse(study.config);
   const items = config.success ? listItems(config.data) : [];
@@ -39,6 +42,8 @@ export function SurveyOverview({
         variant="survey"
         subtitle={STATUS_LABEL[study.status]}
       />
+
+      {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
 
       {created ? (
         <Alert>
@@ -119,6 +124,8 @@ export function SurveyOverview({
           duplicatePolicy={study.duplicate_policy}
         />
       </Card>
+
+      <DuplicateStudyForm studyId={study.id} projectId={study.project_id} />
 
       <Card className="space-y-4 border-danger/30">
         <SectionTitle icon="alert" className="text-danger">Zona de riesgo</SectionTitle>

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
+import { DuplicateStudyForm } from "@/components/duplicate-study-form";
 import { StudyTabs } from "@/components/study-tabs";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
@@ -56,12 +57,12 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
     return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "survey") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
-    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} />;
+    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} copied={sp.copied === "1"} />;
   }
-  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} copied={sp.copied === "1"} />;
 }
 
-async function IatOverview({ study, projectName, created }: { study: StudyRow; projectName: string | null; created: boolean }) {
+async function IatOverview({ study, projectName, created, copied }: { study: StudyRow; projectName: string | null; created: boolean; copied: boolean }) {
   const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
   const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
@@ -89,6 +90,7 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
       <StudyTabs id={id} active="overview" />
 
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
+      {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
 
       <Card className="space-y-3">
         <div>
@@ -150,6 +152,8 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
           duplicatePolicy={study.duplicate_policy}
         />
       </Card>
+
+      <DuplicateStudyForm studyId={study.id} projectId={study.project_id} />
 
       <Card className="space-y-4 border-danger/30">
         <SectionTitle icon="alert" className="text-danger">
