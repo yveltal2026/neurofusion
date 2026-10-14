@@ -117,7 +117,7 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 - **Plantillas de estudio** y duplicado entre proyectos, para que un docente prepare un estudio base y cada equipo lo copie.
 - **Calculadora de tamaño de muestra** por herramienta, con una guía honesta de qué se puede concluir con grupos chicos (incluida la estabilidad de mapas de calor por mitades de muestra).
 - **Aula**: ya existe el aviso de duplicados por IP+navegador que no bloquea (muchos comparten IP en un salón); hay que probar ligas con 20–40 dispositivos simultáneos y el límite de peticiones en memoria.
-- **Menores de edad.** Si participan estudiantes de menos de 18 años, el consentimiento y el aviso de privacidad cambian (ver §6, punto 4). Es un requisito previo a abrir ligas en escuelas, no un detalle posterior.
+- **Requisitos legales previos a abrir ligas en escuelas** (ver [`ANALISIS_LEGAL_EYETRACKING.md`](ANALISIS_LEGAL_EYETRACKING.md)): aviso de privacidad, definición de roles y convenio con la escuela, corrección del texto «anónima», voluntariedad real frente al docente. No hay menores de edad en el alcance.
 
 ### 9b. Operación para clientes finales (cuando lleguen)
 
@@ -147,12 +147,13 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 1. **El compositor convive con el estudio de una sola herramienta.** El usuario elige entre ambos al crear el estudio. Implicación de diseño: el estudio de una herramienta no se convierte en una «batería de un paso» por debajo si eso arriesga cambiar su comportamiento; si se unifica el modelo de datos, debe ser invisible para el usuario y cubierto por las pruebas actuales.
 2. **Se probará ahora con escuelas y, quizá, con clientes finales.** El uso académico (9a) sube a la Ola 2 y la operación para clientes finales (9b) queda en la Ola 3, a activarse si el interés de clientes se confirma. El portal de sólo lectura no es bloqueante para las escuelas.
 3. **No hay presupuesto para validar el eye tracking contra un rastreador de laboratorio.** El módulo sale etiquetado como indicativo y no validado (ver ficha 3); no se hacen afirmaciones de precisión a clientes. Se revisa si aparece una alianza académica o presupuesto.
-4. **Revisión legal en dos pasos:** primero un análisis de cumplimiento con las herramientas legales de Claude (skill `legal:compliance-check` y, para clasificar riesgos, `legal:legal-risk-assessment`), y después validación por el equipo legal de FRSKO. **Ninguna liga con cámara/mirada se abre a participantes reales sin esa validación.** El análisis de Claude es un insumo para el equipo legal, no asesoría legal.
+4. **Revisión legal en dos pasos:** primero un análisis de cumplimiento con las herramientas legales de Claude (skill `legal:compliance-check` y, para clasificar riesgos, `legal:legal-risk-assessment`), y después validación por el equipo legal de FRSKO. **Ninguna liga con cámara/mirada se abre a participantes reales sin esa validación.** El análisis de Claude es un insumo para el equipo legal, no asesoría legal. **Primer paso hecho:** [`ANALISIS_LEGAL_EYETRACKING.md`](ANALISIS_LEGAL_EYETRACKING.md) (borrador pendiente de validación por legal).
+5. **Todos los participantes serán de universidad o posgrado (mayores de 18).** No se diseña flujo para menores. Sigue siendo necesaria una casilla explícita de «tengo 18 años o más», porque el filtro es una autodeclaración y hay alumnos de primer semestre que pueden tener 17.
 
 ### Temas que el análisis legal debe cubrir (insumo)
 
 - Consentimiento explícito de **cámara y mirada**, con la promesa técnica de que el video no sale del dispositivo y de qué datos sí se guardan (coordenadas, tiempos, calidad).
-- **Menores de edad** en escuelas: edad mínima, consentimiento de madre/padre o tutor, y autorización de la institución.
+- **Autodeclaración de edad** (18 años o más) y voluntariedad real frente al docente; no hay menores en el alcance.
 - Aviso de privacidad y base legal según la normativa mexicana de protección de datos personales vigente (confirmar la versión aplicable) y, si hubiera participantes de la UE, GDPR.
 - Si los datos de mirada o el patrón de uso pueden considerarse biométricos o sensibles en alguna jurisdicción, y qué cambia si es así.
 - Retención, borrado, derechos de acceso/rectificación/cancelación/oposición y cómo se ejercen sin identificar al participante.
@@ -161,7 +162,7 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 
 ## 7. Decisiones abiertas
 
-1. ¿Qué escuelas, niveles (licenciatura, maestría, bachillerato) y qué tamaño de grupo? Define si hay menores y la carga simultánea a probar.
+1. ¿Qué escuelas y qué tamaño de grupo? Define si son públicas o privadas (régimen legal distinto) y la carga simultánea a probar.
 2. ¿Quién es el responsable del tratamiento de los datos en las pruebas escolares: FRSKO, la escuela o el docente?
 3. ¿Qué piezas del compositor se necesitan primero en las escuelas (¿encuesta + IAT, o ya con eye tracking?). Si el eye tracking no entra en las primeras pruebas, el trabajo legal más pesado puede esperar.
 4. ¿Qué fecha tentativa tienen las primeras pruebas? Ordena el calendario de la Ola 1 y del trabajo legal.
