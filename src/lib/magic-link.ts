@@ -13,8 +13,3 @@ export function isPlausibleToken(token: string): boolean {
 export function magicLinkUrl(origin: string, token: string): string {
   return `${origin.replace(/\/+$/, "")}/s/${token}`;
 }
-
-/** Liga mágica de una batería (página pública del participante en /b/). */
-export function batteryLinkUrl(origin: string, token: string): string {
-  return `${origin.replace(/\/+$/, "")}/b/${token}`;
-}

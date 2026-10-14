@@ -9,9 +9,9 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Se excluyen estáticos y las rutas PÚBLICAS del participante (/s/*, /b/* y sus /api/*):
+  // Se excluyen estáticos y las rutas PÚBLICAS del participante (/s/* y /api/s/*):
   // ahí no hay sesión de investigador y no deben pasar por la lógica de auth.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|s/|b/|api/s/|api/b/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|s/|api/s/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -60,9 +60,7 @@ export interface EmbeddedMode {
 export function Runner({ token, config, preview, embedded }: { token: string; config: IatConfig; preview: boolean; embedded?: EmbeddedMode }) {
   const [stage, setStage] = useState<Stage>(embedded ? { kind: "form" } : { kind: "welcome" });
   const [consent, setConsent] = useState(false);
-  // Incrustado: no hay pantalla de bienvenida que detecte el dispositivo, así que se detecta al montar (el runner incrustado
-  // sólo se monta en el cliente, tras una interacción, nunca en el render del servidor).
-  const [device, setDevice] = useState<DeviceInfo | null>(() => (embedded ? detectDevice() : null));
+  const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -74,7 +72,11 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
   const totalTrials = session ? session.plans.reduce((n, dim) => n + dim.reduce((m, b) => m + b.trials.length, 0), 0) : 0;
   const blockCount = session?.plans[0]?.length ?? 0;
 
+  // Incrustado: no hay pantalla de bienvenida que detecte el dispositivo, así que se detecta al montar.
   const embeddedActive = Boolean(embedded);
+  useEffect(() => {
+    if (embeddedActive) setDevice(detectDevice());
+  }, [embeddedActive]);
 
   // Pre-chequeo: avisa de inmediato si ya participó o el estudio cerró.
   useEffect(() => {
@@ -197,14 +199,15 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
       : ({ "--primary": "var(--heading)", "--primary-foreground": "var(--background)" } as CSSProperties);
 
   // Incrustado: al terminar el paso avisa a la batería (una sola vez).
-  const onComplete = embedded?.onComplete;
+  const onCompleteRef = useRef(embedded?.onComplete);
+  onCompleteRef.current = embedded?.onComplete;
   const notifiedRef = useRef(false);
   useEffect(() => {
-    if (stage.kind === "thanks" && onComplete && !notifiedRef.current) {
+    if (stage.kind === "thanks" && onCompleteRef.current && !notifiedRef.current) {
       notifiedRef.current = true;
-      onComplete();
+      onCompleteRef.current();
     }
-  }, [stage.kind, onComplete]);
+  }, [stage.kind]);
 
   let body: ReactNode = null;
 

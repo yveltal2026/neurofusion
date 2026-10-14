@@ -192,14 +192,15 @@ export function SurveyRunner({
   }, [embeddedActive, start]);
 
   // Incrustado: al terminar el paso avisa a la batería (una sola vez).
-  const onComplete = embedded?.onComplete;
+  const onCompleteRef = useRef(embedded?.onComplete);
+  onCompleteRef.current = embedded?.onComplete;
   const notifiedRef = useRef(false);
   useEffect(() => {
-    if (stage.kind === "thanks" && onComplete && !notifiedRef.current) {
+    if (stage.kind === "thanks" && onCompleteRef.current && !notifiedRef.current) {
       notifiedRef.current = true;
-      onComplete();
+      onCompleteRef.current();
     }
-  }, [stage.kind, onComplete]);
+  }, [stage.kind]);
 
   function next(index: number) {
     const block = blocks[index];

@@ -37,21 +37,6 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
           </li>
         ))}
       </ul>
-      <div className="space-y-3 pt-2">
-        <h2 className="font-medium">O combina varios estudios</h2>
-        <Link href={`/projects/${id}/batteries/new`} className="block">
-          <Card className="flex gap-4 transition hover:border-primary">
-            <IconTile name="layers" />
-            <div className="min-w-0">
-              <h3 className="font-medium">Batería de estudios</h3>
-              <p className="mt-1 text-sm text-muted">
-                Encadena estudios del proyecto (por ejemplo un IAT y una encuesta) en una sola liga y con un solo consentimiento, para cruzar lo
-                implícito con lo que la gente dice, de las mismas personas.
-              </p>
-            </div>
-          </Card>
-        </Link>
-      </div>
     </div>
   );
 }
