@@ -55,7 +55,7 @@ export async function regenerateLink(formData: FormData) {
   const id = idSchema.safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
-  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).eq("tool_type", "iat");
+  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).in("tool_type", ["iat", "survey"]);
   revalidatePath(`/studies/${id.data}`);
 }
 

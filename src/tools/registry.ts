@@ -2,7 +2,7 @@
  * Registro de herramientas de investigación. Un proyecto puede contener
  * estudios de distintas herramientas.
  */
-export type ToolType = "iat" | "seo" | "visual";
+export type ToolType = "iat" | "seo" | "visual" | "survey";
 
 export interface ToolDefinition {
   type: ToolType;
@@ -36,6 +36,14 @@ export const TOOLS: ToolDefinition[] = [
     description:
       "Evalúa piezas gráficas, anuncios y capturas web: mapa de atención estimado, recorrido visual, zonas ciegas y métricas de imagen. Incluye el modo journey con el Índice de Fricción Digital (IFD).",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/visual`,
+  },
+  {
+    type: "survey",
+    name: "Encuesta",
+    shortName: "Encuesta",
+    description:
+      "Preguntas propias e instrumentos estandarizados (SUS, NPS, SAM, intención de compra, actitud). El servidor valida y puntúa; los resultados salen con intervalos de confianza y CSV.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/survey`,
   },
 ];
 

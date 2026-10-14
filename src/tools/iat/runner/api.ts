@@ -12,7 +12,7 @@ const FALLBACK: ApiFailure = {
   retryable: true,
 };
 
-async function call<T extends object>(url: string, init?: RequestInit): Promise<({ ok: true } & T) | ApiFailure> {
+export async function call<T extends object>(url: string, init?: RequestInit): Promise<({ ok: true } & T) | ApiFailure> {
   try {
     const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
     let json: Record<string, unknown> | null = null;

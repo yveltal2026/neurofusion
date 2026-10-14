@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlausibleToken } from "@/lib/magic-link";
 import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
+import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
 
 /** Códigos de error públicos que entiende el runner del participante. */
 export type ApiErrorCode =
@@ -53,46 +54,100 @@ export function apiError(code: ApiErrorCode, extra: Record<string, unknown> = {}
   return NextResponse.json({ ok: false, code, message: MESSAGES[code], ...extra }, { status: STATUS[code], headers });
 }
 
-export interface StudyForParticipant {
+/** Herramientas que tienen participantes y, por tanto, liga mágica. */
+export type ParticipantToolType = "iat" | "survey";
+
+export interface ParticipantStudy<C> {
   id: string;
   status: "draft" | "published" | "closed";
   closes_at: string | null;
   duplicate_policy: "device_cookie" | "device_cookie_and_ip" | "none";
-  config: IatConfig;
+  config: C;
 }
 
-export type LoadStudyResult =
-  | { ok: true; study: StudyForParticipant }
+export type StudyForParticipant = ParticipantStudy<IatConfig>;
+export type SurveyStudyForParticipant = ParticipantStudy<SurveyConfig>;
+
+export type LoadResult<C> = { ok: true; study: ParticipantStudy<C> } | { ok: false; code: ApiErrorCode };
+export type LoadStudyResult = LoadResult<IatConfig>;
+
+/** Estudio hallado por token, con la configuración ya validada según su herramienta. */
+export type LoadedParticipantStudy =
+  | { ok: true; tool: "iat"; study: StudyForParticipant }
+  | { ok: true; tool: "survey"; study: SurveyStudyForParticipant }
   | { ok: false; code: ApiErrorCode };
 
+interface StudyRowForParticipant {
+  id: string;
+  tool_type: string;
+  status: ParticipantStudy<unknown>["status"];
+  closes_at: string | null;
+  duplicate_policy: ParticipantStudy<unknown>["duplicate_policy"];
+  config: unknown;
+}
+
 /** Busca el estudio por token de la liga mágica (cliente admin: ignora RLS). */
-export async function loadStudyByToken(token: string): Promise<LoadStudyResult> {
+async function fetchStudyRow(
+  token: string,
+  toolTypes: readonly ParticipantToolType[],
+): Promise<{ ok: true; row: StudyRowForParticipant } | { ok: false; code: ApiErrorCode }> {
   if (!isPlausibleToken(token)) return { ok: false, code: "invalid_link" };
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("studies")
-    .select("id, status, closes_at, duplicate_policy, config")
+    .select("id, tool_type, status, closes_at, duplicate_policy, config")
     .eq("access_token", token)
-    .eq("tool_type", "iat")
+    .in("tool_type", [...toolTypes])
     .maybeSingle();
   if (error) return { ok: false, code: "server_error" };
   if (!data) return { ok: false, code: "invalid_link" };
-  const config = iatConfigSchema.safeParse(data.config);
+  return { ok: true, row: data as StudyRowForParticipant };
+}
+
+function toStudy<C>(row: StudyRowForParticipant, schema: z.ZodType<C>): LoadResult<C> {
+  const config = schema.safeParse(row.config);
   if (!config.success) return { ok: false, code: "server_error" };
   return {
     ok: true,
     study: {
-      id: data.id,
-      status: data.status,
-      closes_at: data.closes_at,
-      duplicate_policy: data.duplicate_policy,
+      id: row.id,
+      status: row.status,
+      closes_at: row.closes_at,
+      duplicate_policy: row.duplicate_policy,
       config: config.data,
     },
   };
 }
 
+/** Estudio IAT por token. Un token de otra herramienta se trata como liga inválida. */
+export async function loadStudyByToken(token: string): Promise<LoadStudyResult> {
+  const found = await fetchStudyRow(token, ["iat"]);
+  return found.ok ? toStudy(found.row, iatConfigSchema) : found;
+}
+
+/** Encuesta por token. Un token de otra herramienta se trata como liga inválida. */
+export async function loadSurveyByToken(token: string): Promise<LoadResult<SurveyConfig>> {
+  const found = await fetchStudyRow(token, ["survey"]);
+  return found.ok ? toStudy(found.row, surveyConfigSchema) : found;
+}
+
+/** Estudio de cualquier herramienta con participantes, para decidir qué pantalla mostrar. */
+export async function loadParticipantStudyByToken(token: string): Promise<LoadedParticipantStudy> {
+  const found = await fetchStudyRow(token, ["iat", "survey"]);
+  if (!found.ok) return found;
+  if (found.row.tool_type === "survey") {
+    const survey = toStudy(found.row, surveyConfigSchema);
+    return survey.ok ? { ok: true, tool: "survey", study: survey.study } : survey;
+  }
+  const iat = toStudy(found.row, iatConfigSchema);
+  return iat.ok ? { ok: true, tool: "iat", study: iat.study } : iat;
+}
+
 /** Código de error si el estudio no acepta participantes ahora; null si está abierto. */
-export function availabilityError(study: StudyForParticipant, now = new Date()): ApiErrorCode | null {
+export function availabilityError(
+  study: Pick<ParticipantStudy<unknown>, "status" | "closes_at">,
+  now = new Date(),
+): ApiErrorCode | null {
   if (study.status !== "published") return study.status === "closed" ? "closed" : "not_available";
   if (study.closes_at && new Date(study.closes_at) <= now) return "closed";
   return null;

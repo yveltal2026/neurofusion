@@ -16,11 +16,11 @@ export type DuplicatePolicy = "device_cookie" | "device_cookie_and_ip" | "none";
 export interface StudyRow {
   id: string;
   project_id: string;
-  tool_type: "iat" | "seo" | "visual";
+  tool_type: "iat" | "seo" | "visual" | "survey";
   name: string;
   status: StudyStatus;
   config: unknown;
-  /** Sólo el IAT tiene liga mágica. */
+  /** Sólo las herramientas con participantes (IAT y encuesta) tienen liga mágica. */
   access_token: string | null;
   max_responses: number | null;
   closes_at: string | null;

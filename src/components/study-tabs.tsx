@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type TabKey = "overview" | "data" | "analysis" | "compare" | "ratings" | "results" | "report" | "settings";
+type TabKey = "overview" | "data" | "analysis" | "compare" | "ratings" | "results" | "report" | "settings" | "responses";
 interface Tab {
   key: TabKey;
   label: string;
@@ -12,6 +12,7 @@ const t = (key: TabKey, label: string, path = ""): Tab => ({ key, label, href: (
 /** Pestañas por herramienta (y por modo, en la herramienta visual). */
 const TABS = {
   iat: [t("overview", "Resumen"), t("data", "Datos", "/data"), t("analysis", "Análisis", "/analysis")],
+  survey: [t("overview", "Resumen"), t("responses", "Resultados", "/responses")],
   seo: [t("overview", "Auditorías"), t("settings", "Ajustes", "/settings")],
   pieces: [t("overview", "Piezas"), t("compare", "Comparativa", "/compare"), t("report", "Informe", "/report"), t("settings", "Ajustes", "/settings")],
   journey: [
