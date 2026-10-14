@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/participant-api";
 import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
 import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
-import { batteryConfigSchema, type BatteryConfig, type StepTool } from "./engine/config";
+import { batteryConfigSchema, type BatteryConfig } from "./engine/config";
 
 /**
  * Lógica de servidor del participante de una batería. Recibe el cliente de Supabase por parámetro (en

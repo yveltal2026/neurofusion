@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
@@ -15,8 +14,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { StudyRow } from "@/lib/db/types";
-import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
+import { requestOrigin } from "@/lib/request-origin";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
 import { SeoOverview } from "@/tools/seo/ui/overview";
@@ -36,13 +35,6 @@ export const maxDuration = 120;
 
 const STATUS_LABEL = { draft: "Borrador", published: "Publicado", closed: "Cerrado" } as const;
 
-async function requestOrigin(): Promise<string> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
-  return host ? `${proto}://${host}` : publicEnv().appUrl;
-}
-
 export default async function StudyPage({ params, searchParams }: PageProps<"/studies/[id]">) {
   const { id } = await params;
   const sp = await searchParams;
@@ -57,12 +49,12 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
     return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "survey") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
-    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} copied={sp.copied === "1"} />;
+    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} copied={sp.copied === "1"} inBattery={sp.inBattery === "1"} />;
   }
-  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} copied={sp.copied === "1"} />;
+  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} copied={sp.copied === "1"} inBattery={sp.inBattery === "1"} />;
 }
 
-async function IatOverview({ study, projectName, created, copied }: { study: StudyRow; projectName: string | null; created: boolean; copied: boolean }) {
+async function IatOverview({ study, projectName, created, copied, inBattery = false }: { study: StudyRow; projectName: string | null; created: boolean; copied: boolean; inBattery?: boolean }) {
   const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
   const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
@@ -90,6 +82,7 @@ async function IatOverview({ study, projectName, created, copied }: { study: Stu
       <StudyTabs id={id} active="overview" />
 
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
+      {inBattery ? <Alert tone="warning">Este estudio es un paso de una batería, así que no se puede eliminar. Quítalo de la batería primero (o elimina la batería).</Alert> : null}
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
 
       <Card className="space-y-3">

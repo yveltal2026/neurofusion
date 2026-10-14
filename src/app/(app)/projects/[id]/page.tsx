@@ -30,6 +30,13 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     .order("created_at", { ascending: false })
     .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "status" | "created_at">[]>();
 
+  const { data: batteries } = await supabase
+    .from("batteries")
+    .select("id, name, status")
+    .eq("project_id", id)
+    .order("created_at", { ascending: false })
+    .returns<{ id: string; name: string; status: StudyRow["status"] }[]>();
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
@@ -91,6 +98,33 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           </ul>
         )}
       </section>
+
+      {(batteries ?? []).length > 0 ? (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-medium">Baterías</h2>
+            <Link href={`/projects/${project.id}/batteries/new`} className={buttonClass("secondary")}>
+              <Icon name="plus" className="size-5" />
+              Nueva batería
+            </Link>
+          </div>
+          <ul className="space-y-2">
+            {(batteries ?? []).map((b) => (
+              <li key={b.id}>
+                <Link href={`/batteries/${b.id}`} className="block">
+                  <Card className="flex items-center justify-between gap-3 py-4 transition hover:border-primary">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <IconTile name="layers" size="sm" />
+                      <span className="truncate font-medium">{b.name}</span>
+                    </span>
+                    <span className="text-xs uppercase text-muted">Batería · {STATUS_LABEL[b.status]}</span>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -23,14 +23,17 @@ export function StudySettingsForm({
   maxResponses,
   closesAt,
   duplicatePolicy,
+  action: saveAction = updateStudySettings,
 }: {
+  /** Acción que guarda los ajustes; por defecto la de estudios (las baterías pasan la suya). */
+  action?: (prev: SettingsState, formData: FormData) => Promise<SettingsState>;
   id: string;
   status: StudyStatus;
   maxResponses: number | null;
   closesAt: string | null;
   duplicatePolicy: DuplicatePolicy;
 }) {
-  const [state, action, pending] = useActionState(updateStudySettings, initial);
+  const [state, action, pending] = useActionState(saveAction, initial);
   // La zona horaria sólo se conoce en el navegador: en servidor el snapshot es "" y en cliente el valor
   // local; al cambiar, `key` remonta el input con su defaultValue sin desajustar la hidratación.
   const localClose = useSyncExternalStore(

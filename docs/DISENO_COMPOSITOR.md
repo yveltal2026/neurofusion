@@ -8,6 +8,24 @@ Fecha: 2026-10-14 · Estado: **aprobado en lo esencial** (opción A y orden conf
 2. **La batería orquesta estudios existentes** (opción A, §2); no se reescribe el modelo del IAT.
 3. **El orden de los pasos lo configura el usuario.** La plataforma **sugiere** un orden predefinido, pero el investigador puede **intercambiar** pasos y **omitir** los que no necesite según el objetivo del estudio. La omisión es una decisión del investigador al diseñar la batería; **no** se ofrece al participante saltarse pasos (eso cambiaría la muestra de cada medida). Detalle en §3.4.
 
+## Estado de la implementación (2026-10-15)
+
+| Fase | Estado |
+|---|---|
+| F0 y F1 (encuesta) | Hechas antes. |
+| **F2 · Batería** | **Hecha.** Migración `20261015000000_battery.sql` (tablas, RLS, `claim_battery_session`; verificada con `scripts/verify-sql.sh` y `supabase/tests/battery.sql`), API `/api/b/[token]/{start,progress,complete}`, enlace de sesiones hijas con cookie firmada, modo incrustado del IAT y de la encuesta, `BatteryRunner`, página `/b/[token]`, constructor con orden sugerido y avisos, resumen, ajustes, vista previa y borrado. |
+| **F3 · Informe integrado** | **Hecho en su versión base** (`/batteries/[id]/results`): D compuesto del IAT frente a cada instrumento de las encuestas, con n, IC por Fisher, p, etiqueta de evidencia y supresión de cifras con menos de 5 participantes. |
+
+Decisiones que se tomaron al implementar y difieren o precisan el diseño:
+
+- **FK diferida de `battery_steps.study_id`.** Al borrar un proyecto se borran estudios y baterías en cascada y el orden entre cascadas no está garantizado; una llave inmediata fallaba. Con la llave diferida, un estudio que es paso no se borra por accidente (la app lo avisa antes: `deleteStudy`).
+- **Modo incrustado sin extraer los bloques.** En vez de refactorizar `Runner`, gana un modo `embedded` (omite bienvenida, consentimiento y pantalla final). Las pruebas del runner siguen siendo la red de seguridad.
+- **`run_order` en vez de `config.runOrder`** en `battery_sessions` (columna propia, consultable).
+- **Pasos fijos con respuestas.** El orden y los pasos activos sólo se editan mientras la batería no tiene sesiones; con datos hay que crear otra (versión inmutable).
+- **El servidor deriva el avance** de las sesiones hijas con `battery_session_id`; el navegador nunca declara qué terminó.
+
+Pendiente: llenar `battery_sessions.quality` (validez del IAT por sesión) y usarlo para ponderar; que la IA redacte sobre el informe integrado; contrabalanceo de orden entre participantes; paso de eye tracking; probar con 20 a 40 dispositivos simultáneos (límite de peticiones en memoria); el aviso de consentimiento sigue pendiente de validación legal.
+
 ## 1. Lo que hay hoy (verificado en el código)
 
 | Pieza | Acoplamiento al IAT |

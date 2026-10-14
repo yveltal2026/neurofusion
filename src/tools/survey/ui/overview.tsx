@@ -23,12 +23,14 @@ export function SurveyOverview({
   link,
   created,
   copied = false,
+  inBattery = false,
 }: {
   study: StudyRow;
   projectName: string | null;
   link: string;
   created: boolean;
   copied?: boolean;
+  inBattery?: boolean;
 }) {
   const config = surveyConfigSchema.safeParse(study.config);
   const items = config.success ? listItems(config.data) : [];
@@ -43,6 +45,7 @@ export function SurveyOverview({
         subtitle={STATUS_LABEL[study.status]}
       />
 
+      {inBattery ? <Alert tone="warning">Este estudio es un paso de una batería, así que no se puede eliminar. Quítalo de la batería primero (o elimina la batería).</Alert> : null}
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
 
       {created ? (
