@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { INSTRUMENT_IDS, getInstrument, instrumentItemId } from "./instruments";
+import {
+  INSTRUMENT_IDS,
+  getInstrument,
+  instrumentItemId,
+  type InstrumentDef,
+  type InstrumentItem,
+} from "./instruments";
 
 /**
  * Configuración de una encuesta (lo que produce el wizard) y validación de
@@ -198,7 +204,24 @@ export type SurveyItem =
       min: number;
       max: number;
       instrument?: string;
+      /** Etiquetas de los extremos (escala numérica). */
+      minLabel?: string;
+      maxLabel?: string;
+      /** Una etiqueta por punto, de `min` a `max` (escala con todas las opciones rotuladas). */
+      labels?: string[];
     };
+
+/** Etiquetas de escala de un ítem de instrumento, según cómo se presente el instrumento. */
+function scaleLabelsOf(
+  inst: InstrumentDef,
+  item: InstrumentItem,
+): { minLabel?: string; maxLabel?: string; labels?: string[] } {
+  if (inst.scaleDisplay === "labeled") return { labels: inst.scaleLabels };
+  return {
+    minLabel: item.minLabel ?? inst.scaleLabels?.[0],
+    maxLabel: item.maxLabel ?? inst.scaleLabels?.at(-1),
+  };
+}
 
 /** Aplana la configuración en elementos respondibles, en orden. */
 export function listItems(config: SurveyConfig): SurveyItem[] {
@@ -217,6 +240,7 @@ export function listItems(config: SurveyConfig): SurveyItem[] {
           min: inst.scale.min,
           max: inst.scale.max,
           instrument: inst.id,
+          ...scaleLabelsOf(inst, item),
         });
       }
       continue;
@@ -240,10 +264,24 @@ export function listItems(config: SurveyConfig): SurveyItem[] {
           out.push({ ...common, type: q.type, options: q.options });
           break;
         case "likert":
-          out.push({ ...common, type: "scale", min: 1, max: q.points });
+          out.push({
+            ...common,
+            type: "scale",
+            min: 1,
+            max: q.points,
+            minLabel: q.minLabel,
+            maxLabel: q.maxLabel,
+          });
           break;
         case "nps":
-          out.push({ ...common, type: "scale", min: 0, max: 10 });
+          out.push({
+            ...common,
+            type: "scale",
+            min: 0,
+            max: 10,
+            minLabel: "Nada probable",
+            maxLabel: "Muy probable",
+          });
           break;
       }
     }
@@ -251,51 +289,102 @@ export function listItems(config: SurveyConfig): SurveyItem[] {
   return out;
 }
 
+/** Esquema de la respuesta a un elemento (opcional si el elemento no es obligatorio). */
+function itemSchema(item: SurveyItem): z.ZodType {
+  let field: z.ZodType;
+  switch (item.type) {
+    case "text":
+      field = item.required
+        ? z.string().trim().min(1, "Campo obligatorio").max(MAX_TEXT_ANSWER)
+        : z.string().trim().max(MAX_TEXT_ANSWER);
+      break;
+    case "number": {
+      let n = z.number({ message: "Debe ser un número" });
+      if (item.min !== undefined) n = n.min(item.min, `Mínimo ${item.min}`);
+      if (item.max !== undefined) n = n.max(item.max, `Máximo ${item.max}`);
+      field = n;
+      break;
+    }
+    case "select":
+      field = z.enum(item.options as [string, ...string[]], {
+        message: "Elige una opción",
+      });
+      break;
+    case "multiselect": {
+      const choice = z.enum(item.options as [string, ...string[]], {
+        message: "Opción inválida",
+      });
+      const list = z
+        .array(choice, { message: "Elige al menos una opción" })
+        .max(item.options.length)
+        .refine((v) => new Set(v).size === v.length, "Opciones repetidas");
+      field = item.required ? list.min(1, "Elige al menos una opción") : list;
+      break;
+    }
+    case "scale":
+      field = z
+        .number({ message: "Elige un valor de la escala" })
+        .int("Elige un valor de la escala")
+        .min(item.min, "Elige un valor de la escala")
+        .max(item.max, "Elige un valor de la escala");
+      break;
+  }
+  return item.required ? field : field.optional();
+}
+
 /** Esquema de las respuestas de un participante. Estricto: rechaza ids desconocidos. */
 export function buildAnswerSchema(config: SurveyConfig) {
   const shape: Record<string, z.ZodType> = {};
-  for (const item of listItems(config)) {
-    let field: z.ZodType;
-    switch (item.type) {
-      case "text":
-        field = item.required
-          ? z.string().trim().min(1, "Campo obligatorio").max(MAX_TEXT_ANSWER)
-          : z.string().trim().max(MAX_TEXT_ANSWER);
-        break;
-      case "number": {
-        let n = z.number({ message: "Debe ser un número" });
-        if (item.min !== undefined) n = n.min(item.min, `Mínimo ${item.min}`);
-        if (item.max !== undefined) n = n.max(item.max, `Máximo ${item.max}`);
-        field = n;
-        break;
-      }
-      case "select":
-        field = z.enum(item.options as [string, ...string[]], {
-          message: "Elige una opción",
-        });
-        break;
-      case "multiselect": {
-        const choice = z.enum(item.options as [string, ...string[]], {
-          message: "Opción inválida",
-        });
-        const list = z
-          .array(choice, { message: "Elige al menos una opción" })
-          .max(item.options.length)
-          .refine((v) => new Set(v).size === v.length, "Opciones repetidas");
-        field = item.required ? list.min(1, "Elige al menos una opción") : list;
-        break;
-      }
-      case "scale":
-        field = z
-          .number({ message: "Elige un valor de la escala" })
-          .int("Elige un valor de la escala")
-          .min(item.min, "Elige un valor de la escala")
-          .max(item.max, "Elige un valor de la escala");
-        break;
-    }
-    shape[item.id] = item.required ? field : field.optional();
-  }
+  for (const item of listItems(config)) shape[item.id] = itemSchema(item);
   return z.object(shape).strict();
+}
+
+/** Elementos de un bloque, en orden. */
+export function itemsOfBlock(
+  config: SurveyConfig,
+  blockId: string,
+): SurveyItem[] {
+  return listItems(config).filter((it) => it.blockId === blockId);
+}
+
+/** Indicación del instrumento de un bloque (si la tiene), para mostrarla encima de sus ítems. */
+export function blockInstructions(block: SurveyBlock): string | undefined {
+  return block.kind === "instrument"
+    ? getInstrument(block.instrumentId).instructions
+    : undefined;
+}
+
+/**
+ * Valida las respuestas de un conjunto de elementos (p. ej. el bloque que se está
+ * viendo) con las MISMAS reglas que el servidor. Devuelve un mensaje por elemento con
+ * error, vacío si todo está bien. Un elemento sin responder se trata como tal, no como
+ * un tipo inválido.
+ */
+export function validateItems(
+  items: readonly SurveyItem[],
+  answers: SurveyAnswers,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const item of items) {
+    const value = answers[item.id];
+    const empty =
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0);
+    if (empty) {
+      if (item.required)
+        errors[item.id] =
+          item.type === "text" || item.type === "number"
+            ? "Campo obligatorio"
+            : "Responde esta pregunta";
+      continue;
+    }
+    const parsed = itemSchema(item).safeParse(value);
+    if (!parsed.success)
+      errors[item.id] = parsed.error.issues[0]?.message ?? "Respuesta inválida";
+  }
+  return errors;
 }
 
 export type SurveyAnswers = Record<string, unknown>;

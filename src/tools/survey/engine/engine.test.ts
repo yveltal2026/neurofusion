@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blockInstructions,
   buildAnswerSchema,
   computeSurveyAggregates,
   cronbachAlpha,
@@ -7,6 +8,7 @@ import {
   DEFAULT_THANK_YOU,
   directionalValues,
   instrumentItemId,
+  itemsOfBlock,
   listItems,
   npsCategory,
   renderItemText,
@@ -16,6 +18,7 @@ import {
   summarizeNps,
   summarizeNumeric,
   surveyConfigSchema,
+  validateItems,
   wilsonInterval,
   INSTRUMENTS,
   INSTRUMENT_IDS,
@@ -570,5 +573,157 @@ describe("desglose por grupo con supresión de grupos chicos", () => {
     expect(splitByGroup(rs, "age_range", 3).groups.map((g) => g.value)).toEqual(
       ["18-24", "25-34"],
     );
+  });
+});
+
+describe("presentación de escalas", () => {
+  const items = listItems(config);
+  const byId = (id: string) => items.find((i) => i.id === id)!;
+
+  it("SUS: extremos tomados de las etiquetas de acuerdo", () => {
+    expect(byId("sus_1")).toMatchObject({
+      type: "scale",
+      min: 1,
+      max: 5,
+      minLabel: "Totalmente en desacuerdo",
+      maxLabel: "Totalmente de acuerdo",
+    });
+    expect(byId("sus_1")).not.toHaveProperty("labels");
+  });
+
+  it("NPS y Likert: extremos propios", () => {
+    expect(byId("nps_1")).toMatchObject({
+      min: 0,
+      max: 10,
+      minLabel: "Nada probable",
+      maxLabel: "Muy probable",
+    });
+    expect(byId("confianza")).toMatchObject({ min: 1, max: 5 });
+  });
+
+  it("intención de compra: una etiqueta por punto, de 1 a 5", () => {
+    const pi = listItems({
+      ...config,
+      blocks: [
+        {
+          kind: "instrument",
+          id: "pi",
+          instrumentId: "purchase_intent",
+          required: true,
+        },
+      ],
+    })[0]!;
+    expect(pi).toMatchObject({ type: "scale", min: 1, max: 5 });
+    expect(pi.type === "scale" && pi.labels).toHaveLength(5);
+  });
+
+  it("SAM: extremos propios por ítem", () => {
+    const sam = listItems({
+      ...config,
+      blocks: [
+        { kind: "instrument", id: "sam", instrumentId: "sam", required: true },
+      ],
+    });
+    expect(
+      sam.map((i) => i.type === "scale" && [i.minLabel, i.maxLabel]),
+    ).toEqual([
+      ["Infeliz", "Feliz"],
+      ["Calmado", "Excitado"],
+      ["Sin control", "En control"],
+    ]);
+  });
+
+  it("indicaciones por bloque sin revelar el nombre del instrumento", () => {
+    expect(blockInstructions(config.blocks[1]!)).toBe(
+      "Indica qué tan de acuerdo estás con cada afirmación.",
+    );
+    expect(blockInstructions(config.blocks[0]!)).toBeUndefined();
+    expect(blockInstructions(config.blocks[2]!)).toBeUndefined();
+    for (const id of INSTRUMENT_IDS)
+      expect(INSTRUMENTS[id].instructions ?? "").not.toMatch(
+        /SUS|NPS|SAM|Net Promoter/i,
+      );
+  });
+
+  it("itemsOfBlock devuelve sólo los elementos del bloque", () => {
+    expect(itemsOfBlock(config, "perfil").map((i) => i.id)).toEqual([
+      "frecuencia",
+      "canales",
+      "confianza",
+      "gasto",
+      "comentario",
+    ]);
+    expect(itemsOfBlock(config, "nps")).toHaveLength(1);
+    expect(itemsOfBlock(config, "no-existe")).toEqual([]);
+  });
+});
+
+describe("validación por elementos (cliente) coherente con la del servidor", () => {
+  const items = listItems(config);
+  const schema = buildAnswerSchema(config);
+
+  it("respuestas completas → sin errores", () => {
+    expect(validateItems(items, answers())).toEqual({});
+  });
+
+  it("obligatorios vacíos se reportan en español; opcionales vacíos no", () => {
+    const errs = validateItems(items, { nps_1: 5 });
+    expect(errs.frecuencia).toBe("Responde esta pregunta");
+    expect(errs.confianza).toBe("Responde esta pregunta");
+    expect(errs.sus_1).toBe("Responde esta pregunta");
+    expect(errs.canales).toBeUndefined();
+    expect(errs.comentario).toBeUndefined();
+    expect(errs.gasto).toBeUndefined();
+  });
+
+  it("texto obligatorio con sólo espacios cuenta como vacío", () => {
+    const req = listItems({
+      ...config,
+      blocks: [
+        {
+          kind: "questions",
+          id: "q",
+          questions: [{ type: "text", id: "t", prompt: "x", required: true }],
+        },
+      ],
+    });
+    expect(validateItems(req, { t: "   " }).t).toBe("Campo obligatorio");
+    expect(validateItems(req, {}).t).toBe("Campo obligatorio");
+    expect(validateItems(req, { t: "hola" })).toEqual({});
+  });
+
+  it("valores inválidos reciben el mensaje del esquema", () => {
+    expect(
+      validateItems(items, answers({ extra: { confianza: 9 } })).confianza,
+    ).toBe("Elige un valor de la escala");
+    expect(
+      validateItems(items, answers({ extra: { frecuencia: "Diario" } }))
+        .frecuencia,
+    ).toBe("Elige una opción");
+    expect(validateItems(items, answers({ extra: { gasto: -1 } })).gasto).toBe(
+      "Mínimo 0",
+    );
+  });
+
+  it("acepta exactamente lo mismo que el esquema estricto del servidor", () => {
+    const cases: Record<string, unknown>[] = [
+      answers(),
+      answers({ nps: 11 }),
+      answers({ nps: -1 }),
+      answers({ extra: { canales: [] } }),
+      answers({ extra: { canales: ["Web", "Web"] } }),
+      answers({ extra: { canales: ["Otro"] } }),
+      answers({ extra: { gasto: 1e9 } }),
+      answers({ extra: { confianza: 2.5 } }),
+      answers({ extra: { comentario: "x".repeat(1001) } }),
+      answers({ sus: [5, 1, 5, 1, 5, 1, 5, 1, 5, 6] }),
+      { ...answers(), frecuencia: undefined },
+    ];
+    for (const c of cases) {
+      expect(
+        Object.keys(validateItems(items, c)).length === 0,
+        JSON.stringify(c),
+      ).toBe(schema.safeParse(c).success);
+    }
   });
 });

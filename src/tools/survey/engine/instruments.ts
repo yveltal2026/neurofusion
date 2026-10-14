@@ -38,6 +38,13 @@ export interface InstrumentDef {
   /** Etiquetas de cada punto de la escala, si todos los ítems comparten las mismas. */
   scaleLabels?: string[];
   items: InstrumentItem[];
+  /**
+   * Cómo se presenta la escala: `endpoints` = números con etiquetas sólo en los extremos;
+   * `labeled` = una opción por cada punto, con su etiqueta completa (`scaleLabels`).
+   */
+  scaleDisplay: "endpoints" | "labeled";
+  /** Indicación breve para el participante, sin revelar el nombre del instrumento. */
+  instructions?: string;
   defaultSubject: string;
   source: string;
   notes: string;
@@ -53,6 +60,8 @@ const AGREEMENT_LABELS = [
 
 const SUS: InstrumentDef = {
   id: "sus",
+  scaleDisplay: "endpoints",
+  instructions: "Indica qué tan de acuerdo estás con cada afirmación.",
   version: "sus-es-1.0",
   name: "Escala de Usabilidad del Sistema (SUS)",
   scale: { min: 1, max: 5 },
@@ -100,6 +109,7 @@ const SUS: InstrumentDef = {
 
 const NPS: InstrumentDef = {
   id: "nps",
+  scaleDisplay: "endpoints",
   version: "nps-es-1.0",
   name: "Net Promoter Score (NPS)",
   scale: { min: 0, max: 10 },
@@ -120,6 +130,8 @@ const NPS: InstrumentDef = {
 
 const SAM: InstrumentDef = {
   id: "sam",
+  scaleDisplay: "endpoints",
+  instructions: "Elige el número que mejor describa cómo te sentiste.",
   version: "sam-es-1.0",
   name: "Maniquí de autoevaluación (SAM): valencia, activación y dominancia",
   scale: { min: 1, max: 9 },
@@ -152,6 +164,7 @@ const SAM: InstrumentDef = {
 
 const PURCHASE_INTENT: InstrumentDef = {
   id: "purchase_intent",
+  scaleDisplay: "labeled",
   version: "pi-es-1.0",
   name: "Intención de compra (5 puntos)",
   scale: { min: 1, max: 5 },
@@ -172,6 +185,8 @@ const PURCHASE_INTENT: InstrumentDef = {
 
 const ATTITUDE: InstrumentDef = {
   id: "attitude",
+  scaleDisplay: "endpoints",
+  instructions: "Elige el punto que mejor represente tu opinión.",
   version: "att-es-1.0",
   name: "Actitud hacia la marca o el anuncio (diferencial semántico, 7 puntos)",
   scale: { min: 1, max: 7 },
