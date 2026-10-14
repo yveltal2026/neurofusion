@@ -170,7 +170,9 @@ export function orderWarnings(steps: readonly BatteryStep[]): OrderWarning[] {
 }
 
 /** Errores que impiden guardar la batería (a diferencia de los avisos). */
-export function validateComposition(steps: readonly BatteryStep[]): string[] {
+export function validateComposition(
+  steps: readonly Pick<BatteryStep, "studyId" | "enabled">[],
+): string[] {
   const errors: string[] = [];
   if (steps.length === 0) errors.push("Agrega al menos un paso.");
   if (steps.length > MAX_STEPS)

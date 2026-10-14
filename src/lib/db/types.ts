@@ -30,6 +30,41 @@ export interface StudyRow {
   updated_at: string;
 }
 
+export interface BatteryRow {
+  id: string;
+  project_id: string;
+  name: string;
+  status: StudyStatus;
+  config: unknown;
+  access_token: string;
+  max_responses: number | null;
+  closes_at: string | null;
+  duplicate_policy: DuplicatePolicy;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BatteryStepRow {
+  battery_id: string;
+  position: number;
+  study_id: string;
+  enabled: boolean;
+}
+
+export interface BatterySessionRow {
+  id: string;
+  battery_id: string;
+  participant_ref: string;
+  status: "started" | "completed" | "abandoned";
+  run_order: string[];
+  device_type: string;
+  excluded: boolean;
+  excluded_reason: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
 export interface SeoAuditRow {
   id: string;
   study_id: string;
