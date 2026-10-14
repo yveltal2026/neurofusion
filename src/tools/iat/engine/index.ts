@@ -8,3 +8,4 @@ export * from "./validity";
 export * from "./stats";
 export { oneSampleTTest, tQuantile, tTwoSidedP, mean } from "./math";
 export * from "./score";
+export * from "./variants";

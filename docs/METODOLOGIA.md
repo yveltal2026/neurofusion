@@ -62,3 +62,15 @@ Se admite teclado (E/I) y botones táctiles. El RT táctil se toma en `pointerdo
 - Con n pequeño los intervalos son amplios; la plataforma advierte con n < 30 (y < 10).
 - Temas sensibles (política, salud…): documentar consentimiento informado y uso ético de datos. El consentimiento aceptado se versiona por sesión.
 - La IA sólo redacta la interpretación a partir de agregados; las cifras oficiales son las de las tablas y gráficas.
+
+## Variantes del IAT (motor de puntuación, sin runner todavía)
+
+`src/tools/iat/engine/variants.ts` puntúa tres variantes. **Aún no hay runner, wizard ni API para ellas**: el runner actual es de cuatro categorías y bloques de dos teclas. Antes de ofrecerlas a participantes hacen falta (1) un runner con ventana de respuesta, (2) que el servidor regenere el plan y revise los tiempos como hace con el IAT, y (3) cotejar las constantes con las publicaciones. Las constantes son **parámetros configurables con valores de la literatura**, no una réplica validada; las pruebas verifican la aritmética con ejemplos calculados a mano, no contra conjuntos de datos publicados.
+
+| Variante | Medida | Referencia | Parámetros por defecto |
+|---|---|---|---|
+| SC-IAT (un solo concepto) | D = (media con polo negativo − media con polo positivo) / DE de todas las latencias | Karpinski y Steinman (2006) | ventana 1500 ms; descarta < 350 ms; error → media de aciertos del bloque + 600 ms (Greenwald et al., 2003) |
+| Go/No-Go (GNAT) | d′ = z(aciertos) − z(falsas alarmas), con corrección log-lineal | Nosek y Banaji (2001); Hautus (1995) | corrección log-lineal; d′ y criterio c |
+| Priming afectivo | media incongruente − media congruente (ms), sólo aciertos | Fazio et al. (1986) | rango válido 200–2000 ms; mínimo 4 ensayos por condición |
+
+Las tres conservan las advertencias de validez del IAT (tasa de error > 30 % y > 10 % de respuestas rápidas).
