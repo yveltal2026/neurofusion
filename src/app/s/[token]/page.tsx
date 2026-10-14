@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { apiMessage, availabilityError, loadStudyByToken } from "@/lib/participant-api";
+import { apiMessage, availabilityError, loadParticipantStudyByToken } from "@/lib/participant-api";
 import { Runner } from "@/tools/iat/runner/Runner";
 
 // La liga es privada: no debe indexarse ni mostrar vistas previas con datos del estudio.
@@ -22,11 +22,13 @@ export default async function ParticipantPage({ params, searchParams }: PageProp
   // Vista previa (para el investigador): corre el test completo sin guardar nada.
   const preview = sp.preview === "1";
 
-  const loaded = await loadStudyByToken(token);
+  const loaded = await loadParticipantStudyByToken(token);
   if (!loaded.ok) return <Unavailable message={apiMessage(loaded.code)} />;
 
   const unavailable = availabilityError(loaded.study);
   if (unavailable && !preview) return <Unavailable message={apiMessage(unavailable)} />;
 
-  return <Runner token={token} config={loaded.study.config} preview={preview} />;
+  // La pantalla del participante depende de la herramienta del estudio.
+  if (loaded.tool === "iat") return <Runner token={token} config={loaded.study.config} preview={preview} />;
+  return <Unavailable message={apiMessage("not_available")} />; // encuesta: el runner llega en F1c
 }

@@ -1,6 +1,12 @@
 # Diseño técnico: compositor de sesión (baterías)
 
-Fecha: 2026-10-14 · Estado: **propuesta para aprobación**, nada de esto está migrado ni implementado. Continúa la ficha 1 de [`ROADMAP_MODULOS.md`](ROADMAP_MODULOS.md). Decisión de producto ya tomada: **el compositor convive con el estudio de una sola herramienta** y el usuario elige entre ambos.
+Fecha: 2026-10-14 · Estado: **aprobado en lo esencial** (opción A y orden configurable, ver «Decisiones»); la implementación avanza por fases (§4). Continúa la ficha 1 de [`ROADMAP_MODULOS.md`](ROADMAP_MODULOS.md).
+
+## Decisiones tomadas
+
+1. **El compositor convive con el estudio de una sola herramienta** y el usuario elige entre ambos.
+2. **La batería orquesta estudios existentes** (opción A, §2); no se reescribe el modelo del IAT.
+3. **El orden de los pasos lo configura el usuario.** La plataforma **sugiere** un orden predefinido, pero el investigador puede **intercambiar** pasos y **omitir** los que no necesite según el objetivo del estudio. La omisión es una decisión del investigador al diseñar la batería; **no** se ofrece al participante saltarse pasos (eso cambiaría la muestra de cada medida). Detalle en §3.4.
 
 ## 1. Lo que hay hoy (verificado en el código)
 
@@ -54,6 +60,8 @@ create table public.battery_steps (
   battery_id uuid not null references public.batteries (id) on delete cascade,
   position   smallint not null check (position >= 0),
   study_id   uuid not null references public.studies (id) on delete restrict,
+  -- false = el investigador omite el paso sin quitarlo de la batería (se conserva su lugar y su configuración).
+  enabled    boolean not null default true,
   primary key (battery_id, position),
   unique (battery_id, study_id)
 );  -- sólo estudios participativos (iat, survey): se valida en la app y con un trigger
@@ -100,9 +108,13 @@ El estudio **encuesta** añade `survey_answers(session_id pk → sessions, study
 - Nuevo `BatteryRunner`: consentimiento → paso 1 → paso 2 → … → gracias. Progreso global, y si el participante recarga la página, consulta `progress` y retoma en el primer paso incompleto.
 - Un paso IAT interrumpido **se reinicia** (misma regla que hoy); los pasos ya completados se conservan.
 
-### 3.4 Orden de los pasos
+### 3.4 Orden de los pasos: sugerido por la plataforma, decidido por el investigador
 
-v1: **orden fijo** definido por el investigador. Es la opción segura: medidas explícitas después del IAT para no contaminarlo. Orden aleatorio entre pasos y contrabalanceo de orden quedan para una versión posterior, porque el efecto del orden es una decisión metodológica, no técnica.
+- **Orden sugerido.** Al armar la batería, la plataforma ordena los pasos por familia de medida: **exposición** (eye tracking, pruebas de estímulos) → **implícita** (IAT) → **explícita** (encuestas). Es un punto de partida, no una regla. El orden vive en código puro y probado (`suggestOrder`).
+- **Libertad del investigador.** Puede arrastrar para **intercambiar** pasos, **omitir** (`enabled = false`) los que no necesite, y volver al orden sugerido con un botón. Lo que corre el participante es: los pasos activos, en el orden guardado.
+- **Avisos, no bloqueos.** Si el orden elegido tiene un riesgo metodológico conocido, la interfaz lo advierte sin impedirlo; p. ej. una medida explícita antes del IAT sobre el mismo concepto puede influir en las asociaciones implícitas. Los avisos son reglas puras con texto claro y se pueden descartar.
+- **Registro.** La sesión de batería guarda el orden efectivamente corrido (`config.runOrder` en `battery_sessions`), de modo que el análisis sabe en qué orden vio cada participante los pasos aunque el investigador cambie la batería después. Cambiar el orden o los pasos activos de una batería **con respuestas** exige duplicarla (mismo criterio de «versión inmutable» que ya usan SEO y Visual), para no mezclar muestras que corrieron en órdenes distintos sin que quede claro.
+- **Fuera de alcance por ahora.** Orden aleatorio entre participantes y contrabalanceo de orden (útiles para estudiar efectos de orden) y que el participante se salte pasos. El esquema no lo impide; se añade cuando una pregunta de investigación lo pida.
 
 ### 3.5 Informe integrado
 
@@ -132,4 +144,5 @@ Motor puro `src/tools/battery/engine`, con pruebas: une por `battery_session_id`
 3. **Refresco a mitad de un IAT** reinicia ese paso; en baterías largas puede aumentar el abandono. A medir en las pruebas con escuelas.
 4. **Una sola `Runner` del IAT con dos modos** puede volverse frágil. Mitigación: extraer la parte de bloques a un componente reutilizable antes de añadir el modo incrustado, con las pruebas del runner como red.
 5. **Legal (postergado, no olvidado).** El diseño ya deja los ganchos: el consentimiento vive en la **batería** y se versiona en `battery_sessions.consent_version`; el código de participación para ARCO puede ser `participant_ref`; borrar una sesión de batería borra las hijas; `quality` y `ip_hash` están acotados. Cuando se retome el tema legal ([`ANALISIS_LEGAL_EYETRACKING.md`](ANALISIS_LEGAL_EYETRACKING.md)), no debería requerir rediseño.
-6. **Decisión abierta:** ¿se aprueba la opción A y el orden fijo en v1?
+6. **Orden configurable:** más libertad implica más combinaciones que probar (pasos omitidos, orden distinto por batería). Mitigación: el runner trabaja sólo con «lista de pasos activos en orden», así que la lógica del participante no cambia; la complejidad queda en el editor y en las reglas de aviso.
+7. **Sin decisiones abiertas de arquitectura.** Quedan los detalles de cada fase, que se revisan al implementarlas.
