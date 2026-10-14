@@ -44,7 +44,7 @@ export default async function AuditPage({ params }: PageProps<"/studies/[id]/aud
         }
       />
 
-      <SummaryCards summary={audit.summary} />
+      <SummaryCards summary={audit.summary} lighthouseSeo={audit.performance?.lighthouseSeoScore} />
       <p className="text-xs text-muted">
         {audit.mode === "live" ? "Rastreo en vivo" : "Modo asistido (HTML subido)"} · {audit.summary.pagesAudited} página(s) · motor {audit.engineVersion}
         {audit.durationMs !== null ? ` · ${(audit.durationMs / 1000).toFixed(0)} s` : ""}

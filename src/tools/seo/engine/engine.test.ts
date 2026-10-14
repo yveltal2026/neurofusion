@@ -136,7 +136,7 @@ describe("PageSpeed", () => {
     },
     lighthouseResult: {
       finalDisplayedUrl: "https://d.mx/",
-      categories: { performance: { score: 0.42 } },
+      categories: { performance: { score: 0.42 }, seo: { score: 1 } },
       audits: {
         "largest-contentful-paint": { numericValue: 5200 },
         "cumulative-layout-shift": { numericValue: 0.05 },
@@ -147,6 +147,7 @@ describe("PageSpeed", () => {
   it("prefiere datos de campo y aplica los umbrales de Core Web Vitals", () => {
     const p = parsePsi(psi, "mobile");
     expect(p.performanceScore).toBe(42);
+    expect(p.lighthouseSeoScore).toBe(100);
     expect(p.field).toEqual({ lcpMs: 3100, cls: 0.3, inpMs: 150, category: "AVERAGE" });
     expect(p.opportunities[0]).toMatchObject({ id: "render-blocking-resources", savingsMs: 900 });
     const sev = Object.fromEntries(auditPerformance(p).map((f) => [f.rule, f.severity]));

@@ -96,6 +96,8 @@ export interface PerformanceResult {
   strategy: "mobile" | "desktop";
   url: string;
   performanceScore: number | null;
+  /** Categoría SEO de Lighthouse (1 página, ya renderizada). Opcional: auditorías anteriores no la tienen. */
+  lighthouseSeoScore?: number | null;
   lab: { lcpMs: number | null; cls: number | null; tbtMs: number | null; fcpMs: number | null; speedIndexMs: number | null };
   /** Datos de campo (CrUX). null si el sitio no tiene tráfico suficiente. */
   field: { lcpMs: number | null; cls: number | null; inpMs: number | null; category: string | null } | null;

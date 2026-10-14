@@ -5,8 +5,12 @@ import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
 import { SeverityBadge } from "./findings-table";
 import { CATEGORY_LABEL, type AuditSummary, type PageSummary, type PerformanceResult } from "../engine";
 
-/** Resumen de la auditoría: la puntuación con su banda y el desglose por severidad en una sola franja. */
-export function SummaryCards({ summary }: { summary: AuditSummary }) {
+/**
+ * Resumen de la auditoría: la puntuación con su banda y el desglose por severidad en una sola franja.
+ * Si PageSpeed devolvió la categoría SEO de Lighthouse, se muestra al lado con lo que mide cada una:
+ * suelen diferir mucho y sin esa nota parecen contradecirse.
+ */
+export function SummaryCards({ summary, lighthouseSeo }: { summary: AuditSummary; lighthouseSeo?: number | null }) {
   const band = scoreBand(summary.score);
   const total = summary.counts.critical + summary.counts.high + summary.counts.medium + summary.counts.ok;
   return (
@@ -16,7 +20,7 @@ export function SummaryCards({ summary }: { summary: AuditSummary }) {
           {summary.score}
         </p>
         <div>
-          <p className="font-medium text-heading">Puntuación · {band.label.toLowerCase()}</p>
+          <p className="font-medium text-heading">Puntuación NeuroFusion · {band.label.toLowerCase()}</p>
           <p className="text-xs text-muted">de 100 · {summary.scoreVersion}</p>
         </div>
       </div>
@@ -31,6 +35,18 @@ export function SummaryCards({ summary }: { summary: AuditSummary }) {
         ))}
       </dl>
       <p className="text-sm text-muted">{total} evaluaciones en {summary.pagesAudited} página(s)</p>
+      {lighthouseSeo != null ? (
+        <p className="basis-full border-t border-border pt-3 text-sm text-muted">
+          <span className="text-foreground">
+            SEO de Lighthouse (Google):{" "}
+            <strong className="tabular-nums" style={{ color: scoreColor(lighthouseSeo) }}>
+              {lighthouseSeo}/100
+            </strong>
+          </span>{" "}
+          · revisa sólo la página principal, después de ejecutar JavaScript, con unas 10 comprobaciones básicas. La puntuación NeuroFusion
+          rastrea {summary.pagesAudited} página(s) con todas las reglas sobre el HTML que entrega el servidor, así que suele ser más baja.
+        </p>
+      ) : null}
     </Card>
   );
 }

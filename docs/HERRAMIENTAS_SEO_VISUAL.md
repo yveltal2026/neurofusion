@@ -37,7 +37,9 @@ Origen: el módulo **FRSKO NeuroSEO v1.0** (pipeline CLI en Python, desarrollado
 | Enlaces | enlaces internos rotos y enlaces a redirecciones |
 | Rendimiento | puntuación Lighthouse, LCP, CLS, INP con umbrales oficiales; prefiere datos de campo (CrUX p75) sobre laboratorio |
 
-**Puntuación `seo-score-1.0`**: promedio ponderado por regla (peso 1–3) del crédito de cada evaluación (CORRECTO 1 · MEJORABLE 0.5 · GRAVE 0.25 · CRÍTICO 0). Sirve para seguir la evolución de un mismo sitio; no es una métrica de Google.
+**Puntuación `seo-score-1.0`**: promedio ponderado por regla (peso 1–3) del crédito de cada evaluación (CORRECTO 1 · MEJORABLE 0.5 · GRAVE 0.25 · CRÍTICO 0). Sirve para seguir la evolución de un mismo sitio; no es una métrica de Google. Junto a ella se muestra la categoría SEO de Lighthouse (vía PageSpeed): ésa revisa sólo la página principal, ya renderizada con JavaScript y con ~10 comprobaciones básicas, así que suele salir más alta (p. ej. 100 vs. 60). No se contradicen: miden cosas distintas.
+
+**URLs**: se comparan sin hash ni puerto por defecto, pero **conservando la barra final** (`/ia` y `/ia/` son URLs distintas; antes quitarla provocaba bucles de redirección falsos en sitios con barra final). Los bucles reales se reportan como «bucle de redirecciones». Si una página entrega casi nada en el HTML (< 50 palabras y sin enlaces internos), la auditoría avisa que el sitio parece construirse con JavaScript.
 
 **Plan con IA**: resumen, prioridades con impacto/esfuerzo y pasos, ganancias rápidas y propuestas de reescritura de títulos/descripciones/H1 para revisión editorial. Exportación CSV e impresión a PDF.
 

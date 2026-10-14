@@ -12,6 +12,7 @@ export function parsePsi(json: unknown, strategy: "mobile" | "desktop"): Perform
   const audits = obj(lh.audits);
   const audit = (id: string) => num(obj(audits[id]).numericValue);
   const score = num(obj(obj(lh.categories).performance).score);
+  const seoScore = num(obj(obj(lh.categories).seo).score);
 
   const le = obj(root.loadingExperience);
   const metrics = obj(le.metrics);
@@ -34,6 +35,7 @@ export function parsePsi(json: unknown, strategy: "mobile" | "desktop"): Perform
     strategy,
     url: String(lh.finalDisplayedUrl ?? lh.finalUrl ?? root.id ?? ""),
     performanceScore: score === null ? null : Math.round(score * 100),
+    lighthouseSeoScore: seoScore === null ? null : Math.round(seoScore * 100),
     lab: {
       lcpMs: audit("largest-contentful-paint"),
       cls: audit("cumulative-layout-shift"),

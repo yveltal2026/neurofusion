@@ -76,6 +76,39 @@ describe("runLiveAudit", () => {
     expect(out.findings.find((f) => f.rule === "page.reachable")?.detail).toContain("privada");
   });
 
+  it("respeta la barra final: /ia → /ia/ no es un bucle", async () => {
+    const deps = fakeSite({
+      "https://d.mx/": { status: 200, body: page("Inicio de la tienda demo en línea", ["/ia/", "/ia"]) },
+      "https://d.mx/ia": { status: 301, headers: { location: "/ia/" } },
+      "https://d.mx/ia/": { status: 200, body: page("Inteligencia artificial para marketing") },
+    });
+    const out = await runLiveAudit(config, deps);
+    const ia = out.pages.find((p) => p.url === "https://d.mx/ia/");
+    expect(ia?.status).toBe(200);
+    const sinBarra = out.pages.find((p) => p.url === "https://d.mx/ia");
+    expect(sinBarra?.finalUrl).toBe("https://d.mx/ia/");
+    expect(out.findings.filter((f) => f.rule === "page.reachable" && f.severity === "critical")).toEqual([]);
+  });
+
+  it("reporta un bucle de redirecciones real como tal", async () => {
+    const deps = fakeSite({
+      "https://d.mx/": { status: 200, body: page("Inicio de la tienda demo en línea", ["/x"]) },
+      "https://d.mx/x": { status: 301, headers: { location: "/y" } },
+      "https://d.mx/y": { status: 301, headers: { location: "/x" } },
+    });
+    const out = await runLiveAudit(config, deps);
+    expect(deps.hits.filter((h) => h === "https://d.mx/x")).toHaveLength(1);
+    expect(out.findings.find((f) => f.rule === "page.reachable" && f.url === "https://d.mx/x")?.detail).toContain("bucle");
+  });
+
+  it("avisa cuando el HTML es un cascarón que arma JavaScript", async () => {
+    const deps = fakeSite({
+      "https://d.mx/": { status: 200, body: `<html><head><title>App</title></head><body><div id="root"></div><script src="/app.js"></script></body></html>` },
+    });
+    const out = await runLiveAudit(config, deps);
+    expect(out.notes.some((n) => n.includes("JavaScript en el navegador"))).toBe(true);
+  });
+
   it("rechaza de entrada un sitio privado", async () => {
     const deps = fakeSite({});
     deps.lookup = async () => ["10.0.0.5"];

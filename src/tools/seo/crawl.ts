@@ -121,6 +121,8 @@ export async function download(url: string, deps: CrawlDeps, timeoutMs: number, 
         if (hop >= MAX_REDIRECTS) return { rec: { ...base, finalUrl: current, status: res.status, error: "demasiadas redirecciones" }, body: null };
         const next = normalizeUrl(location, current);
         if (!next) return { rec: { ...base, status: res.status, error: "redirección inválida" }, body: null };
+        if (next === url || redirects.includes(next))
+          return { rec: { ...base, finalUrl: next, status: res.status, error: `bucle de redirecciones (${current} → ${next})` }, body: null };
         redirects.push(next);
         await res.body?.cancel();
         current = next;
@@ -189,6 +191,8 @@ export function psiErrorNote(status: number, hasKey: boolean, googleMessage: str
 
 async function fetchPerformance(url: string, strategy: "mobile" | "desktop", deps: CrawlDeps): Promise<PerformanceResult | string> {
   const q = new URLSearchParams({ url, strategy, category: "performance", locale: "es" });
+  // La categoría SEO de Lighthouse se muestra junto a la nuestra para explicar la diferencia.
+  q.append("category", "seo");
   if (deps.psiKey) q.set("key", deps.psiKey);
   try {
     const res = await deps.fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`, { signal: AbortSignal.timeout(75_000) });
@@ -358,6 +362,11 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
     performance = perf;
     raw.push(...auditPerformance(perf));
   }
+  const shells = pages.filter((p) => p.wordCount < 50 && p.links.internal.length === 0).length;
+  if (shells)
+    notes.push(
+      `${shells} página(s) entregan casi nada en el HTML (menos de 50 palabras y ningún enlace interno): el sitio parece construirse con JavaScript en el navegador. Google lo renderiza, pero después y no siempre completo; otros buscadores y los asistentes de IA suelen leer sólo el HTML. Por eso aquí pueden faltar H1, texto o enlaces que sí ves en el navegador.`,
+    );
   if (pages.length === 0) notes.push("No se pudo descargar ningún HTML. Si el sitio bloquea rastreadores, usa el modo asistido (subir HTML).");
   notes.push("Se analiza el HTML tal como lo entrega el servidor, sin ejecutar JavaScript.");
 
