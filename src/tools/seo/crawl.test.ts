@@ -92,3 +92,29 @@ describe("runUploadAudit", () => {
     expect(out.findings.some((f) => f.rule === "title.present")).toBe(true);
   });
 });
+
+describe("aviso de PageSpeed", () => {
+  it("distingue cuota compartida sin clave de problemas con la clave", async () => {
+    const { psiErrorNote } = await import("./crawl");
+    expect(psiErrorNote(429, false, null)).toContain("sin clave");
+    expect(psiErrorNote(429, true, null)).toContain("con la clave configurada");
+    expect(psiErrorNote(403, true, "PageSpeed Insights API has not been used in project 123")).toContain("habilitada");
+  });
+
+  it("la nota llega a la auditoría y nunca incluye la clave", async () => {
+    const deps = fakeSite({ "https://d.mx/": { status: 200, body: page("Inicio de la tienda demo en línea") } });
+    const base = deps.fetch;
+    deps.psiKey = "SECRETA123";
+    deps.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith("https://www.googleapis.com/")) {
+        return new Response(JSON.stringify({ error: { message: `Quota exceeded for ${url}` } }), { status: 429 });
+      }
+      return base(input, init);
+    }) as typeof fetch;
+    const out = await runLiveAudit(seoConfigSchema.parse({ siteUrl: "https://d.mx/", maxPages: 1, checkPerformance: true }), deps);
+    const note = out.notes.find((n) => n.includes("PageSpeed")) ?? "";
+    expect(note).toContain("con la clave configurada");
+    expect(note).not.toContain("SECRETA123");
+  });
+});

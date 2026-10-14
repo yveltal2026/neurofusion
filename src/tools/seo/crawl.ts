@@ -159,12 +159,40 @@ async function runPool<T>(items: T[], limit: number, fn: (x: T) => Promise<void>
   );
 }
 
+/** Mensaje de error que Google devuelve en el cuerpo ({ error: { message } }), recortado. Nunca incluye la clave. */
+async function googleErrorMessage(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { error?: { message?: unknown } };
+    const msg = typeof body.error?.message === "string" ? body.error.message : null;
+    return msg ? msg.replace(/key=[^&\s]+/gi, "key=…").slice(0, 200) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Nota legible sobre por qué no hubo datos de rendimiento. Distingue si el servidor tenía
+ * clave: sin clave, un 429 es la cuota compartida de Google; con clave, el problema es la clave.
+ */
+export function psiErrorNote(status: number, hasKey: boolean, googleMessage: string | null): string {
+  const detail = googleMessage ? ` Google: «${googleMessage}»` : "";
+  if (!hasKey) {
+    return status === 429
+      ? "PageSpeed Insights respondió 429: se agotó la cuota compartida sin clave. Configura PAGESPEED_API_KEY en Vercel y vuelve a desplegar."
+      : `PageSpeed Insights respondió ${status} (consulta sin clave).${detail}`;
+  }
+  if (status === 429) return `PageSpeed Insights respondió 429 con la clave configurada: se agotó su cuota.${detail}`;
+  if (status === 400 || status === 403)
+    return `PageSpeed Insights rechazó la clave configurada (${status}). Revisa que la PageSpeed Insights API esté habilitada en ese proyecto de Google Cloud y que la clave la permita.${detail}`;
+  return `PageSpeed Insights respondió ${status} con la clave configurada.${detail}`;
+}
+
 async function fetchPerformance(url: string, strategy: "mobile" | "desktop", deps: CrawlDeps): Promise<PerformanceResult | string> {
   const q = new URLSearchParams({ url, strategy, category: "performance", locale: "es" });
   if (deps.psiKey) q.set("key", deps.psiKey);
   try {
     const res = await deps.fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`, { signal: AbortSignal.timeout(75_000) });
-    if (!res.ok) return `PageSpeed Insights respondió ${res.status}${res.status === 429 ? " (cuota agotada; configura PAGESPEED_API_KEY)" : ""}.`;
+    if (!res.ok) return psiErrorNote(res.status, Boolean(deps.psiKey), await googleErrorMessage(res));
     return parsePsi(await res.json(), strategy);
   } catch {
     return "No se pudo consultar PageSpeed Insights (tiempo agotado o error de red).";
