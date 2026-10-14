@@ -207,6 +207,7 @@ begin
   -- Un estudio que forma parte de una batería no se borra sin quitarlo antes.
   begin
     delete from public.studies where id = '20000000-0000-0000-0000-0000000000a1';
+    set constraints all immediate; -- la llave es diferida (migración battery_study_fk_deferred): fuerza la comprobación
     raise exception 'un estudio que es paso de una batería no debería poder borrarse';
   exception when foreign_key_violation then null;
   end;
