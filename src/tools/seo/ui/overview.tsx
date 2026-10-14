@@ -3,6 +3,7 @@ import { ScoreTrendChart } from "@/components/charts/seo-charts";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { SeoAuditRow, StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { seoConfigSchema } from "../config";
@@ -61,7 +62,9 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
         <h2 className="font-medium">Auditorías</h2>
         {trend.length > 1 ? <ScoreTrendChart rows={trend} /> : null}
         {audits.length === 0 ? (
-          <Card className="text-sm text-muted">Aún no hay auditorías.</Card>
+          <EmptyState icon="search" title="Aún no hay auditorías">
+            Lanza la primera auditoría con la URL del sitio para ver indexación, on-page y Core Web Vitals.
+          </EmptyState>
         ) : (
           <ul className="space-y-2">
             {audits.map((a) => {

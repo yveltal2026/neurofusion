@@ -136,7 +136,13 @@ export function Wizard({ projectId, projectName, aiAvailable = false }: { projec
                     i <= stepIndex ? "bg-primary text-primary-foreground" : "border border-border"
                   }`}
                 >
-                  {i < stepIndex ? "✓" : i + 1}
+                  {i < stepIndex ? (
+                    <svg viewBox="0 0 40 40" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M9 21l8 8 14-16" />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
                 </span>
                 {s.title}
               </button>

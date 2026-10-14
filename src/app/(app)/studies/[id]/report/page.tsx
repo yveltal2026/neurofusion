@@ -2,6 +2,7 @@ import { IfdChart, TaskSuccessChart } from "@/components/charts/visual-charts";
 import { PrintButton } from "@/components/print-button";
 import { StudyHeader } from "@/components/study-header";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, IfdMeasurementRow } from "@/lib/db/types";
 import { loadVisualStudyPage } from "@/tools/visual/load";
@@ -108,7 +109,9 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
           <MethodNote measurement={latest[0]} />
         </section>
       ) : (
-        <Card className="text-sm text-muted">Aún no hay medición del IFD.</Card>
+        <EmptyState icon="flag" title="Aún no hay medición del IFD">
+          Califica las capturas del recorrido en la pestaña Calificación para calcular el Índice de Fricción Digital.
+        </EmptyState>
       )}
 
       {config.sites.map((site) => (

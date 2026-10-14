@@ -6,7 +6,11 @@ import { StudyTabs } from "@/components/study-tabs";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/brand/icon";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
+import { IconTile } from "@/components/ui/icon-tile";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { StudyRow } from "@/lib/db/types";
@@ -48,7 +52,8 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", study.project_id).maybeSingle();
 
   if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
-  if (study.tool_type === "visual") return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "visual")
+    return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "survey") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
     return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} />;
@@ -64,14 +69,20 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-            ← {projectName ?? "Proyecto"}
-          </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
-          <p className="mt-1 text-xs uppercase text-muted">
-            IAT · {STATUS_LABEL[study.status]}
-          </p>
+        <div className="flex items-start gap-4">
+          <IconTile name="neuro" size="lg" className="mt-1 hidden sm:inline-flex" />
+          <div>
+            <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
+              ← {projectName ?? "Proyecto"}
+            </Link>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+            <p className="mt-2 flex items-center gap-2 text-xs text-muted">
+              <span className="uppercase">IAT</span>
+              <StatusBadge tone={study.status === "published" ? "success" : study.status === "closed" ? "warning" : "neutral"}>
+                {STATUS_LABEL[study.status]}
+              </StatusBadge>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -81,29 +92,33 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-medium">Liga mágica</h2>
+          <SectionTitle icon="link">Liga mágica</SectionTitle>
           <p className="text-sm text-muted">
             Comparte esta liga con tantos participantes como necesites. No requiere cuenta ni contraseña.
           </p>
         </div>
         <CopyLink url={link} />
-        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-heading underline underline-offset-4">
-          Abrir vista previa (no guarda datos) ↗
+        <a
+          href={`${link}?preview=1`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-heading underline underline-offset-4"
+        >
+          <Icon name="eye" className="size-5" />
+          Abrir vista previa (no guarda datos)
         </a>
         {study.status !== "published" ? (
-          <Alert tone="warning">
-            La liga está inactiva porque el estudio está en estado «{STATUS_LABEL[study.status].toLowerCase()}».
-          </Alert>
+          <Alert tone="warning">La liga está inactiva porque el estudio está en estado «{STATUS_LABEL[study.status].toLowerCase()}».</Alert>
         ) : null}
         <p className="text-xs text-muted">
-          Tip: para mayor fiabilidad de los tiempos de reacción, pide a tus participantes que respondan desde una
-          computadora con teclado. También funciona en celular.
+          Tip: para mayor fiabilidad de los tiempos de reacción, pide a tus participantes que respondan desde una computadora con teclado.
+          También funciona en celular.
         </p>
       </Card>
 
       {config.success ? (
         <Card className="space-y-3">
-          <h2 className="font-medium">Diseño del estudio</h2>
+          <SectionTitle icon="layers">Diseño del estudio</SectionTitle>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[160px_1fr]">
             <dt className="text-muted">Producto</dt>
             <dd>{config.data.product}</dd>
@@ -112,9 +127,7 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
               {config.data.conceptA.label} vs {config.data.conceptB.label}
             </dd>
             <dt className="text-muted">Dimensiones</dt>
-            <dd>
-              {config.data.dimensions.map((d) => `${d.name} (${d.positiveLabel} / ${d.negativeLabel})`).join(" · ")}
-            </dd>
+            <dd>{config.data.dimensions.map((d) => `${d.name} (${d.positiveLabel} / ${d.negativeLabel})`).join(" · ")}</dd>
             <dt className="text-muted">Protocolo</dt>
             <dd>
               {config.data.protocol === "classic7" ? "Clásico de 7 bloques" : "Demo de 5 bloques"} ·{" "}
@@ -128,7 +141,7 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
       )}
 
       <Card className="space-y-4">
-        <h2 className="font-medium">Ajustes</h2>
+        <SectionTitle icon="settings">Ajustes</SectionTitle>
         <StudySettingsForm
           id={study.id}
           status={study.status}
@@ -139,17 +152,21 @@ async function IatOverview({ study, projectName, created }: { study: StudyRow; p
       </Card>
 
       <Card className="space-y-4 border-danger/30">
-        <h2 className="font-medium text-danger">Zona de riesgo</h2>
+        <SectionTitle icon="alert" className="text-danger">
+          Zona de riesgo
+        </SectionTitle>
         <div className="flex flex-wrap gap-3">
           <form action={regenerateLink}>
             <input type="hidden" name="id" value={study.id} />
             <Button type="submit" variant="secondary">
+              <Icon name="refresh" className="size-5" />
               Regenerar liga (invalida la actual)
             </Button>
           </form>
           <form action={deleteStudy}>
             <input type="hidden" name="id" value={study.id} />
             <Button type="submit" variant="danger">
+              <Icon name="trash" className="size-5" />
               Eliminar estudio y todos sus datos
             </Button>
           </form>

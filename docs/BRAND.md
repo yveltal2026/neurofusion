@@ -32,6 +32,16 @@ Reglas que no se rompen:
 - El corredor del IAT (`src/tools/iat/runner/Runner.tsx`) sobrescribe `--primary` por estudio. En modo neutro lo fija a
   `--heading` porque `BlockRunner` pinta con `text-primary` los estímulos de concepto y la menta sobre crema no se lee.
 
+## Iconos
+
+Familia propia del manual (cap. 13), en `src/components/brand/icon.tsx`: lienzo de 40 × 40, trazo de 2, extremos y uniones redondos, sin relleno
+salvo **una** burbuja menta por icono. El trazo toma el color del texto (`text-heading`: teal en claro, crema en profundo). No se mezclan otras
+familias (nada de lucide, emojis ni ilustraciones de banco). Para añadir uno, dibújalo con la misma construcción en `GLYPHS`.
+
+- `IconTile` (icono sobre base de menta al 15 %): filas y tarjetas. `StatTile`: cifra destacada con icono. `EmptyState`: estado vacío con su siguiente paso.
+- Cada herramienta tiene su icono en `src/tools/registry.ts` (`icon`); las pestañas de estudio llevan el suyo en `study-tabs.tsx`.
+- Decorativos: `aria-hidden`. Si un icono es el único contenido de un control, pasa `title`.
+
 ## Tipografía
 
 Poppins (títulos 700/800, etiquetas y botones 600, cifras) y Plus Jakarta Sans (texto, 16 px, interlínea 1.6), cargadas con

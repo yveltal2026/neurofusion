@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Icon } from "@/components/brand/icon";
 import { Button } from "@/components/ui/button";
 
 export function CopyLink({ url }: { url: string }) {
@@ -27,6 +28,7 @@ export function CopyLink({ url }: { url: string }) {
         className="h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 font-mono text-xs"
       />
       <Button type="button" variant="secondary" onClick={copy}>
+        <Icon name={copied ? "check" : "copy"} className="size-5" />
         {copied ? "¡Copiada!" : "Copiar"}
       </Button>
     </div>

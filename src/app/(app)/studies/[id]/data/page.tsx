@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { StudyTabs } from "@/components/study-tabs";
 import { buttonClass } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Icon } from "@/components/brand/icon";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatTile } from "@/components/ui/stat-tile";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { loadSessionViews } from "@/tools/iat/results/load";
@@ -15,15 +17,6 @@ const PAGE_SIZE = 25;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 const pick = <T extends string>(v: string | undefined, allowed: readonly T[], fallback: T): T =>
   allowed.includes(v as T) ? (v as T) : fallback;
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-2xl font-semibold tabular-nums">{value}</p>
-      <p className="text-xs text-muted">{label}</p>
-    </Card>
-  );
-}
 
 export default async function DataPage({ params, searchParams }: PageProps<"/studies/[id]/data">) {
   const { id } = await params;
@@ -77,13 +70,13 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
       <StudyTabs id={id} active="data" />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Completadas" value={stats.completed} />
-        <Stat label="En curso" value={stats.started} />
-        <Stat label="Abandonadas" value={stats.abandoned} />
-        <Stat label="Datos a revisar" value={stats.invalid} />
-        <Stat label="Posibles duplicados" value={stats.dup} />
-        <Stat label="Excluidas del análisis" value={stats.excluded} />
-        <Stat label="Desde celular/tableta" value={stats.mobile} />
+        <StatTile icon="check" label="Completadas" value={stats.completed} />
+        <StatTile icon="clock" label="En curso" value={stats.started} />
+        <StatTile icon="inbox" label="Abandonadas" value={stats.abandoned} />
+        <StatTile icon="alert" label="Datos a revisar" value={stats.invalid} />
+        <StatTile icon="copy" label="Posibles duplicados" value={stats.dup} />
+        <StatTile icon="ban" label="Excluidas del análisis" value={stats.excluded} />
+        <StatTile icon="device" label="Desde celular/tableta" value={stats.mobile} />
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -135,16 +128,29 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
         </form>
         <div className="flex gap-2">
           <a href={`/api/studies/${id}/export/session_summary`} className={buttonClass("secondary", "h-9")}>
+            <Icon name="download" className="size-5" />
             session_summary.csv
           </a>
           <a href={`/api/studies/${id}/export/raw_trials`} className={buttonClass("secondary", "h-9")}>
+            <Icon name="download" className="size-5" />
             raw_trials.csv
           </a>
         </div>
       </div>
 
       {all.length === 0 ? (
-        <Card className="text-sm text-muted">Aún no hay respuestas. Comparte la liga del estudio para empezar a recolectar datos.</Card>
+        <EmptyState
+          icon="inbox"
+          title="Aún no hay respuestas"
+          action={
+            <Link href={`/studies/${id}`} className={buttonClass("secondary")}>
+              <Icon name="link" className="size-5" />
+              Ir a la liga del estudio
+            </Link>
+          }
+        >
+          Comparte la liga del estudio con tus participantes para empezar a recolectar datos.
+        </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-sm">

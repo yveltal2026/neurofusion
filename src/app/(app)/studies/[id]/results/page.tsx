@@ -4,6 +4,7 @@ import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, IfdMeasurementRow } from "@/lib/db/types";
 import { createRemeasurement } from "@/tools/visual/actions";
@@ -224,7 +225,9 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
           <MethodNote measurement={latest[0]} />
         </>
       ) : (
-        <Card className="text-sm text-muted">Aún no hay mediciones.</Card>
+        <EmptyState icon="results" title="Aún no hay mediciones">
+          Cuando haya calificaciones del recorrido verás aquí los resultados del IFD.
+        </EmptyState>
       )}
 
       {runs.length > 1 ? (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { visualConfigSchema } from "../config";
@@ -77,7 +78,9 @@ export async function VisualOverview({ study, projectName, created }: { study: S
           <AssetUploader studyId={study.id} withPlacement />
         </Card>
         {assets.length === 0 ? (
-          <Card className="text-sm text-muted">Aún no hay piezas.</Card>
+          <EmptyState icon="image" title="Aún no hay piezas">
+            Sube una pieza gráfica, un anuncio o una captura para estimar su mapa de atención.
+          </EmptyState>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {assets.map((a) => (

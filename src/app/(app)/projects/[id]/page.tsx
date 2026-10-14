@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button, buttonClass } from "@/components/ui/button";
+import { Icon } from "@/components/brand/icon";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { IconTile } from "@/components/ui/icon-tile";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
 import { getTool } from "@/tools/registry";
@@ -40,6 +43,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         <form action={deleteProject}>
           <input type="hidden" name="id" value={project.id} />
           <Button type="submit" variant="ghost" className="text-danger">
+            <Icon name="trash" className="size-5" />
             Eliminar proyecto
           </Button>
         </form>
@@ -49,18 +53,33 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Estudios</h2>
           <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
+            <Icon name="plus" className="size-5" />
             Nuevo estudio
           </Link>
         </div>
         {(studies ?? []).length === 0 ? (
-          <Card className="text-sm text-muted">Este proyecto aún no tiene estudios.</Card>
+          <EmptyState
+            icon="layers"
+            title="Este proyecto aún no tiene estudios"
+            action={
+              <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("secondary")}>
+                <Icon name="plus" className="size-5" />
+                Crear el primer estudio
+              </Link>
+            }
+          >
+            Elige una herramienta (IAT, encuesta, SEO o análisis visual) y arma tu primer estudio.
+          </EmptyState>
         ) : (
           <ul className="space-y-2">
             {(studies ?? []).map((s) => (
               <li key={s.id}>
                 <Link href={`/studies/${s.id}`} className="block">
-                  <Card className="flex items-center justify-between transition hover:border-primary">
-                    <span className="font-medium">{s.name}</span>
+                  <Card className="flex items-center justify-between gap-3 py-4 transition hover:border-primary">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <IconTile name={getTool(s.tool_type)?.icon ?? "layers"} size="sm" />
+                      <span className="truncate font-medium">{s.name}</span>
+                    </span>
                     <span className="text-xs uppercase text-muted">
                       {getTool(s.tool_type)?.shortName ?? s.tool_type}
                       {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}

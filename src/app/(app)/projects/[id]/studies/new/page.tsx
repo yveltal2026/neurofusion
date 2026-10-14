@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { IconTile } from "@/components/ui/icon-tile";
 import { requireUser } from "@/lib/auth/session";
 import { TOOLS } from "@/tools/registry";
 
@@ -25,9 +26,12 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
         {TOOLS.map((tool) => (
           <li key={tool.type}>
             <Link href={tool.newStudyPath(id)} className="block">
-              <Card className="h-full transition hover:border-primary">
-                <h2 className="font-medium">{tool.name}</h2>
-                <p className="mt-1 text-sm text-muted">{tool.description}</p>
+              <Card className="flex h-full gap-4 transition hover:border-primary">
+                <IconTile name={tool.icon} />
+                <div className="min-w-0">
+                  <h2 className="font-medium">{tool.name}</h2>
+                  <p className="mt-1 text-sm text-muted">{tool.description}</p>
+                </div>
               </Card>
             </Link>
           </li>
