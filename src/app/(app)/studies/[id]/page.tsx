@@ -15,6 +15,7 @@ import { magicLinkUrl } from "@/lib/magic-link";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
 import { SeoOverview } from "@/tools/seo/ui/overview";
+import { SurveyOverview } from "@/tools/survey/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
 import { deleteStudy, regenerateLink } from "./actions";
 
@@ -48,6 +49,10 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
 
   if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "visual") return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "survey") {
+    const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
+    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} />;
+  }
   return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
 }
 

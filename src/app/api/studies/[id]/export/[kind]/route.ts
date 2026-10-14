@@ -4,8 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { loadSessionViews, loadTrialsForExport } from "@/tools/iat/results/load";
 import { rawTrialsCsv, sessionSummaryCsv } from "@/tools/iat/results/views";
+import { surveyConfigSchema } from "@/tools/survey/engine";
+import { surveyCsv } from "@/tools/survey/results/csv";
+import { loadSurveyRecords } from "@/tools/survey/results/load";
 
-const kindSchema = z.enum(["raw_trials", "session_summary"]);
+const kindSchema = z.enum(["raw_trials", "session_summary", "survey_responses"]);
 
 /** Exporta los datos del estudio a CSV. Usa la sesión del investigador, así que RLS decide qué ve. */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id]/export/[kind]">) {
@@ -21,6 +24,15 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
+  // Encuestas: una fila por participante (RLS decide qué estudios ve el investigador).
+  if (kind.data === "survey_responses") {
+    const { data: survey } = await supabase.from("studies").select("id, config").eq("id", id).eq("tool_type", "survey").maybeSingle();
+    if (!survey) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    const surveyConfig = surveyConfigSchema.safeParse(survey.config);
+    if (!surveyConfig.success) return NextResponse.json({ error: "Configuración inválida" }, { status: 500 });
+    return csvResponse(surveyCsv(surveyConfig.data, await loadSurveyRecords(supabase, id)), kind.data);
+  }
+
   const { data: study } = await supabase.from("studies").select("id, config").eq("id", id).eq("tool_type", "iat").maybeSingle();
   if (!study) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
   const config = iatConfigSchema.safeParse(study.config);
@@ -32,10 +44,14 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id
       ? sessionSummaryCsv(config.data, views)
       : rawTrialsCsv(config.data, new Map(views.map((v) => [v.id, v.participant_ref])), await loadTrialsForExport(supabase, id));
 
+  return csvResponse(csv, kind.data);
+}
+
+function csvResponse(csv: string, name: string) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${kind.data}.csv"`,
+      "Content-Disposition": `attachment; filename="${name}.csv"`,
       "Cache-Control": "no-store",
     },
   });
