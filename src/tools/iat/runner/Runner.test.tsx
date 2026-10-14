@@ -375,3 +375,43 @@ describe("Runner · dispositivo táctil", () => {
     expect(screen.getByTestId("error-mark").textContent).toBe("");
   });
 });
+
+describe("Runner · como paso de una batería", () => {
+  it("empieza en el formulario (sin consentimiento propio), no hace pre-chequeo y enlaza la sesión a la batería", async () => {
+    const config = makeConfig();
+    const server = createFakeServer(config);
+    const fetchSpy = vi.fn(server.fetchImpl);
+    vi.stubGlobal("fetch", fetchSpy);
+    const onComplete = vi.fn();
+    render(<Runner token={TOKEN} config={config} preview={false} embedded={{ batterySessionId: "bat-1", onComplete }} />);
+
+    await tick(0);
+    // La bienvenida y el consentimiento los cubre la batería: se va directo al formulario.
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByText("Antes de empezar")).toBeTruthy();
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText(/Frecuencia/), { target: { value: "Diario" } });
+      fireEvent.click(screen.getByRole("radio", { name: "Marca A" }));
+    });
+    await click("Continuar");
+    await tick(0);
+
+    const startCall = fetchSpy.mock.calls.find((c) => String(c[0]).endsWith("/start"));
+    expect(startCall).toBeTruthy();
+    expect(JSON.parse(String((startCall![1] as RequestInit).body)).batterySessionId).toBe("bat-1");
+    expect(server.state.calls).not.toContain("/check");
+    expect(onComplete).not.toHaveBeenCalled(); // aún no termina el test
+  });
+
+  it("sin batería no manda batterySessionId (comportamiento de siempre)", async () => {
+    const config = makeConfig();
+    const server = createFakeServer(config);
+    const fetchSpy = vi.fn(server.fetchImpl);
+    vi.stubGlobal("fetch", fetchSpy);
+    render(<Runner token={TOKEN} config={config} preview={false} />);
+    await startSession();
+    const startCall = fetchSpy.mock.calls.find((c) => String(c[0]).endsWith("/start"));
+    expect(JSON.parse(String((startCall![1] as RequestInit).body))).not.toHaveProperty("batterySessionId");
+  });
+});

@@ -32,7 +32,9 @@ import { demoConfig } from "@/tools/iat/demo";
 import { generateMagicToken } from "@/lib/magic-link";
 import type { SurveyConfig } from "@/tools/survey/engine";
 import {
+  apiMessage,
   availabilityError,
+  loadBatteryByToken,
   loadParticipantStudyByToken,
   loadStudyByToken,
   loadSurveyByToken,
@@ -200,5 +202,71 @@ describe("disponibilidad", () => {
         now,
       ),
     ).toBe("closed");
+  });
+});
+
+describe("carga de la batería", () => {
+  const batteryRow = (
+    config: unknown,
+    extra: Record<string, unknown> = {},
+  ) => ({
+    id: "bat-1",
+    status: "published",
+    closes_at: null,
+    duplicate_policy: "device_cookie",
+    config,
+    ...extra,
+  });
+  const validConfig = {
+    version: 1,
+    title: "Estudio",
+    texts: { consent: "Consentimiento", thankYou: "Gracias" },
+  };
+
+  it("rechaza ligas con forma inválida sin consultar la base de datos", async () => {
+    expect(await loadBatteryByToken("corto")).toEqual({
+      ok: false,
+      code: "invalid_link",
+    });
+    expect(db.calls).toBe(0);
+  });
+
+  it("sin coincidencia → liga inválida; error de la base → error de servidor", async () => {
+    const token = generateMagicToken();
+    expect(await loadBatteryByToken(token)).toEqual({
+      ok: false,
+      code: "invalid_link",
+    });
+    db.result = { data: null, error: { message: "boom" } };
+    expect(await loadBatteryByToken(token)).toEqual({
+      ok: false,
+      code: "server_error",
+    });
+  });
+
+  it("devuelve la batería con su configuración validada", async () => {
+    db.result = {
+      data: batteryRow(validConfig, { closes_at: "2030-01-01T00:00:00Z" }),
+      error: null,
+    };
+    const res = await loadBatteryByToken(generateMagicToken());
+    expect(res.ok && res.study).toMatchObject({
+      id: "bat-1",
+      status: "published",
+      closes_at: "2030-01-01T00:00:00Z",
+    });
+    expect(res.ok && res.study.config.title).toBe("Estudio");
+  });
+
+  it("una configuración guardada inválida → error de servidor", async () => {
+    db.result = { data: batteryRow({ version: 1 }), error: null };
+    expect(await loadBatteryByToken(generateMagicToken())).toEqual({
+      ok: false,
+      code: "server_error",
+    });
+  });
+
+  it("el código de paso fuera de orden tiene mensaje en español", () => {
+    expect(apiMessage("out_of_order")).toMatch(/termina primero el anterior/);
   });
 });

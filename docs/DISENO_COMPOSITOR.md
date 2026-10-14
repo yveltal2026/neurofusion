@@ -137,6 +137,8 @@ Motor puro `src/tools/battery/engine`, con pruebas: une por `battery_session_id`
 | **F2** | **Batería**: migración, API `/api/b/*`, modo incrustado del IAT, `BatteryRunner`, creación y vista de resultados por participante | Batería IAT + encuesta completa de punta a punta; recarga a mitad retoma bien; el estudio de una herramienta sigue idéntico |
 | **F3** | **Informe integrado** (motor + vista) | Dos capas cruzadas con etiqueta de evidencia y supresión de grupos chicos |
 
+**Estado (2026-10-14).** F0–F2 hechas y migración aplicada en Supabase. F3 hecha en lo esencial: motor `src/tools/battery/report` (D-score del IAT + métricas de encuesta por participante; Spearman con IC, p y ajuste de Holm; mínimo 10 pares y marca «exploratoria» bajo 30; etiquetas medido/estimado), página `/batteries/[id]/report`, CSV `/api/batteries/[id]/export`, exclusión manual de participantes y páginas de error amables en `/s` y `/b`. **Pendiente de F3:** desglose por grupo con supresión < 5 (la batería aún no captura segmentos), análisis con IA sobre los agregados, y ponderar por `quality`.
+
 ## 5. Riesgos y decisiones abiertas
 
 1. **Dos niveles de límite y candado** (batería e hijos). Mitigación: los estudios hijo creados desde una batería no llevan límite propio; el de la batería manda y se aplica con `claim_battery_session`.

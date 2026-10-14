@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { linkStepSession } from "@/lib/battery-link";
 import type { ApiErrorCode } from "@/lib/participant-api";
 import {
   buildAnswerSchema,
@@ -42,6 +43,8 @@ export async function startSurveySession(
     ipHash: string | null;
     userAgent: string | null;
     device: DeviceInput;
+    /** Si la encuesta es un paso de una batería, la sesión de batería a la que se enlaza. */
+    batterySessionId?: string;
   },
 ): Promise<StartResult> {
   const { data, error } = await admin.rpc("claim_session", {
@@ -64,10 +67,19 @@ export async function startSurveySession(
     data as { outcome: string; new_session_id: string | null }[] | null
   )?.[0];
   switch (row?.outcome) {
-    case "ok":
-      return row.new_session_id
-        ? { ok: true, sessionId: row.new_session_id }
-        : { ok: false, code: "server_error" };
+    case "ok": {
+      if (!row.new_session_id) return { ok: false, code: "server_error" };
+      // Dentro de una batería: la base de datos valida el paso y el orden; si no se puede, no deja sesión huérfana.
+      if (input.batterySessionId) {
+        const linked = await linkStepSession(
+          admin,
+          row.new_session_id,
+          input.batterySessionId,
+        );
+        if (!linked.ok) return { ok: false, code: linked.code };
+      }
+      return { ok: true, sessionId: row.new_session_id };
+    }
     case "already_participated":
       return { ok: false, code: "already_participated" };
     case "full":

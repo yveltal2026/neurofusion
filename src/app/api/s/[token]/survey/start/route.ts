@@ -23,6 +23,8 @@ import { startSurveySession } from "@/tools/survey/participant";
 
 const bodySchema = z.object({
   consent: z.literal(true),
+  /** Sólo si la encuesta corre como paso de una batería. */
+  batterySessionId: z.string().uuid().optional(),
   device: z.object({
     inputMode: z.enum(["keyboard", "touch"]),
     deviceType: z.enum(["desktop", "mobile", "tablet", "unknown"]),
@@ -72,6 +74,7 @@ export async function POST(
     ipHash: ip ? hashIp(ip, study.id, secret) : null,
     userAgent: request.headers.get("user-agent"),
     device: body.device,
+    batterySessionId: body.batterySessionId,
   });
   if (!started.ok) return apiError(started.code);
 

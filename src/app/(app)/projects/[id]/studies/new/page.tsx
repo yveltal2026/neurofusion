@@ -20,8 +20,11 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
           ← {project.name}
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nuevo estudio</h1>
-        <p className="mt-1 text-sm text-muted">Elige la herramienta que quieres aplicar en este proyecto.</p>
+        <p className="mt-1 text-sm text-muted">
+          Elige entre aplicar <strong>una sola herramienta</strong> o combinar varias en una <strong>batería</strong> con una sola liga.
+        </p>
       </div>
+      <h2 className="text-lg font-semibold">Una herramienta</h2>
       <ul className="grid gap-3 sm:grid-cols-2">
         {TOOLS.map((tool) => (
           <li key={tool.type}>
@@ -37,6 +40,16 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
           </li>
         ))}
       </ul>
+      <h2 className="text-lg font-semibold">Varias herramientas en una sola liga</h2>
+      <Link href={`/projects/${id}/batteries/new`} className="block">
+        <Card className="transition hover:border-primary">
+          <h3 className="font-medium">Batería de pasos</h3>
+          <p className="mt-1 text-sm text-muted">
+            Une estudios del proyecto (IAT y encuestas) en una sola liga: el participante da un consentimiento y los recorre en el orden que elijas. La plataforma
+            sugiere un orden y tú puedes cambiarlo u omitir pasos.
+          </p>
+        </Card>
+      </Link>
     </div>
   );
 }

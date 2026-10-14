@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { StudyRow } from "@/lib/db/types";
+import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
 import { getInstrument, listItems, surveyConfigSchema } from "../engine";
 
 const STATUS_LABEL = {
@@ -23,12 +24,15 @@ export function SurveyOverview({
   link,
   created,
   copied = false,
+  blocked = false,
 }: {
   study: StudyRow;
   projectName: string | null;
   link: string;
   created: boolean;
   copied?: boolean;
+  /** Se intentó eliminar un estudio que es paso de una batería. */
+  blocked?: boolean;
 }) {
   const config = surveyConfigSchema.safeParse(study.config);
   const items = config.success ? listItems(config.data) : [];
@@ -50,6 +54,7 @@ export function SurveyOverview({
           ¡Encuesta generada! Comparte la liga con tus participantes.
         </Alert>
       ) : null}
+      {blocked ? <Alert tone="warning">{BATTERY_BLOCK_MESSAGE}</Alert> : null}
 
       <Card className="space-y-3">
         <div>

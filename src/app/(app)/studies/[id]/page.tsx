@@ -19,6 +19,7 @@ import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
+import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
 import { SeoOverview } from "@/tools/seo/ui/overview";
 import { SurveyOverview } from "@/tools/survey/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
@@ -57,12 +58,41 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
     return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "survey") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
-    return <SurveyOverview study={study} projectName={project?.name ?? null} link={link} created={sp.created === "1"} copied={sp.copied === "1"} />;
+    return (
+      <SurveyOverview
+        study={study}
+        projectName={project?.name ?? null}
+        link={link}
+        created={sp.created === "1"}
+        copied={sp.copied === "1"}
+        blocked={sp.blocked === "battery"}
+      />
+    );
   }
-  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} copied={sp.copied === "1"} />;
+  return (
+    <IatOverview
+      study={study}
+      projectName={project?.name ?? null}
+      created={sp.created === "1"}
+      copied={sp.copied === "1"}
+      blocked={sp.blocked === "battery"}
+    />
+  );
 }
 
-async function IatOverview({ study, projectName, created, copied }: { study: StudyRow; projectName: string | null; created: boolean; copied: boolean }) {
+async function IatOverview({
+  study,
+  projectName,
+  created,
+  copied,
+  blocked,
+}: {
+  study: StudyRow;
+  projectName: string | null;
+  created: boolean;
+  copied: boolean;
+  blocked: boolean;
+}) {
   const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
   const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
@@ -91,6 +121,7 @@ async function IatOverview({ study, projectName, created, copied }: { study: Stu
 
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
+      {blocked ? <Alert tone="warning">{BATTERY_BLOCK_MESSAGE}</Alert> : null}
 
       <Card className="space-y-3">
         <div>

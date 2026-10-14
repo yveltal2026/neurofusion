@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlausibleToken } from "@/lib/magic-link";
 import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
+import { batteryConfigSchema, type BatteryConfig } from "@/tools/battery/engine";
 import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
 
 /** Códigos de error públicos que entiende el runner del participante. */
@@ -16,6 +17,7 @@ export type ApiErrorCode =
   | "invalid_data"
   | "rate_limited"
   | "incomplete"
+  | "out_of_order"
   | "not_found"
   | "server_error";
 
@@ -28,6 +30,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   invalid_data: "Los datos enviados no son válidos.",
   rate_limited: "Demasiados intentos. Espera un momento e inténtalo de nuevo.",
   incomplete: "Faltan respuestas por registrar.",
+  out_of_order: "Este paso aún no está disponible: termina primero el anterior.",
   not_found: "No encontramos tu sesión. Vuelve a empezar desde la liga.",
   server_error: "Ocurrió un error. Inténtalo de nuevo en unos minutos.",
 };
@@ -41,6 +44,7 @@ const STATUS: Record<ApiErrorCode, number> = {
   invalid_data: 422,
   rate_limited: 429,
   incomplete: 409,
+  out_of_order: 409,
   not_found: 404,
   server_error: 500,
 };
@@ -141,6 +145,32 @@ export async function loadParticipantStudyByToken(token: string): Promise<Loaded
   }
   const iat = toStudy(found.row, iatConfigSchema);
   return iat.ok ? { ok: true, tool: "iat", study: iat.study } : iat;
+}
+
+export type BatteryForParticipant = ParticipantStudy<BatteryConfig>;
+
+/** Batería por token de su liga mágica (cliente admin: ignora RLS). */
+export async function loadBatteryByToken(token: string): Promise<LoadResult<BatteryConfig>> {
+  if (!isPlausibleToken(token)) return { ok: false, code: "invalid_link" };
+  const { data, error } = await createAdminClient()
+    .from("batteries")
+    .select("id, status, closes_at, duplicate_policy, config")
+    .eq("access_token", token)
+    .maybeSingle();
+  if (error) return { ok: false, code: "server_error" };
+  if (!data) return { ok: false, code: "invalid_link" };
+  const config = batteryConfigSchema.safeParse(data.config);
+  if (!config.success) return { ok: false, code: "server_error" };
+  return {
+    ok: true,
+    study: {
+      id: data.id,
+      status: data.status,
+      closes_at: data.closes_at,
+      duplicate_policy: data.duplicate_policy,
+      config: config.data,
+    },
+  };
 }
 
 /** Código de error si el estudio no acepta participantes ahora; null si está abierto. */
