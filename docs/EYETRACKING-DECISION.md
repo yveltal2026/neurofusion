@@ -1,6 +1,6 @@
 # Eye tracking con webcam: investigación y decisión
 
-Fecha: 2026-10-14 · Estado: **decisión aprobada** (WebEyeTrack tras interfaz `GazeEngine`, plan B MediaPipe + regresión propia); pendiente el spike de validación. No hay código de eye tracking aún.
+Fecha: 2026-10-14 · Estado: **decisión aprobada** (WebEyeTrack tras interfaz `GazeEngine`, plan B MediaPipe + regresión propia). Spike implementado en la rama `spike/eyetracking` (ver [`EYETRACKING-SPIKE.md`](EYETRACKING-SPIKE.md)); pendiente medirlo en dispositivos reales.
 
 ## 1. Qué necesitamos
 
