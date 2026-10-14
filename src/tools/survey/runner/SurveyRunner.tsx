@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import type { EmbeddedStep } from "@/lib/embedded-step";
 import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice, type DeviceInfo } from "@/tools/iat/runner/device";
 import {
@@ -81,10 +82,13 @@ export function SurveyRunner({
   token,
   config,
   preview,
+  embedded,
 }: {
   token: string;
   config: SurveyConfig;
   preview: boolean;
+  /** Si la encuesta corre como paso de una batería (sin consentimiento ni bienvenida propios). */
+  embedded?: EmbeddedStep;
 }) {
   const [stage, setStage] = useState<Stage>({ kind: "welcome" });
   const [consent, setConsent] = useState(false);
@@ -96,12 +100,14 @@ export function SurveyRunner({
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const topRef = useRef<HTMLDivElement>(null);
+  const autoStartedRef = useRef(false);
+  const completedRef = useRef(false);
 
   const blocks = config.blocks;
 
   // Pre-chequeo: avisa de inmediato si ya participó o la encuesta cerró.
   useEffect(() => {
-    if (preview) return;
+    if (preview || embedded) return;
     let cancelled = false;
     surveyApi.check(token).then((res) => {
       if (!cancelled && !res.ok && BLOCKING.includes(res.code))
@@ -110,7 +116,7 @@ export function SurveyRunner({
     return () => {
       cancelled = true;
     };
-  }, [token, preview]);
+  }, [token, preview, embedded]);
 
   // Al cambiar de bloque, vuelve al inicio de la página.
   useEffect(() => {
@@ -124,9 +130,10 @@ export function SurveyRunner({
     setStarting(true);
     setStartError(null);
     if (!preview) {
-      const res = await withRetry(() => surveyApi.start(token, info), {
-        retries: 2,
-      });
+      const res = await withRetry(
+        () => surveyApi.start(token, info, embedded?.batterySessionId),
+        { retries: 2 },
+      );
       if (!res.ok) {
         setStarting(false);
         if (BLOCKING.includes(res.code))
@@ -140,7 +147,21 @@ export function SurveyRunner({
     }
     setStarting(false);
     setStage({ kind: "block", index: 0 });
-  }, [preview, token]);
+  }, [preview, token, embedded]);
+
+  // Como paso de una batería no hay bienvenida ni consentimiento propios: empieza sola.
+  useEffect(() => {
+    if (!embedded || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void start();
+  }, [embedded, start]);
+
+  // Como paso de una batería, avisa una sola vez al terminar (las respuestas ya se guardaron).
+  useEffect(() => {
+    if (stage.kind !== "thanks" || !embedded || completedRef.current) return;
+    completedRef.current = true;
+    embedded.onComplete();
+  }, [stage.kind, embedded]);
 
   const submit = useCallback(async () => {
     if (!sessionId) return;
@@ -189,7 +210,24 @@ export function SurveyRunner({
 
   let body: ReactNode = null;
 
-  if (stage.kind === "welcome") {
+  if (stage.kind === "welcome" && embedded) {
+    body = (
+      <Screen>
+        <div className="space-y-4 text-center">
+          {startError ? (
+            <>
+              <Alert tone="error">{startError}</Alert>
+              <Button onClick={() => void start()}>Reintentar</Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted" role="status">
+              Preparando…
+            </p>
+          )}
+        </div>
+      </Screen>
+    );
+  } else if (stage.kind === "welcome") {
     body = (
       <Screen>
         <div className="space-y-6">
@@ -311,6 +349,14 @@ export function SurveyRunner({
             </p>
           )}
         </div>
+      </Screen>
+    );
+  } else if (stage.kind === "thanks" && embedded) {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status">
+          Continuando…
+        </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {

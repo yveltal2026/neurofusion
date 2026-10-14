@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
+import { demoConfig } from "@/tools/iat/demo";
+import {
+  DEFAULT_THANK_YOU as SURVEY_THANK_YOU,
+  defaultConsentText as surveyConsent,
+  type SurveyConfig,
+} from "@/tools/survey/engine";
 import {
   DEFAULT_BATTERY_THANK_YOU,
   defaultBatteryConsentText,
@@ -49,6 +55,16 @@ function fakeAdmin(
   };
   return { admin: admin as unknown as SupabaseClient, rpcCalls };
 }
+
+const iatCfg = demoConfig();
+const surveyCfg: SurveyConfig = {
+  version: 1,
+  title: "Encuesta",
+  texts: { consent: surveyConsent("Encuesta"), thankYou: SURVEY_THANK_YOU },
+  blocks: [
+    { kind: "instrument", id: "nps", instrumentId: "nps", required: true },
+  ],
+};
 
 const device = {
   deviceId: "dev-1",
@@ -172,8 +188,18 @@ describe("progreso", () => {
     run_order: ["s-iat", "s-sv"],
   };
   const studies = [
-    { id: "s-sv", tool_type: "survey", access_token: "tok-sv" },
-    { id: "s-iat", tool_type: "iat", access_token: "tok-iat" },
+    {
+      id: "s-sv",
+      tool_type: "survey",
+      access_token: "tok-sv",
+      config: surveyCfg,
+    },
+    {
+      id: "s-iat",
+      tool_type: "iat",
+      access_token: "tok-iat",
+      config: iatCfg,
+    },
   ];
 
   it("devuelve los pasos en el orden fijado al iniciar (no el de la consulta) con sus ligas", async () => {
@@ -186,8 +212,8 @@ describe("progreso", () => {
     });
     const res = await loadBatteryProgress(f.admin, "bat-1", "bs-1");
     expect(res.ok && res.value.steps).toEqual([
-      { studyId: "s-iat", tool: "iat", token: "tok-iat" },
-      { studyId: "s-sv", tool: "survey", token: "tok-sv" },
+      { studyId: "s-iat", tool: "iat", token: "tok-iat", config: iatCfg },
+      { studyId: "s-sv", tool: "survey", token: "tok-sv", config: surveyCfg },
     ]);
     expect(res.ok && res.value.progress).toEqual([
       { studyId: "s-iat", status: "completed" },
@@ -292,6 +318,16 @@ describe("progreso", () => {
       },
     });
     expect(await loadBatteryProgress(wrongTool.admin, "bat-1", "bs-1")).toEqual(
+      { ok: false, code: "server_error" },
+    );
+    const badConfig = fakeAdmin({
+      tables: {
+        battery_sessions: ok(session),
+        studies: ok([{ ...studies[0], config: { version: 1 } }, studies[1]]),
+        sessions: ok([]),
+      },
+    });
+    expect(await loadBatteryProgress(badConfig.admin, "bat-1", "bs-1")).toEqual(
       { ok: false, code: "server_error" },
     );
     const failChildren = fakeAdmin({

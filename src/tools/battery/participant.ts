@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ApiErrorCode } from "@/lib/participant-api";
+import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
+import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
 import {
   isBatteryComplete,
   stepProgress,
   type BatteryConfig,
-  type BatteryToolType,
   type StepProgress,
 } from "./engine";
 
@@ -76,12 +77,13 @@ export async function startBatterySession(
   }
 }
 
-/** Un paso listo para correr: qué herramienta es y con qué liga se abre. */
-export interface StepLink {
-  studyId: string;
-  tool: BatteryToolType;
-  token: string;
-}
+/**
+ * Un paso listo para correr: qué herramienta es, con qué liga se abre y su configuración (la misma
+ * que el participante ve al abrir esa liga por separado).
+ */
+export type StepLink =
+  | { studyId: string; tool: "iat"; token: string; config: IatConfig }
+  | { studyId: string; tool: "survey"; token: string; config: SurveyConfig };
 
 export interface BatteryProgress {
   /** Estado de la sesión de batería. */
@@ -95,10 +97,71 @@ export interface BatteryProgress {
 export type ProgressResult =
   { ok: true; value: BatteryProgress } | { ok: false; code: ApiErrorCode };
 
+type StepLinksResult =
+  { ok: true; steps: StepLink[] } | { ok: false; code: ApiErrorCode };
+
 const isStringArray = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
-const isTool = (v: unknown): v is BatteryToolType =>
-  v === "iat" || v === "survey";
+
+/** Pasos (en el orden dado) con su liga y su configuración validada. */
+export async function loadStepLinks(
+  admin: SupabaseClient,
+  order: readonly string[],
+): Promise<StepLinksResult> {
+  if (order.length === 0) return { ok: true, steps: [] };
+  const { data, error } = await admin
+    .from("studies")
+    .select("id, tool_type, access_token, config")
+    .in("id", [...order]);
+  if (error) return { ok: false, code: "server_error" };
+
+  const byId = new Map((data ?? []).map((s) => [s.id as string, s]));
+  const steps: StepLink[] = [];
+  for (const studyId of order) {
+    const s = byId.get(studyId);
+    if (!s || typeof s.access_token !== "string")
+      return { ok: false, code: "server_error" };
+    if (s.tool_type === "iat") {
+      const config = iatConfigSchema.safeParse(s.config);
+      if (!config.success) return { ok: false, code: "server_error" };
+      steps.push({
+        studyId,
+        tool: "iat",
+        token: s.access_token,
+        config: config.data,
+      });
+    } else if (s.tool_type === "survey") {
+      const config = surveyConfigSchema.safeParse(s.config);
+      if (!config.success) return { ok: false, code: "server_error" };
+      steps.push({
+        studyId,
+        tool: "survey",
+        token: s.access_token,
+        config: config.data,
+      });
+    } else {
+      return { ok: false, code: "server_error" };
+    }
+  }
+  return { ok: true, steps };
+}
+
+/** Pasos activos de la batería en su orden actual, para la vista previa del investigador (no guarda nada). */
+export async function loadPreviewSteps(
+  admin: SupabaseClient,
+  batteryId: string,
+): Promise<StepLinksResult> {
+  const { data, error } = await admin
+    .from("battery_steps")
+    .select("study_id, position, enabled")
+    .eq("battery_id", batteryId)
+    .order("position");
+  if (error) return { ok: false, code: "server_error" };
+  const order = (data ?? [])
+    .filter((s) => s.enabled)
+    .map((s) => s.study_id as string);
+  return loadStepLinks(admin, order);
+}
 
 /** Progreso de una sesión de batería, derivado de las sesiones de sus pasos. */
 export async function loadBatteryProgress(
@@ -118,24 +181,15 @@ export async function loadBatteryProgress(
   if (!isStringArray(bs.run_order)) return { ok: false, code: "server_error" };
   const order: string[] = bs.run_order;
 
-  const [studies, children] = await Promise.all([
-    admin.from("studies").select("id, tool_type, access_token").in("id", order),
+  const [links, children] = await Promise.all([
+    loadStepLinks(admin, order),
     admin
       .from("sessions")
       .select("study_id, status")
       .eq("battery_session_id", bs.id),
   ]);
-  if (studies.error || children.error)
-    return { ok: false, code: "server_error" };
-
-  const byId = new Map((studies.data ?? []).map((s) => [s.id as string, s]));
-  const steps: StepLink[] = [];
-  for (const studyId of order) {
-    const s = byId.get(studyId);
-    if (!s || !isTool(s.tool_type) || typeof s.access_token !== "string")
-      return { ok: false, code: "server_error" };
-    steps.push({ studyId, tool: s.tool_type, token: s.access_token });
-  }
+  if (!links.ok) return { ok: false, code: links.code };
+  if (children.error) return { ok: false, code: "server_error" };
 
   const progress = stepProgress(
     order,
@@ -148,7 +202,7 @@ export async function loadBatteryProgress(
     ok: true,
     value: {
       status: bs.status as BatteryProgress["status"],
-      steps,
+      steps: links.steps,
       progress,
       complete: bs.status === "completed" || isBatteryComplete(progress),
     },

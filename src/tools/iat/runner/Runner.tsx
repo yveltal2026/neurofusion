@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import type { EmbeddedStep } from "@/lib/embedded-step";
 import type { IatConfig } from "../config";
 import { cryptoRng } from "../engine/rng";
 import type { PlannedBlock } from "../engine/types";
@@ -47,10 +48,13 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
-export function Runner({ token, config, preview }: { token: string; config: IatConfig; preview: boolean }) {
-  const [stage, setStage] = useState<Stage>({ kind: "welcome" });
+export function Runner({ token, config, preview, embedded }: { token: string; config: IatConfig; preview: boolean; embedded?: EmbeddedStep }) {
+  // Como paso de una batería no hay bienvenida ni consentimiento propios: empieza en el formulario.
+  // (Sólo se monta en el navegador, después de que el participante inicia la batería.)
+  const [stage, setStage] = useState<Stage>(embedded ? { kind: "form" } : { kind: "welcome" });
   const [consent, setConsent] = useState(false);
-  const [device, setDevice] = useState<DeviceInfo | null>(null);
+  const [device, setDevice] = useState<DeviceInfo | null>(() => (embedded ? detectDevice() : null));
+  const completedRef = useRef(false);
   const [session, setSession] = useState<Session | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -64,7 +68,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
 
   // Pre-chequeo: avisa de inmediato si ya participó o el estudio cerró.
   useEffect(() => {
-    if (preview) return;
+    if (preview || embedded) return;
     let cancelled = false;
     participantApi.check(token).then((res) => {
       if (!cancelled && !res.ok && ["already_participated", "closed", "full", "not_available", "invalid_link"].includes(res.code)) {
@@ -74,7 +78,14 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     return () => {
       cancelled = true;
     };
-  }, [token, preview]);
+  }, [token, preview, embedded]);
+
+  // Como paso de una batería, avisa una sola vez al terminar (los datos ya se guardaron en "saving").
+  useEffect(() => {
+    if (stage.kind !== "thanks" || !embedded || completedRef.current) return;
+    completedRef.current = true;
+    embedded.onComplete();
+  }, [stage.kind, embedded]);
 
   // Bloquea el scroll mientras se responde el test.
   const running = stage.kind === "block";
@@ -112,7 +123,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
       let id = "preview";
       let counterbalance = newCounterbalance(nDims, cryptoRng());
       if (!preview) {
-        const res = await withRetry(() => participantApi.start(token, participant, device), { retries: 2 });
+        const res = await withRetry(() => participantApi.start(token, participant, device, embedded?.batterySessionId), { retries: 2 });
         if (!res.ok) {
           setStarting(false);
           if (["already_participated", "closed", "full", "not_available", "invalid_link"].includes(res.code)) {
@@ -131,7 +142,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
       setStarting(false);
       setStage(device.inputMode === "touch" ? { kind: "device-notice" } : { kind: "intro" });
     },
-    [device, nDims, preview, token, config],
+    [device, nDims, preview, token, config, embedded],
   );
 
   const finishDimension = useCallback(
@@ -323,6 +334,14 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
             </p>
           )}
         </div>
+      </Screen>
+    );
+  } else if (stage.kind === "thanks" && embedded) {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status">
+          Continuando…
+        </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {
