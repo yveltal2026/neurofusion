@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
-import type { ProjectRow, StudyRow } from "@/lib/db/types";
+import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
 import { getTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
 
@@ -26,6 +26,13 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     .eq("project_id", id)
     .order("created_at", { ascending: false })
     .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "status" | "created_at">[]>();
+
+  const { data: batteries } = await supabase
+    .from("batteries")
+    .select("id, name, status")
+    .eq("project_id", id)
+    .order("created_at", { ascending: false })
+    .returns<Pick<BatteryRow, "id" | "name" | "status">[]>();
 
   return (
     <div className="space-y-8">
@@ -65,6 +72,31 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                       {getTool(s.tool_type)?.shortName ?? s.tool_type}
                       {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Baterías</h2>
+          <Link href={`/projects/${project.id}/batteries/new`} className={buttonClass("secondary")}>
+            Nueva batería
+          </Link>
+        </div>
+        {(batteries ?? []).length === 0 ? (
+          <Card className="text-sm text-muted">Una batería une varios estudios (IAT y encuestas) en una sola liga. Aún no hay ninguna.</Card>
+        ) : (
+          <ul className="space-y-2">
+            {(batteries ?? []).map((b) => (
+              <li key={b.id}>
+                <Link href={`/batteries/${b.id}`} className="block">
+                  <Card className="flex items-center justify-between transition hover:border-primary">
+                    <span className="font-medium">{b.name}</span>
+                    <span className="text-xs uppercase text-muted">Batería · {STATUS_LABEL[b.status]}</span>
                   </Card>
                 </Link>
               </li>

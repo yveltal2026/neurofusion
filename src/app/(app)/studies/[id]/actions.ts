@@ -64,6 +64,9 @@ export async function deleteStudy(formData: FormData) {
   if (!id.success) return;
   const { supabase } = await requireUser();
   const { data: study } = await supabase.from("studies").select("project_id, tool_type").eq("id", id.data).maybeSingle();
+  // Un estudio que es paso de una batería no se borra desde aquí (la FK lo impide): primero se quita de la batería.
+  const { data: usedBy } = await supabase.from("battery_steps").select("battery_id").eq("study_id", id.data).limit(1);
+  if (usedBy?.length) redirect(`/studies/${id.data}?blocked=battery`);
   if (study?.tool_type === "visual") await removeStudyFiles(supabase, id.data);
   // Borra también sesiones, ensayos, resultados, auditorías y piezas (ON DELETE CASCADE).
   await supabase.from("studies").delete().eq("id", id.data);
