@@ -1,6 +1,6 @@
 # Eye tracking con webcam: investigación y decisión
 
-Fecha: 2026-10-14 · Estado: **propuesta para aprobar** (no hay código de eye tracking aún)
+Fecha: 2026-10-14 · Estado: **decisión aprobada** (WebEyeTrack tras interfaz `GazeEngine`, plan B MediaPipe + regresión propia); pendiente el spike de validación. No hay código de eye tracking aún.
 
 ## 1. Qué necesitamos
 
