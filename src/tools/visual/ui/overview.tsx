@@ -2,6 +2,7 @@ import Link from "next/link";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
@@ -72,7 +73,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
         </Card>
         <Card className="space-y-3">
           <div>
-            <h2 className="font-medium">Subir piezas</h2>
+            <SectionTitle icon="image">Subir piezas</SectionTitle>
             <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. Elige el formato para revisar tamaño, proporción y peso.</p>
           </div>
           <AssetUploader studyId={study.id} withPlacement />

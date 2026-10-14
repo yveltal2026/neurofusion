@@ -1,6 +1,7 @@
 import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
 import { SeverityBadge } from "./findings-table";
 import { CATEGORY_LABEL, type AuditSummary, type PageSummary, type PerformanceResult } from "../engine";
@@ -151,7 +152,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
   return (
     <div className="space-y-4">
       <Card className="space-y-2">
-        <h3 className="font-medium">Resumen ejecutivo</h3>
+        <SectionTitle icon="neuro">Resumen ejecutivo</SectionTitle>
         <p className="text-sm leading-relaxed">{plan.executiveSummary}</p>
       </Card>
       {plan.priorities.length ? (
@@ -178,7 +179,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
       ) : null}
       {plan.quickWins.length ? (
         <Card className="space-y-2">
-          <h3 className="font-medium">Ganancias rápidas</h3>
+          <SectionTitle icon="bolt">Ganancias rápidas</SectionTitle>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {plan.quickWins.map((q) => (
               <li key={q}>{q}</li>
@@ -188,7 +189,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
       ) : null}
       {plan.rewrites.length ? (
         <Card className="space-y-2">
-          <h3 className="font-medium">Propuestas de reescritura</h3>
+          <SectionTitle icon="chat">Propuestas de reescritura</SectionTitle>
           <p className="text-xs text-muted">Propuestas de la IA para revisión editorial; no se aplican automáticamente.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -219,7 +220,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
       ) : null}
       {plan.limitations.length ? (
         <Card className="space-y-2">
-          <h3 className="font-medium">Límites de esta auditoría</h3>
+          <SectionTitle icon="alert">Límites de esta auditoría</SectionTitle>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {plan.limitations.map((l) => (
               <li key={l}>{l}</li>

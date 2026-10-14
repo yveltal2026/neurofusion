@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { withRetry } from "@/tools/iat/runner/api";
@@ -193,6 +194,7 @@ export function SurveyRunner({
     body = (
       <Screen>
         <div className="space-y-6">
+          <IconTile name="survey" />
           <h1 className="text-2xl font-semibold tracking-tight">
             {config.title}
           </h1>
@@ -316,7 +318,8 @@ export function SurveyRunner({
   } else if (stage.kind === "thanks") {
     body = (
       <Screen>
-        <div className="space-y-4 text-center" data-testid="thanks">
+        <div className="flex flex-col items-center space-y-4 text-center" data-testid="thanks">
+          <IconTile name="check" size="lg" />
           <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
           <p className="whitespace-pre-line text-sm leading-relaxed">
             {config.texts.thankYou}

@@ -120,11 +120,11 @@ export function BlockRunner({
         <div className="grid grid-cols-2 gap-4 p-6">
           <div className="space-y-2" data-testid="side-left">
             <Labels categories={block.leftCategories} labels={labels} />
-            <div className="text-center"><kbd className="rounded border border-border px-2 py-0.5 text-sm">E</kbd></div>
+            <div className="text-center"><kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 font-mono text-sm font-semibold">E</kbd></div>
           </div>
           <div className="space-y-2" data-testid="side-right">
             <Labels categories={block.rightCategories} labels={labels} />
-            <div className="text-center"><kbd className="rounded border border-border px-2 py-0.5 text-sm">I</kbd></div>
+            <div className="text-center"><kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 font-mono text-sm font-semibold">I</kbd></div>
           </div>
         </div>
       ) : null}

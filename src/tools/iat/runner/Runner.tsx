@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import type { IatConfig } from "../config";
@@ -188,6 +189,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     body = (
       <Screen>
         <div className="space-y-6">
+          <IconTile name="neuro" />
           <h1 className="text-2xl font-semibold tracking-tight">Estudio sobre {config.product}</h1>
           <div className="space-y-3 whitespace-pre-line text-sm leading-relaxed">{config.texts.consent}</div>
           <label className="flex cursor-pointer items-start gap-3 text-sm">
@@ -234,6 +236,7 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
     body = (
       <Screen>
         <div className="space-y-5">
+          <IconTile name="agenda" />
           <h2 className="text-xl font-semibold tracking-tight">Instrucciones</h2>
           <p className="text-sm leading-relaxed">
             Verás palabras, una a la vez, en el centro de la pantalla. Tu tarea es clasificarlas en la categoría correcta{" "}
@@ -246,8 +249,8 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
             </p>
           ) : (
             <p className="text-sm leading-relaxed">
-              Usa la tecla <kbd className="rounded border border-border px-1.5">E</kbd> para la categoría de la izquierda y la
-              tecla <kbd className="rounded border border-border px-1.5">I</kbd> para la de la derecha.
+              Usa la tecla <kbd className="rounded-md border-2 border-border bg-surface px-1.5 font-mono text-xs font-semibold">E</kbd> para la categoría de la izquierda y la
+              tecla <kbd className="rounded-md border-2 border-border bg-surface px-1.5 font-mono text-xs font-semibold">I</kbd> para la de la derecha.
             </p>
           )}
           <p className="text-sm leading-relaxed">
@@ -328,7 +331,8 @@ export function Runner({ token, config, preview }: { token: string; config: IatC
   } else if (stage.kind === "thanks") {
     body = (
       <Screen>
-        <div className="space-y-4 text-center" data-testid="thanks">
+        <div className="flex flex-col items-center space-y-4 text-center" data-testid="thanks">
+          <IconTile name="check" size="lg" />
           <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
           <p className="whitespace-pre-line text-sm leading-relaxed">{config.texts.thankYou}</p>
         </div>

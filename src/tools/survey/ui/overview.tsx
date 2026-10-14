@@ -5,6 +5,7 @@ import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { StudyRow } from "@/lib/db/types";
 import { getInstrument, listItems, surveyConfigSchema } from "../engine";
 
@@ -47,7 +48,7 @@ export function SurveyOverview({
 
       <Card className="space-y-3">
         <div>
-          <h2 className="font-medium">Liga mágica</h2>
+          <SectionTitle icon="link">Liga mágica</SectionTitle>
           <p className="text-sm text-muted">
             Comparte esta liga con tantos participantes como necesites. No
             requiere cuenta ni contraseña.
@@ -72,7 +73,7 @@ export function SurveyOverview({
 
       {config.success ? (
         <Card className="space-y-3">
-          <h2 className="font-medium">Diseño de la encuesta</h2>
+          <SectionTitle icon="survey">Diseño de la encuesta</SectionTitle>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[160px_1fr]">
             <dt className="text-muted">Título</dt>
             <dd>{config.data.title}</dd>
@@ -109,7 +110,7 @@ export function SurveyOverview({
       )}
 
       <Card className="space-y-4">
-        <h2 className="font-medium">Ajustes</h2>
+        <SectionTitle icon="settings">Ajustes</SectionTitle>
         <StudySettingsForm
           id={study.id}
           status={study.status}
@@ -120,7 +121,7 @@ export function SurveyOverview({
       </Card>
 
       <Card className="space-y-4 border-danger/30">
-        <h2 className="font-medium text-danger">Zona de riesgo</h2>
+        <SectionTitle icon="alert" className="text-danger">Zona de riesgo</SectionTitle>
         <div className="flex flex-wrap gap-3">
           <form action={regenerateLink}>
             <input type="hidden" name="id" value={study.id} />

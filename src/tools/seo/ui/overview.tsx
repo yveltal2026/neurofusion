@@ -3,6 +3,7 @@ import { ScoreTrendChart } from "@/components/charts/seo-charts";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { SectionTitle } from "@/components/ui/section-title";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { SeoAuditRow, StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
@@ -37,7 +38,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="min-w-0 space-y-3">
             <div>
-              <h2 className="font-medium">Auditoría en vivo</h2>
+              <SectionTitle icon="search">Auditoría en vivo</SectionTitle>
               <p className="text-sm text-muted">
                 Rastrea <strong className="break-all text-foreground">{config.data.siteUrl}</strong> (hasta {config.data.maxPages} páginas
                 {config.data.extraUrls.length ? ` + ${config.data.extraUrls.length} URLs adicionales` : ""}), revisa robots.txt, sitemaps y
@@ -48,7 +49,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
           </Card>
           <Card className="min-w-0 space-y-3">
             <div>
-              <h2 className="font-medium">Modo asistido</h2>
+              <SectionTitle icon="settings">Modo asistido</SectionTitle>
               <p className="text-sm text-muted">
                 Para sitios que bloquean rastreadores de centros de datos (frecuente en retail): guarda el HTML desde tu navegador y súbelo.
               </p>
@@ -59,7 +60,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
       ) : null}
 
       <section className="space-y-3">
-        <h2 className="font-medium">Auditorías</h2>
+        <SectionTitle icon="layers">Auditorías</SectionTitle>
         {trend.length > 1 ? <ScoreTrendChart rows={trend} /> : null}
         {audits.length === 0 ? (
           <EmptyState icon="search" title="Aún no hay auditorías">
