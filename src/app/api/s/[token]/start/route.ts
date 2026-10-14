@@ -3,26 +3,21 @@ import { z } from "zod";
 import { serverEnv } from "@/lib/env";
 import { apiError, availabilityError, loadStudyByToken, noStore, readJson } from "@/lib/participant-api";
 import {
-  BATTERY_SESSION_COOKIE,
   clientIp,
   DEVICE_COOKIE_MAX_AGE_SECONDS,
   deviceCookieName,
   hashIp,
   newDeviceId,
   signDeviceId,
-  verifyBatterySession,
   verifyDeviceCookie,
 } from "@/lib/participant-lock";
 import { rateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { attachChildSession, authorizeChildLink } from "@/tools/battery/server";
 import { cryptoRng } from "@/tools/iat/engine";
 import { buildParticipantSchema, splitParticipantPayload, type ParticipantPayload } from "@/tools/iat/participant";
 import { newCounterbalance } from "@/tools/iat/session";
 
 const bodySchema = z.object({
-  /** Si el paso corre dentro de una batería, la sesión de batería a la que se enlaza. */
-  batterySessionId: z.string().uuid().optional(),
   participant: z.unknown(),
   consent: z.literal(true),
   device: z.object({
@@ -60,20 +55,13 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   const { explicit, demographics } = splitParticipantPayload(participant.data as ParticipantPayload);
 
   const { PARTICIPANT_LOCK_SECRET: secret } = serverEnv();
-  const admin = createAdminClient();
-
-  // Dentro de una batería: la cookie firmada debe coincidir con la sesión indicada y el estudio debe ser un paso activo suyo.
-  if (body.batterySessionId) {
-    const owns = verifyBatterySession(request.cookies.get(BATTERY_SESSION_COOKIE)?.value, secret) === body.batterySessionId;
-    if (!owns || !(await authorizeChildLink(admin, study.id, body.batterySessionId))) return apiError("not_found");
-  }
-
   const cookieName = deviceCookieName(study.id);
   const existing = verifyDeviceCookie(request.cookies.get(cookieName)?.value, secret);
   const deviceId = existing ?? newDeviceId();
 
   const counterbalance = newCounterbalance(study.config.dimensions.length, cryptoRng());
 
+  const admin = createAdminClient();
   const { data, error } = await admin.rpc("claim_session", {
     p_study: study.id,
     p_device_id: deviceId,
@@ -93,9 +81,6 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   const row = (data as { outcome: string; new_session_id: string | null }[] | null)?.[0];
   switch (row?.outcome) {
     case "ok": {
-      if (body.batterySessionId && !(await attachChildSession(admin, study.id, row.new_session_id as string, body.batterySessionId))) {
-        return apiError("server_error");
-      }
       const response = NextResponse.json(
         { ok: true, sessionId: row.new_session_id, counterbalance },
         { headers: noStore },

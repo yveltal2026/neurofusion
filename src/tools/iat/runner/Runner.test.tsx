@@ -58,7 +58,6 @@ function createFakeServer(config: IatConfig, opts: { checkError?: string; startE
     demographics: null as Record<string, unknown> | null,
     explicit: null as string | null,
     device: null as unknown,
-    batterySessionId: undefined as string | undefined,
     trials: [] as (StoredTrial & { pressed_side: Side; correct_side: Side })[],
     status: "none" as "none" | "started" | "completed",
     results: null as ReturnType<typeof scoreSession> | null,
@@ -83,7 +82,6 @@ function createFakeServer(config: IatConfig, opts: { checkError?: string; startE
       state.demographics = demographics;
       state.explicit = explicit;
       state.device = body.device;
-      state.batterySessionId = body.batterySessionId;
       state.counterbalance = newCounterbalance(config.dimensions.length, mulberry32(7));
       state.status = "started";
       return json({ ok: true, sessionId: "00000000-0000-4000-8000-000000000001", counterbalance: state.counterbalance });
@@ -375,77 +373,5 @@ describe("Runner · dispositivo táctil", () => {
     pressKey("right");
     expect(screen.getByTestId("stimulus").textContent).toBe(before);
     expect(screen.getByTestId("error-mark").textContent).toBe("");
-  });
-});
-
-describe("Runner · incrustado en una batería", () => {
-  const BATTERY_SESSION = "11111111-1111-4111-8111-111111111111";
-
-  /** Formulario → instrucciones (sin consentimiento ni bienvenida). */
-  async function startEmbedded() {
-    await tick(0);
-    act(() => {
-      fireEvent.change(screen.getByLabelText(/Frecuencia/), { target: { value: "Diario" } });
-      fireEvent.click(screen.getByRole("radio", { name: "Marca A" }));
-    });
-    await click("Continuar");
-    await tick(0);
-    await click("Entendido, continuar");
-  }
-
-  it("omite bienvenida y pre-chequeo, enlaza la sesión de batería y avisa al terminar sin pantalla final", async () => {
-    const config = makeConfig();
-    const server = createFakeServer(config);
-    vi.stubGlobal("fetch", vi.fn(server.fetchImpl));
-    const onComplete = vi.fn();
-    render(<Runner token={TOKEN} config={config} preview={false} embedded={{ batterySessionId: BATTERY_SESSION, onComplete }} />);
-
-    // Entra directo al formulario del participante: no hay consentimiento propio.
-    await tick(0);
-    expect(screen.queryByRole("button", { name: "Comenzar" })).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.getByLabelText(/Frecuencia/)).toBeTruthy();
-
-    await startEmbedded();
-    expect(server.state.batterySessionId).toBe(BATTERY_SESSION);
-    expect(server.state.device).toMatchObject({ inputMode: "keyboard", deviceType: "desktop" });
-
-    const plan = planForDimension(config, 0, server.state.counterbalance[0]);
-    for (const block of plan) {
-      await playBlock(block, (t) => ({ side: t.correctSide, rt: 650 + (t.index % 5) * 20 }), pressKey);
-    }
-    await tick(0);
-
-    expect(server.state.status).toBe("completed");
-    expect(server.state.calls).toEqual(["/start", "/trials", "/complete"]); // sin /check
-    expect(onComplete).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId("thanks")).toBeNull();
-    expect(screen.getByTestId("embedded-done")).toBeTruthy();
-  });
-
-  it("si el servidor rechaza el paso, muestra el motivo y no avisa a la batería", async () => {
-    const config = makeConfig();
-    const server = createFakeServer(config, { startError: "already_participated" });
-    vi.stubGlobal("fetch", vi.fn(server.fetchImpl));
-    const onComplete = vi.fn();
-    render(<Runner token={TOKEN} config={config} preview={false} embedded={{ batterySessionId: BATTERY_SESSION, onComplete }} />);
-    await tick(0);
-    act(() => {
-      fireEvent.change(screen.getByLabelText(/Frecuencia/), { target: { value: "Diario" } });
-      fireEvent.click(screen.getByRole("radio", { name: "Marca A" }));
-    });
-    await click("Continuar");
-    await tick(0);
-    expect(screen.getByTestId("blocked").textContent).toBe("msg:already_participated");
-    expect(onComplete).not.toHaveBeenCalled();
-  });
-
-  it("sin modo incrustado no envía batterySessionId", async () => {
-    const config = makeConfig();
-    const server = createFakeServer(config);
-    vi.stubGlobal("fetch", vi.fn(server.fetchImpl));
-    render(<Runner token={TOKEN} config={config} preview={false} />);
-    await startSession();
-    expect(server.state.batterySessionId).toBeUndefined();
   });
 });

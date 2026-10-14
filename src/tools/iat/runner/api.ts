@@ -39,10 +39,10 @@ const base = (token: string) => `/api/s/${token}`;
 export const participantApi = {
   check: (token: string) => call<object>(`${base(token)}/check`),
 
-  start: (token: string, participant: unknown, device: DeviceInfo, batterySessionId?: string) =>
+  start: (token: string, participant: unknown, device: DeviceInfo) =>
     call<{ sessionId: string; counterbalance: CounterbalanceEntry[] }>(`${base(token)}/start`, {
       method: "POST",
-      body: JSON.stringify({ participant, consent: true, device, ...(batterySessionId ? { batterySessionId } : {}) }),
+      body: JSON.stringify({ participant, consent: true, device }),
     }),
 
   sendTrials: (token: string, sessionId: string, dimensionIdx: number, trials: SubmittedTrial[]) =>

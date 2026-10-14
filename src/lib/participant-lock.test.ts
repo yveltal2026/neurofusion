@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  BATTERY_SESSION_COOKIE,
   clientIp,
   deviceCookieName,
   hashIp,
   newDeviceId,
-  signBatterySession,
   signDeviceId,
-  verifyBatterySession,
   verifyDeviceCookie,
 } from "./participant-lock";
 import { rateLimit, resetRateLimits } from "./rate-limit";
@@ -85,33 +82,5 @@ describe("rateLimit", () => {
     expect(rateLimit("a", 1, 1000, t0 + 500).ok).toBe(false);
     expect(rateLimit("b", 1, 1000, t0 + 500).ok).toBe(true);
     expect(rateLimit("a", 1, 1000, t0 + 1001).ok).toBe(true);
-  });
-});
-
-describe("cookie de sesión de batería", () => {
-  it("firma y verifica", () => {
-    const id = newDeviceId();
-    expect(verifyBatterySession(signBatterySession(id, SECRET), SECRET)).toBe(id);
-  });
-
-  it("rechaza cookies alteradas, con otro secreto o mal formadas", () => {
-    const id = newDeviceId();
-    const cookie = signBatterySession(id, SECRET);
-    expect(verifyBatterySession(cookie, "otro-secreto-distinto-1234567890")).toBeNull();
-    expect(verifyBatterySession(`${newDeviceId()}.${cookie.split(".")[1]}`, SECRET)).toBeNull();
-    expect(verifyBatterySession(cookie.slice(0, -2), SECRET)).toBeNull();
-    expect(verifyBatterySession(undefined, SECRET)).toBeNull();
-    expect(verifyBatterySession("sin-punto", SECRET)).toBeNull();
-    expect(verifyBatterySession(`no-uuid.${cookie.split(".")[1]}`, SECRET)).toBeNull();
-  });
-
-  it("no se puede reutilizar una cookie de dispositivo como cookie de sesión de batería", () => {
-    const id = newDeviceId();
-    expect(verifyBatterySession(signDeviceId(id, SECRET), SECRET)).toBeNull();
-    expect(verifyDeviceCookie(signBatterySession(id, SECRET), SECRET)).toBeNull();
-  });
-
-  it("tiene un nombre de cookie fijo", () => {
-    expect(BATTERY_SESSION_COOKIE).toBe("nf_bsess");
   });
 });

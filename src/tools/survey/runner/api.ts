@@ -8,10 +8,10 @@ const base = (token: string) => `/api/s/${token}/survey`;
 export const surveyApi = {
   check: (token: string) => call<object>(`${base(token)}/check`),
 
-  start: (token: string, device: DeviceInfo, batterySessionId?: string) =>
+  start: (token: string, device: DeviceInfo) =>
     call<{ sessionId: string }>(`${base(token)}/start`, {
       method: "POST",
-      body: JSON.stringify({ consent: true, device, ...(batterySessionId ? { batterySessionId } : {}) }),
+      body: JSON.stringify({ consent: true, device }),
     }),
 
   submit: (
