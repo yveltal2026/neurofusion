@@ -3,9 +3,24 @@
  * Los proveedores sólo "completan chat" y devuelven texto; la validación del
  * formato (Zod) y el reintento viven en generateStructured, igual para todos.
  */
+/** Imagen en base64 (sin prefijo data:). Sólo en mensajes del usuario. */
+export interface ImagePart {
+  type: "image";
+  mediaType: "image/jpeg" | "image/png" | "image/webp";
+  data: string;
+}
+
+export interface TextPart {
+  type: "text";
+  text: string;
+}
+
+export type ContentPart = TextPart | ImagePart;
+
 export interface ChatMessage {
   role: "user" | "assistant";
-  content: string;
+  /** Texto, o partes de texto e imagen (visión) en mensajes del usuario. */
+  content: string | ContentPart[];
 }
 
 export interface CompletionRequest {

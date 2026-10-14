@@ -10,7 +10,20 @@ import type { ConceptInput, DimensionInput } from "./engine";
 export const MAX_DIMENSIONS = 4;
 export const MIN_WORDS_PER_POLE = 5;
 export const MAX_WORDS_PER_POLE = 10;
-export const MAX_EXTRA_FIELDS = 5;
+export const MAX_EXTRA_FIELDS = 12;
+export const MIN_OPTIONS = 2;
+export const MAX_OPTIONS = 12;
+export const LIKERT_MIN_POINTS = 3;
+export const LIKERT_MAX_POINTS = 10;
+export const LIKERT_DEFAULT_POINTS = 5;
+
+/** Etiquetas de extremos frecuentes para escalas Likert (atajos del wizard). */
+export const LIKERT_PRESETS = [
+  { id: "acuerdo", name: "Acuerdo", minLabel: "Totalmente en desacuerdo", maxLabel: "Totalmente de acuerdo" },
+  { id: "satisfaccion", name: "Satisfacción", minLabel: "Muy insatisfecho", maxLabel: "Muy satisfecho" },
+  { id: "frecuencia", name: "Frecuencia", minLabel: "Nunca", maxLabel: "Siempre" },
+  { id: "probabilidad", name: "Probabilidad", minLabel: "Nada probable", maxLabel: "Muy probable" },
+] as const;
 
 /** Claves reservadas en `sessions.demographics`. */
 export const RESERVED_FIELD_IDS = ["age", "gender", "explicit"] as const;
@@ -44,7 +57,11 @@ export const dimensionBaseSchema = z.object({
   negativeWords: z.array(word).min(MIN_WORDS_PER_POLE, `Mínimo ${MIN_WORDS_PER_POLE} palabras por polo`).max(MAX_WORDS_PER_POLE),
 });
 
-export const dimensionSchema = dimensionBaseSchema.superRefine((d, ctx) => {
+/** Reglas entre campos de una dimensión: polos distintos y ninguna palabra repetida. */
+export function refineDimension(
+  d: Pick<IatDimensionShape, "positiveLabel" | "negativeLabel" | "positiveWords" | "negativeWords">,
+  ctx: z.RefinementCtx,
+) {
   if (normalizeWord(d.positiveLabel) === normalizeWord(d.negativeLabel)) {
     ctx.addIssue({ code: "custom", path: ["negativeLabel"], message: "Los dos polos deben ser distintos" });
   }
@@ -58,13 +75,29 @@ export const dimensionSchema = dimensionBaseSchema.superRefine((d, ctx) => {
       seen.add(n);
     });
   }
-});
+}
+
+type IatDimensionShape = z.infer<typeof dimensionBaseSchema>;
+
+export const dimensionSchema = dimensionBaseSchema.superRefine(refineDimension);
 
 const extraBase = {
   id: z.string().regex(/^[a-z0-9_]{1,40}$/, "Identificador inválido"),
   label: text(80),
   required: z.boolean(),
 };
+
+/** Las opciones de un campo de selección no pueden repetirse (ignorando mayúsculas y acentos). */
+function refineUniqueOptions(f: { options: string[] }, ctx: z.RefinementCtx) {
+  const seen = new Set<string>();
+  f.options.forEach((o, i) => {
+    const n = normalizeWord(o);
+    if (seen.has(n)) ctx.addIssue({ code: "custom", path: ["options", i], message: `La opción «${o}» está repetida` });
+    seen.add(n);
+  });
+}
+
+const optionsSchema = z.array(text(40)).min(MIN_OPTIONS, `Agrega al menos ${MIN_OPTIONS} opciones`).max(MAX_OPTIONS);
 
 export const extraFieldSchema = z.discriminatedUnion("type", [
   z.object({ ...extraBase, type: z.literal("text") }),
@@ -74,10 +107,21 @@ export const extraFieldSchema = z.discriminatedUnion("type", [
     min: z.number().optional(),
     max: z.number().optional(),
   }),
+  /** Opción única: el participante elige una de las opciones. */
+  z.object({ ...extraBase, type: z.literal("select"), options: optionsSchema }).superRefine(refineUniqueOptions),
+  /** Opción múltiple: el participante marca una o varias de las opciones. */
+  z.object({ ...extraBase, type: z.literal("multiselect"), options: optionsSchema }).superRefine(refineUniqueOptions),
+  /** Escala Likert de 1 a `points`; sólo los extremos llevan etiqueta (opcional). */
   z.object({
     ...extraBase,
-    type: z.literal("select"),
-    options: z.array(text(40)).min(2, "Agrega al menos 2 opciones").max(12),
+    type: z.literal("likert"),
+    points: z
+      .number()
+      .int("Número de puntos inválido")
+      .min(LIKERT_MIN_POINTS, `La escala debe tener al menos ${LIKERT_MIN_POINTS} puntos`)
+      .max(LIKERT_MAX_POINTS, `La escala admite como máximo ${LIKERT_MAX_POINTS} puntos`),
+    minLabel: text(40).optional(),
+    maxLabel: text(40).optional(),
   }),
 ]);
 
@@ -201,6 +245,14 @@ export function toDimensionInput(d: IatDimension): DimensionInput {
 export function parseWordList(raw: string): string[] {
   return raw
     .split(/[\n,;]+/)
+    .map((w) => w.trim())
+    .filter(Boolean);
+}
+
+/** Convierte un texto en líneas (una opción por línea; admite comas dentro de la opción). */
+export function parseLines(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
     .map((w) => w.trim())
     .filter(Boolean);
 }

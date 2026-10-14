@@ -8,12 +8,25 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
 import type { StudyRow } from "@/lib/db/types";
 import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
+import { SeoOverview } from "@/tools/seo/ui/overview";
+import { VisualOverview } from "@/tools/visual/ui/overview";
 import { deleteStudy, regenerateLink } from "./actions";
+
+export async function generateMetadata({ params }: PageProps<"/studies/[id]">) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase.from("studies").select("name").eq("id", id).maybeSingle();
+  return { title: data?.name ? `${data.name} · NeuroFusion` : "Estudio · NeuroFusion" };
+}
+
+// La auditoría SEO en vivo y el análisis visual con IA se ejecutan desde esta página.
+export const maxDuration = 120;
 
 const STATUS_LABEL = { draft: "Borrador", published: "Publicado", closed: "Cerrado" } as const;
 
@@ -33,26 +46,33 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   if (!study) notFound();
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", study.project_id).maybeSingle();
 
+  if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "visual") return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+}
+
+async function IatOverview({ study, projectName, created }: { study: StudyRow; projectName: string | null; created: boolean }) {
+  const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
-  const link = magicLinkUrl(await requestOrigin(), study.access_token);
+  const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline">
-            ← {project?.name ?? "Proyecto"}
+          <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
+            ← {projectName ?? "Proyecto"}
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
           <p className="mt-1 text-xs uppercase text-muted">
-            {study.tool_type} · {STATUS_LABEL[study.status]}
+            IAT · {STATUS_LABEL[study.status]}
           </p>
         </div>
       </div>
 
       <StudyTabs id={id} active="overview" />
 
-      {sp.created === "1" ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
+      {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
 
       <Card className="space-y-3">
         <div>
@@ -62,7 +82,7 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
           </p>
         </div>
         <CopyLink url={link} />
-        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-primary hover:underline">
+        <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-heading underline underline-offset-4">
           Abrir vista previa (no guarda datos) ↗
         </a>
         {study.status !== "published" ? (
@@ -113,8 +133,8 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
         />
       </Card>
 
-      <Card className="space-y-4 border-red-500/30">
-        <h2 className="font-medium text-red-600">Zona de riesgo</h2>
+      <Card className="space-y-4 border-danger/30">
+        <h2 className="font-medium text-danger">Zona de riesgo</h2>
         <div className="flex flex-wrap gap-3">
           <form action={regenerateLink}>
             <input type="hidden" name="id" value={study.id} />

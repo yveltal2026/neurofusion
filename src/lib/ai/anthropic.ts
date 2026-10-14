@@ -1,8 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AiError, type AnalysisProvider, type CompletionRequest, type CompletionResult } from "./types";
+import { AiError, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
 
 /** Modelo por defecto según la guía vigente de la API; sobreescribible con ANTHROPIC_MODEL. */
 export const DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5";
+
+/** Traduce los mensajes neutros al formato de Anthropic (bloques image con fuente base64). */
+export function toAnthropicMessages(messages: ChatMessage[]): Anthropic.MessageParam[] {
+  return messages.map((m) => ({
+    role: m.role,
+    content:
+      typeof m.content === "string"
+        ? m.content
+        : m.content.map((p): Anthropic.ContentBlockParam =>
+            p.type === "text"
+              ? { type: "text", text: p.text }
+              : { type: "image", source: { type: "base64", media_type: p.mediaType, data: p.data } },
+          ),
+  }));
+}
 
 export function createAnthropicProvider(opts: { apiKey: string; model?: string }): AnalysisProvider {
   const client = new Anthropic({ apiKey: opts.apiKey });
@@ -19,7 +34,7 @@ export function createAnthropicProvider(opts: { apiKey: string; model?: string }
           model,
           max_tokens: 16000,
           system: req.system,
-          messages: req.messages,
+          messages: toAnthropicMessages(req.messages),
         });
         if (res.stop_reason === "refusal") {
           throw new AiError("El modelo rechazó la solicitud. Revisa el contenido del estudio e inténtalo de nuevo.", "refusal");

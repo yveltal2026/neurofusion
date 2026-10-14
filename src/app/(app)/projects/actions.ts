@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
+import { removeStudyFiles } from "@/lib/study-files";
 
 const projectSchema = z.object({
   name: z.string().trim().min(1, "Escribe un nombre").max(120, "Máximo 120 caracteres"),
@@ -40,6 +41,9 @@ export async function deleteProject(formData: FormData) {
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
+  // Los archivos del Storage no se borran en cascada con las filas.
+  const { data: visual } = await supabase.from("studies").select("id").eq("project_id", id.data).eq("tool_type", "visual");
+  for (const s of visual ?? []) await removeStudyFiles(supabase, s.id);
   // RLS garantiza que sólo se borran proyectos de la propia organización.
   await supabase.from("projects").delete().eq("id", id.data);
   revalidatePath("/projects");

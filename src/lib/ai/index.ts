@@ -4,7 +4,7 @@ import { createOpenAiProvider } from "./openai";
 import { AiError, type AnalysisProvider } from "./types";
 
 export { AiError } from "./types";
-export type { AnalysisProvider } from "./types";
+export type { AnalysisProvider, ContentPart, ImagePart } from "./types";
 export { generateStructured } from "./structured";
 
 /** Elige el proveedor según AI_PROVIDER (anthropic por defecto). */
@@ -20,4 +20,14 @@ export function getAnalysisProvider(env: Record<string, string | undefined> = pr
     return createOpenAiProvider({ apiKey: env.OPENAI_API_KEY, model: env.OPENAI_MODEL });
   }
   throw new AiError(`AI_PROVIDER inválido: «${which}». Usa «anthropic» u «openai».`, "config");
+}
+
+/** ¿Hay un proveedor de IA configurado? (para ofrecer o no las funciones asistidas) */
+export function isAiConfigured(env: Record<string, string | undefined> = process.env): boolean {
+  try {
+    getAnalysisProvider(env);
+    return true;
+  } catch {
+    return false;
+  }
 }

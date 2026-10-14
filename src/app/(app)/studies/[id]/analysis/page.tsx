@@ -15,6 +15,8 @@ import { STRENGTH_LABEL } from "@/tools/iat/results/labels";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import { toStatsSessions } from "@/tools/iat/results/views";
 
+export const metadata = { title: "Análisis · NeuroFusion" };
+
 // El análisis con IA puede tardar; las acciones de servidor heredan este límite.
 export const maxDuration = 120;
 
@@ -156,7 +158,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${study.project_id}`} className="text-sm text-muted hover:underline">
+        <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Proyecto
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
@@ -168,7 +170,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
           Base del análisis: <strong className="text-foreground">{aggregates.nWithUsableData}</strong> participantes con datos utilizables
           ({completed.length} completadas).
         </p>
-        <Link href={includeInvalid ? `/studies/${id}/analysis` : `/studies/${id}/analysis?invalid=1`} className="text-primary hover:underline">
+        <Link href={includeInvalid ? `/studies/${id}/analysis` : `/studies/${id}/analysis?invalid=1`} className="text-heading underline underline-offset-4">
           {includeInvalid ? "Excluir datos de calidad dudosa" : "Incluir también datos de calidad dudosa"}
         </Link>
       </div>

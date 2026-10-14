@@ -29,6 +29,7 @@ async function createStudy(page: Page): Promise<{ studyUrl: string; link: string
   await page.getByRole("link", { name: /Test de Asociación Implícita/ }).click();
 
   const next = () => page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: "Comenzar" }).click(); // diseño manual (sin IA)
   await page.getByLabel("Producto, servicio o categoría").fill("café de especialidad");
   await next();
   await page.getByLabel("Concepto A (nombre exacto)").fill("Marca A");

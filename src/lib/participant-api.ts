@@ -73,6 +73,7 @@ export async function loadStudyByToken(token: string): Promise<LoadStudyResult> 
     .from("studies")
     .select("id, status, closes_at, duplicate_policy, config")
     .eq("access_token", token)
+    .eq("tool_type", "iat")
     .maybeSingle();
   if (error) return { ok: false, code: "server_error" };
   if (!data) return { ok: false, code: "invalid_link" };

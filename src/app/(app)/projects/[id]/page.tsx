@@ -4,7 +4,10 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
+import { getTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
+
+const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
 
 export default async function ProjectPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
@@ -28,7 +31,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/projects" className="text-sm text-muted hover:underline">
+          <Link href="/projects" className="inline-block py-1 text-sm text-muted hover:underline">
             ← Proyectos
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.name}</h1>
@@ -36,7 +39,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         </div>
         <form action={deleteProject}>
           <input type="hidden" name="id" value={project.id} />
-          <Button type="submit" variant="ghost" className="text-red-600">
+          <Button type="submit" variant="ghost" className="text-danger">
             Eliminar proyecto
           </Button>
         </form>
@@ -59,7 +62,8 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                   <Card className="flex items-center justify-between transition hover:border-primary">
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs uppercase text-muted">
-                      {s.tool_type} · {s.status}
+                      {getTool(s.tool_type)?.shortName ?? s.tool_type}
+                      {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
                   </Card>
                 </Link>
