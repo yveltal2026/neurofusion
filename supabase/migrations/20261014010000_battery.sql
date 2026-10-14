@@ -180,9 +180,7 @@ grant update (excluded, excluded_reason) on public.battery_sessions to authentic
 create function public.save_battery_steps(p_battery uuid, p_steps jsonb)
 returns void language plpgsql security invoker set search_path = public as $$
 begin
-  if jsonb_typeof(p_steps) <> 'array' then
-    raise exception 'p_steps debe ser una lista' using errcode = '22023';
-  end if;
+  -- Si p_steps no es una lista, jsonb_array_elements falla (22023) y la transacción se revierte.
   delete from public.battery_steps where battery_id = p_battery;
   insert into public.battery_steps (battery_id, position, study_id, enabled)
   select p_battery, (t.ord - 1)::smallint, (t.e ->> 'study_id')::uuid, coalesce((t.e ->> 'enabled')::boolean, true)
