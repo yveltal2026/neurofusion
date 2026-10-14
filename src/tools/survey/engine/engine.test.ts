@@ -3,6 +3,8 @@ import {
   buildAnswerSchema,
   computeSurveyAggregates,
   cronbachAlpha,
+  defaultConsentText,
+  DEFAULT_THANK_YOU,
   directionalValues,
   instrumentItemId,
   listItems,
@@ -24,6 +26,10 @@ import {
 const config: SurveyConfig = {
   version: 1,
   title: "Estudio de prueba",
+  texts: {
+    consent: defaultConsentText("Estudio de prueba"),
+    thankYou: DEFAULT_THANK_YOU,
+  },
   blocks: [
     {
       kind: "questions",

@@ -103,11 +103,25 @@ export const blockSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+/** Texto de consentimiento por defecto; el investigador puede editarlo antes de publicar. */
+export function defaultConsentText(title: string): string {
+  return [
+    `Estás invitado(a) a participar en una encuesta: «${title || "encuesta"}».`,
+    "Te pediremos responder algunas preguntas. Dura pocos minutos.",
+    "Tu participación es voluntaria y confidencial: no te pedimos nombre ni correo, y tus respuestas se analizan de forma agregada con fines de investigación.",
+    "Puedes abandonar la encuesta en cualquier momento cerrando esta ventana. Al continuar confirmas que tienes 18 años o más y que aceptas participar.",
+  ].join("\n\n");
+}
+
+export const DEFAULT_THANK_YOU =
+  "¡Gracias por participar! Tus respuestas se han registrado correctamente. Ya puedes cerrar esta ventana.";
+
 export const surveyConfigSchema = z
   .object({
     version: z.literal(1),
     title: text(160),
     intro: text(2000).optional(),
+    texts: z.object({ consent: text(4000), thankYou: text(1000) }),
     blocks: z
       .array(blockSchema)
       .min(1, "Agrega al menos un bloque")

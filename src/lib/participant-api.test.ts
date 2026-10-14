@@ -41,6 +41,7 @@ import {
 const surveyConfig: SurveyConfig = {
   version: 1,
   title: "Encuesta",
+  texts: { consent: "Consentimiento", thankYou: "Gracias" },
   blocks: [
     { kind: "instrument", id: "nps", instrumentId: "nps", required: true },
   ],
