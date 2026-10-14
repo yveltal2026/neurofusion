@@ -1,6 +1,6 @@
 # Roadmap de módulos
 
-Fecha: 2026-10-14 · Estado: **propuesta para revisión**. Las prioridades son un juicio de análisis, no una decisión aprobada. Parte del estado de `main` y de [`EYETRACKING-DECISION.md`](EYETRACKING-DECISION.md); al escribirlo no existía aún código de eye tracking, así que lo que se dice de él es lo que ese documento promete.
+Fecha: 2026-10-14 · Estado: **propuesta para revisión, con cuatro decisiones de producto ya tomadas** (§6). Las prioridades siguen siendo un juicio de análisis, no una decisión aprobada. Parte del estado de `main` y de [`EYETRACKING-DECISION.md`](EYETRACKING-DECISION.md); al escribirlo no existía aún código de eye tracking, así que lo que se dice de él es lo que ese documento promete.
 
 ## 1. Diagnóstico
 
@@ -43,7 +43,8 @@ Valor, esfuerzo y sinergia son estimaciones cualitativas (alto/medio/bajo), no m
 | 6 | Precio (Van Westendorp, Gabor-Granger; luego MaxDiff y conjoint) | Alto | Bajo (los dos primeros) | Encuestas | 2 |
 | 7 | Usabilidad real (tareas, card sorting, tree testing) | Alto | Medio | Journey/IFD | 3 |
 | 8 | Voz del cliente (cualitativo con IA) | Medio–alto | Medio | Encuestas | 3 |
-| 9 | Operación (cuotas, screeners, paneles externos, muestra, portal) | Medio | Medio | Todas | 3 |
+| 9a | Uso académico (rol de alumno, plantillas, duplicado, calculadora de muestra) | Alto (hoy) | Bajo–medio | Todas | 2 |
+| 9b | Operación para clientes finales (portal de sólo lectura, cuotas, screeners, paneles externos, infraestructura) | Medio | Medio | Todas | 3 |
 | 10 | Biometría importada (GSR, FC, EEG por CSV) | Medio | Medio | Compositor | 4 |
 | 11 | Escucha de reseñas y redes | Medio | Alto | IFD | 4, bajo demanda |
 
@@ -55,10 +56,10 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 
 ### 1. Compositor de sesión + informe integrado
 
-- **Qué es.** Un estudio pasa a ser una *batería*: lista ordenada de módulos que un participante recorre con una sola liga (consentimiento → datos → módulos → cierre). Hoy `studies` es de una herramienta; el compositor agrega el concepto de *pasos* sin romper los estudios existentes. Consentimiento de cámara y calibración son pasos reutilizables, no parte del módulo de eye tracking.
+- **Qué es.** Un estudio pasa a ser una *batería*: lista ordenada de módulos que un participante recorre con una sola liga (consentimiento → datos → módulos → cierre). Hoy `studies` es de una herramienta; el compositor agrega el concepto de *pasos* sin romper los estudios existentes. **Decisión tomada:** el compositor **convive** con el estudio de una sola herramienta y el usuario elige entre ambos al crear el estudio (no se fuerza a nadie a pasar por la batería ni se migran los estudios existentes). Consentimiento de cámara y calibración son pasos reutilizables, no parte del módulo de eye tracking.
 - **Informe integrado.** Una vista por proyecto que cruza implícito, explícito, mirada, visual y SEO sobre el mismo objeto de estudio. La IA redacta sobre agregados ya calculados, con la etiqueta medido/estimado/modelado por cifra.
 - **Datos.** Tabla de pasos por estudio (tipo, orden, configuración versionada) y estado por sesión y paso. Campo común de **calidad de sesión** (validez IAT, calibración de mirada, tiempo de atención) para ponderar o excluir.
-- **Listo cuando.** Una batería de 3 pasos se completa de punta a punta en escritorio y celular; el servidor rechaza pasos fuera de orden; un estudio IAT existente sigue funcionando sin migrar datos; el informe integrado muestra al menos dos capas con su etiqueta de evidencia.
+- **Listo cuando.** La pantalla de nuevo estudio ofrece ambas opciones («una herramienta» o «batería») y la primera se comporta exactamente como hoy; una batería de 3 pasos se completa de punta a punta en escritorio y celular; el servidor rechaza pasos fuera de orden; un estudio IAT existente sigue funcionando sin migrar datos; el informe integrado muestra al menos dos capas con su etiqueta de evidencia.
 - **Riesgo.** Es el cambio estructural más grande; conviene diseñarlo antes de añadir más herramientas sueltas.
 
 ### 2. Encuestas y escalas validadas
@@ -74,7 +75,12 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 - **Datos.** Sólo coordenadas normalizadas y marcas de tiempo, más calidad de calibración por sesión. Nunca video.
 - **Restricción de diseño.** Con 4–6° de error, los AOI son **bloques grandes**; la interfaz debe impedir o advertir AOI más pequeños que el error esperado.
 - **Listo cuando.** El motor tiene pruebas con trazas sintéticas; las sesiones con mala calibración se marcan y se excluyen del agregado por regla explícita; el informe declara el error esperado.
-- **Validación cruzada (alto valor).** Comparar el mapa de atención estimado por IA (`nf-vision-1.0`) contra la mirada real de las mismas piezas y reportar la correlación. Convierte «estimación experta» en un modelo con evidencia, o muestra dónde falla.
+- **Validación cruzada (alto valor).** Comparar el mapa de atención estimado por IA (`nf-vision-1.0`) contra la mirada real de las mismas piezas y reportar la correlación. Convierte «estimación experta» en un modelo con evidencia, o muestra dónde falla. Ojo: esto compara dos estimaciones entre sí; **no sustituye** una validación contra un rastreador de laboratorio.
+- **Sin presupuesto para validación externa (decisión tomada).** Mientras no la haya, el módulo se presenta como **indicativo, no validado contra un rastreador de laboratorio**, y esa leyenda va en la interfaz, en los informes y en cualquier material comercial. Lo que sí se hace sin costo:
+  - medir el **error propio de cada sesión** con los puntos de validación tras calibrar (error interno, no independiente) y publicar internamente la distribución por dispositivo;
+  - aplicar el criterio de salida del spike (≤ ~4° laptop, ≤ ~6° celular, ≥ 15 fps, Safari iOS) con las propias pruebas del equipo;
+  - **no prometer a clientes finales** precisión que sólo existe en el paper de WebEyeTrack;
+  - dejar abierta una alianza académica (una escuela con rastreador de laboratorio) como vía barata de validación posterior.
 
 ### 4. Pruebas de estímulos
 
@@ -105,13 +111,19 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 - **Privacidad.** Detección y enmascaramiento de datos personales antes de enviar texto a la IA; política de retención.
 - **Listo cuando.** Cada tema enlaza a las citas de origen; nada se publica sin aprobación del analista.
 
-### 9. Operación
+### 9a. Uso académico (prioridad actual: pruebas con escuelas)
 
+- **Rol de alumno** dentro de una organización/curso, con permisos acotados (pendiente 4 de `HERRAMIENTAS_SEO_VISUAL.md`; hoy: analistas, una organización por usuario).
+- **Plantillas de estudio** y duplicado entre proyectos, para que un docente prepare un estudio base y cada equipo lo copie.
+- **Calculadora de tamaño de muestra** por herramienta, con una guía honesta de qué se puede concluir con grupos chicos (incluida la estabilidad de mapas de calor por mitades de muestra).
+- **Aula**: ya existe el aviso de duplicados por IP+navegador que no bloquea (muchos comparten IP en un salón); hay que probar ligas con 20–40 dispositivos simultáneos y el límite de peticiones en memoria.
+- **Menores de edad.** Si participan estudiantes de menos de 18 años, el consentimiento y el aviso de privacidad cambian (ver §6, punto 4). Es un requisito previo a abrir ligas en escuelas, no un detalle posterior.
+
+### 9b. Operación para clientes finales (cuando lleguen)
+
+- **Portal de cliente de sólo lectura.**
 - **Cuotas y screeners** con descalificación y cierre por celda.
 - **Paneles externos**: parámetros de ID y URL de retorno al completar/descalificar.
-- **Calculadora de tamaño de muestra** por herramienta (incluida la estabilidad de mapas de calor por mitades de muestra).
-- **Plantillas de estudio** y duplicado entre proyectos.
-- **Portal de cliente de sólo lectura** y **rol de alumno** (pendiente 4 de `HERRAMIENTAS_SEO_VISUAL.md`).
 - **Infraestructura**: limitador de peticiones compartido (hoy en memoria por instancia), bitácora de auditoría, retención y borrado de datos.
 
 ### 10. Biometría importada
@@ -126,13 +138,30 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 ## 5. Orden propuesto
 
 - **Ola 1 — base:** compositor de sesión, encuestas y métricas de AOI de eye tracking. El spike debe dejar consentimiento y calibración como piezas reutilizables.
-- **Ola 2 — estudio de concepto completo:** pruebas de estímulos, variantes del IAT y precio. Con la Ola 1 ya hay percepción, preferencia, atención y precio en una sola batería.
-- **Ola 3 — profundidad y escala:** usabilidad real, voz del cliente, operación.
+- **Ola 2 — estudio de concepto completo y uso en escuelas:** pruebas de estímulos, variantes del IAT, precio y uso académico (9a). Con la Ola 1 ya hay percepción, preferencia, atención y precio en una sola batería, y las escuelas pueden operar con rol de alumno y plantillas.
+- **Ola 3 — profundidad y escala:** usabilidad real, voz del cliente y operación para clientes finales (9b).
 - **Ola 4 — según demanda:** biometría importada y escucha de redes.
 
-## 6. Decisiones abiertas
+## 6. Decisiones tomadas (2026-10-14)
 
-1. ¿El compositor reemplaza al estudio de una herramienta o convive con él? (Recomendado: convivir; un estudio simple es una batería de un paso.)
-2. ¿Quién es el primer cliente de la Ola 1: investigación académica (maestría) o agencia? Cambia la prioridad del portal, el rol de alumno y las plantillas.
-3. ¿Hay presupuesto para validar el eye tracking contra un rastreador de laboratorio? Sin esa comparación, sus cifras de error son las del paper, no las nuestras.
-4. Revisión legal del consentimiento de cámara y mirada, y de participantes de la UE, antes de abrir la liga a público real.
+1. **El compositor convive con el estudio de una sola herramienta.** El usuario elige entre ambos al crear el estudio. Implicación de diseño: el estudio de una herramienta no se convierte en una «batería de un paso» por debajo si eso arriesga cambiar su comportamiento; si se unifica el modelo de datos, debe ser invisible para el usuario y cubierto por las pruebas actuales.
+2. **Se probará ahora con escuelas y, quizá, con clientes finales.** El uso académico (9a) sube a la Ola 2 y la operación para clientes finales (9b) queda en la Ola 3, a activarse si el interés de clientes se confirma. El portal de sólo lectura no es bloqueante para las escuelas.
+3. **No hay presupuesto para validar el eye tracking contra un rastreador de laboratorio.** El módulo sale etiquetado como indicativo y no validado (ver ficha 3); no se hacen afirmaciones de precisión a clientes. Se revisa si aparece una alianza académica o presupuesto.
+4. **Revisión legal en dos pasos:** primero un análisis de cumplimiento con las herramientas legales de Claude (skill `legal:compliance-check` y, para clasificar riesgos, `legal:legal-risk-assessment`), y después validación por el equipo legal de FRSKO. **Ninguna liga con cámara/mirada se abre a participantes reales sin esa validación.** El análisis de Claude es un insumo para el equipo legal, no asesoría legal.
+
+### Temas que el análisis legal debe cubrir (insumo)
+
+- Consentimiento explícito de **cámara y mirada**, con la promesa técnica de que el video no sale del dispositivo y de qué datos sí se guardan (coordenadas, tiempos, calidad).
+- **Menores de edad** en escuelas: edad mínima, consentimiento de madre/padre o tutor, y autorización de la institución.
+- Aviso de privacidad y base legal según la normativa mexicana de protección de datos personales vigente (confirmar la versión aplicable) y, si hubiera participantes de la UE, GDPR.
+- Si los datos de mirada o el patrón de uso pueden considerarse biométricos o sensibles en alguna jurisdicción, y qué cambia si es así.
+- Retención, borrado, derechos de acceso/rectificación/cancelación/oposición y cómo se ejercen sin identificar al participante.
+- Responsabilidades entre FRSKO, la escuela y, en su caso, el cliente final (encargado vs. responsable del tratamiento).
+- Uso de proveedores de IA: confirmar que sólo reciben agregados, sin datos personales.
+
+## 7. Decisiones abiertas
+
+1. ¿Qué escuelas, niveles (licenciatura, maestría, bachillerato) y qué tamaño de grupo? Define si hay menores y la carga simultánea a probar.
+2. ¿Quién es el responsable del tratamiento de los datos en las pruebas escolares: FRSKO, la escuela o el docente?
+3. ¿Qué piezas del compositor se necesitan primero en las escuelas (¿encuesta + IAT, o ya con eye tracking?). Si el eye tracking no entra en las primeras pruebas, el trabajo legal más pesado puede esperar.
+4. ¿Qué fecha tentativa tienen las primeras pruebas? Ordena el calendario de la Ola 1 y del trabajo legal.
