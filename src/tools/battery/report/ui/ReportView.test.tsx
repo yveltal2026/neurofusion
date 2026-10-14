@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../actions", () => ({ setParticipantExcluded: vi.fn() }));
 import {
   defaultConsentText,
   DEFAULT_THANK_YOU,
@@ -48,7 +50,14 @@ const people = (n: number): ReportParticipant[] =>
 describe("ReportView", () => {
   it("con datos suficientes muestra IAT (medido), encuesta (medido) y cruces (estimado)", () => {
     const report = buildBatteryReport(steps, people(12));
-    render(<ReportView report={report} steps={steps} unreadable={[]} />);
+    render(
+      <ReportView
+        batteryId="b-1"
+        report={report}
+        steps={steps}
+        unreadable={[]}
+      />,
+    );
     expect(screen.getByText("Medidas implícitas (IAT)")).toBeTruthy();
     expect(screen.getByText("Encuesta · Encuesta de marca")).toBeTruthy();
     expect(
@@ -63,7 +72,14 @@ describe("ReportView", () => {
 
   it("con pocos participantes explica por qué no hay cruces en lugar de inventarlos", () => {
     const report = buildBatteryReport(steps, people(6));
-    render(<ReportView report={report} steps={steps} unreadable={[]} />);
+    render(
+      <ReportView
+        batteryId="b-1"
+        report={report}
+        steps={steps}
+        unreadable={[]}
+      />,
+    );
     expect(screen.queryByText("ρ de Spearman")).toBeNull();
     expect(screen.getByText(/al menos\s+10 participantes/)).toBeTruthy();
     expect(screen.getByText(/1 cruce no calculado/)).toBeTruthy();
@@ -72,10 +88,38 @@ describe("ReportView", () => {
     ).toBeTruthy();
   });
 
+  it("lista a los participantes con su D y métricas, y permite excluir o reincorporar", () => {
+    const list = people(12);
+    list[0] = { ...list[0]!, excluded: true };
+    const report = buildBatteryReport(steps, list);
+    render(
+      <ReportView
+        batteryId="b-1"
+        report={report}
+        steps={steps}
+        unreadable={[]}
+      />,
+    );
+    expect(screen.getByText("Participantes")).toBeTruthy();
+    expect(screen.getByText("r0")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Excluir" })).toHaveLength(11);
+    expect(
+      screen.getAllByRole("button", { name: "Reincorporar" }),
+    ).toHaveLength(1);
+    expect(screen.getByText("Excluido")).toBeTruthy();
+    expect(screen.getByLabelText("Motivo para excluir a r1")).toBeTruthy();
+    expect(screen.queryByLabelText("Motivo para excluir a r0")).toBeNull();
+  });
+
   it("sin participantes lo dice, y avisa de pasos ilegibles", () => {
     const report = buildBatteryReport(steps, []);
     render(
-      <ReportView report={report} steps={steps} unreadable={["IAT roto"]} />,
+      <ReportView
+        batteryId="b-1"
+        report={report}
+        steps={steps}
+        unreadable={["IAT roto"]}
+      />,
     );
     expect(
       screen.getByText(/Aún no hay participantes que hayan terminado/),

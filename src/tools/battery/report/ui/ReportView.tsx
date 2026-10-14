@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { setParticipantExcluded } from "../../actions";
+import { Button } from "@/components/ui/button";
 import { SurveyResultsView } from "@/tools/survey/ui/results-view";
 import type { BatteryReport, CorrelationReport, ReportStep } from "../report";
 
@@ -77,10 +79,12 @@ function CorrelationRow({ c }: { c: CorrelationReport }) {
 
 /** Informe integrado de una batería: IAT medido, encuestas medidas y cruces estimados. */
 export function ReportView({
+  batteryId,
   report,
   steps,
   unreadable,
 }: {
+  batteryId: string;
   report: BatteryReport;
   steps: ReportStep[];
   unreadable: string[];
@@ -254,6 +258,94 @@ export function ReportView({
           </details>
         ) : null}
       </Section>
+
+      {report.rows.length ? (
+        <Section title="Participantes">
+          <p className="text-sm text-muted">
+            Excluir a alguien lo saca de los cálculos de este informe (no borra
+            nada: sigue en la base y en el CSV con la marca). Hazlo con un
+            criterio que puedas explicar, por ejemplo respuestas al azar.
+          </p>
+          <Card className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <Th>Código</Th>
+                  {report.iat.map((d) => (
+                    <Th key={`${d.stepId}:${d.dimensionId}`}>
+                      D · {d.dimensionName}
+                    </Th>
+                  ))}
+                  {report.metrics.map((m) => (
+                    <Th key={m.key}>{m.label}</Th>
+                  ))}
+                  <Th>Informe</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.rows.map((r) => (
+                  <tr
+                    key={r.id}
+                    className={`border-t border-border align-top ${r.excluded ? "opacity-60" : ""}`}
+                  >
+                    <td className="py-1.5 pr-4 font-mono text-xs">{r.ref}</td>
+                    {report.iat.map((d) => (
+                      <td
+                        key={`${d.stepId}:${d.dimensionId}`}
+                        className="py-1.5 pr-4 tabular-nums"
+                      >
+                        {num(r.d[`${d.stepId}:${d.dimensionId}`] ?? null)}
+                      </td>
+                    ))}
+                    {report.metrics.map((m) => (
+                      <td key={m.key} className="py-1.5 pr-4 tabular-nums">
+                        {num(r.metrics[m.key] ?? null, 1)}
+                      </td>
+                    ))}
+                    <td className="py-1.5 pr-4">
+                      <form
+                        action={setParticipantExcluded}
+                        className="flex flex-wrap items-center gap-2"
+                      >
+                        <input type="hidden" name="id" value={r.id} />
+                        <input
+                          type="hidden"
+                          name="batteryId"
+                          value={batteryId}
+                        />
+                        <input
+                          type="hidden"
+                          name="excluded"
+                          value={r.excluded ? "false" : "true"}
+                        />
+                        {r.excluded ? null : (
+                          <input
+                            name="reason"
+                            maxLength={200}
+                            placeholder="Motivo (opcional)"
+                            aria-label={`Motivo para excluir a ${r.ref}`}
+                            className="h-8 w-40 rounded-md border border-border bg-background px-2 text-xs"
+                          />
+                        )}
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          className="h-8 px-2 text-xs"
+                        >
+                          {r.excluded ? "Reincorporar" : "Excluir"}
+                        </Button>
+                        {r.excluded ? (
+                          <span className="text-xs text-muted">Excluido</span>
+                        ) : null}
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </Section>
+      ) : null}
 
       <p className="text-xs text-muted">
         Versión del motor del informe: {report.engineVersion}

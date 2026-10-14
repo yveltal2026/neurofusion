@@ -272,3 +272,38 @@ export async function duplicateBattery(formData: FormData) {
   }
   redirect(`/batteries/${copy.id}?duplicated=1`);
 }
+
+const excludeSchema = z.object({
+  id: idSchema,
+  batteryId: idSchema,
+  excluded: z.enum(["true", "false"]).transform((v) => v === "true"),
+  reason: z
+    .string()
+    .trim()
+    .max(200)
+    .transform((v) => v || null),
+});
+
+/**
+ * Excluye (o reincorpora) a un participante del informe integrado. No borra nada: los datos siguen
+ * en la base y en el CSV con la marca. RLS limita la escritura a participantes de la propia
+ * organización, y la base sólo deja cambiar estas dos columnas.
+ */
+export async function setParticipantExcluded(formData: FormData) {
+  const parsed = excludeSchema.safeParse({
+    id: formData.get("id"),
+    batteryId: formData.get("batteryId"),
+    excluded: formData.get("excluded"),
+    reason: formData.get("reason") ?? "",
+  });
+  if (!parsed.success) return;
+  const { id, batteryId, excluded, reason } = parsed.data;
+  const { supabase } = await requireUser();
+  await supabase
+    .from("battery_sessions")
+    .update({ excluded, excluded_reason: excluded ? reason : null })
+    .eq("id", id)
+    .eq("battery_id", batteryId);
+  revalidatePath(`/batteries/${batteryId}`);
+  revalidatePath(`/batteries/${batteryId}/report`);
+}

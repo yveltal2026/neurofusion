@@ -96,6 +96,7 @@ import {
   duplicateBattery,
   regenerateBatteryLink,
   saveBatterySteps,
+  setParticipantExcluded,
   updateBatterySettings,
 } from "./actions";
 import { DEFAULT_BATTERY_THANK_YOU, defaultBatteryConsentText } from "./engine";
@@ -500,5 +501,71 @@ describe("liga, borrado y copia", () => {
         (c) => c.op === "delete" && c.filters.some(([, v]) => v === "copia-1"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("setParticipantExcluded", () => {
+  const SESSION = "44444444-1111-4111-8111-111111111111";
+
+  it("excluye con motivo, sólo dentro de esa batería, y refresca el informe", async () => {
+    await setParticipantExcluded(
+      form({
+        id: SESSION,
+        batteryId: BAT,
+        excluded: "true",
+        reason: "  Contestó al azar ",
+      }),
+    );
+    const call = mocks.calls.find((c) => c.table === "battery_sessions")!;
+    expect(call.op).toBe("update");
+    expect(call.payload).toEqual({
+      excluded: true,
+      excluded_reason: "Contestó al azar",
+    });
+    expect(call.filters).toEqual([
+      ["id", SESSION],
+      ["battery_id", BAT],
+    ]);
+    expect(mocks.revalidated).toEqual([
+      `/batteries/${BAT}`,
+      `/batteries/${BAT}/report`,
+    ]);
+  });
+
+  it("al reincorporar borra el motivo aunque llegue uno", async () => {
+    await setParticipantExcluded(
+      form({ id: SESSION, batteryId: BAT, excluded: "false", reason: "x" }),
+    );
+    expect(mocks.calls[0]!.payload).toEqual({
+      excluded: false,
+      excluded_reason: null,
+    });
+  });
+
+  it("motivo vacío = null; datos inválidos no tocan la base", async () => {
+    await setParticipantExcluded(
+      form({ id: SESSION, batteryId: BAT, excluded: "true" }),
+    );
+    expect(mocks.calls[0]!.payload).toEqual({
+      excluded: true,
+      excluded_reason: null,
+    });
+
+    mocks.calls = [];
+    await setParticipantExcluded(
+      form({ id: "no-uuid", batteryId: BAT, excluded: "true" }),
+    );
+    await setParticipantExcluded(
+      form({ id: SESSION, batteryId: BAT, excluded: "quizá" }),
+    );
+    await setParticipantExcluded(
+      form({
+        id: SESSION,
+        batteryId: BAT,
+        excluded: "true",
+        reason: "x".repeat(201),
+      }),
+    );
+    expect(mocks.calls).toEqual([]);
   });
 });

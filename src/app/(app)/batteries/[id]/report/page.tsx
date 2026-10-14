@@ -50,7 +50,12 @@ export default async function BatteryReportPage({
           Esta batería no tiene pasos activos que se puedan reportar.
         </Alert>
       ) : (
-        <ReportView report={report} steps={steps} unreadable={unreadable} />
+        <ReportView
+          batteryId={id}
+          report={report}
+          steps={steps}
+          unreadable={unreadable}
+        />
       )}
     </div>
   );
