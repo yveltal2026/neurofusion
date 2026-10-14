@@ -46,6 +46,44 @@ describe("buildSession", () => {
     expect(s.summary.medianErrorDeg).toBeGreaterThan(1);
     expect(s.summary.medianErrorDeg).toBeLessThan(1.5);
     expect(s.verdict.pass).toBe(true);
+    expect(s.calibration.layout).toBe("v2-corners-last");
+  });
+
+  it("diagnóstico: ganancia por eje, error normalizado y área de prueba", () => {
+    // Objetivos con gaze = objetivo + 20 px en x (ganancia 1, sesgo 20) y constante en y (ganancia 0).
+    const results: TargetResult[] = [100, 400, 700, 1000].map((x, i) => ({
+      target: { x, y: 100 + i * 200 },
+      samples: 30,
+      gaze: { x: x + 20, y: 400 },
+      errorPx: 0,
+      precisionPx: 3,
+    }));
+    const s = buildSession(
+      input({
+        viewport: { width: 1440, height: 800 },
+        validation: { results, stream: { fps: 30, validRatio: 1, inferenceMsMedian: 5, frames: 100 }, durationMs: 1 },
+      }),
+    );
+    expect(s.diagnostics.x.gain).toBeCloseTo(1);
+    expect(s.diagnostics.x.biasPx).toBeCloseTo(20);
+    expect(s.diagnostics.y.gain).toBeCloseTo(0);
+    expect(s.diagnostics.normalizedErrorX).toBeCloseTo(20 / 1440);
+    expect(s.diagnostics.span.halfAngleXDeg).toBeGreaterThan(10);
+  });
+
+  it("sin objetivos medidos el diagnóstico queda en null", () => {
+    const s = buildSession(
+      input({
+        validation: {
+          results: [target(null), target(null)],
+          stream: { fps: 30, validRatio: 0, inferenceMsMedian: null, frames: 0 },
+          durationMs: 1,
+        },
+      }),
+    );
+    expect(s.diagnostics.x.gain).toBeNull();
+    expect(s.diagnostics.normalizedErrorX).toBeNull();
+    expect(s.diagnostics.normalizedErrorY).toBeNull();
   });
 
   it("un código vacío cae a «sin-codigo» y una cobertura baja no pasa", () => {

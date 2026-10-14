@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  LIBRARY_CALIBRATION_WINDOW,
   THRESHOLDS,
   aggregateSessions,
+  axisFit,
   calibrationGrid,
   cmToDeg,
   distance,
@@ -14,9 +16,11 @@ import {
   summarize,
   validationTargets,
   verdict,
+  viewportSpan,
   type GazeFrame,
   type Geometry,
   type SessionRecord,
+  type TargetResult,
 } from "./metrics";
 
 const geo: Geometry = { screenWidthPx: 1440, screenWidthCm: 30.4, distanceCm: 50 };
@@ -77,6 +81,34 @@ describe("cuadrículas", () => {
     for (let i = 1; i < pts.length; i++) {
       const dx = Math.abs(pts[i].x - pts[i - 1].x) / w;
       const dy = Math.abs(pts[i].y - pts[i - 1].y) / h;
+      expect(dx >= 0.05 || dy >= 0.05).toBe(true);
+    }
+  });
+
+  it("calibración: los últimos puntos (los que conserva la librería) cubren las 4 esquinas y el centro", () => {
+    const w = 1000;
+    const h = 800;
+    const tail = calibrationGrid(w, h).slice(-LIBRARY_CALIBRATION_WINDOW);
+    const has = (fx: number, fy: number) => tail.some((p) => Math.abs(p.x - fx * w) < 1e-9 && Math.abs(p.y - fy * h) < 1e-9);
+    for (const [fx, fy] of [
+      [0.1, 0.1],
+      [0.9, 0.1],
+      [0.1, 0.9],
+      [0.9, 0.9],
+      [0.5, 0.5],
+    ]) {
+      expect(has(fx, fy)).toBe(true);
+    }
+  });
+
+  it("calibración: repetir el recorrido (2 pasadas) no deja dos puntos seguidos demasiado cerca", () => {
+    const w = 1000;
+    const h = 800;
+    const grid = calibrationGrid(w, h);
+    const twice = [...grid, ...grid];
+    for (let i = 1; i < twice.length; i++) {
+      const dx = Math.abs(twice[i].x - twice[i - 1].x) / w;
+      const dy = Math.abs(twice[i].y - twice[i - 1].y) / h;
       expect(dx >= 0.05 || dy >= 0.05).toBe(true);
     }
   });
@@ -260,5 +292,57 @@ describe("aggregateSessions", () => {
 
   it("sin sesiones devuelve lista vacía", () => {
     expect(aggregateSessions([])).toEqual([]);
+  });
+});
+
+describe("axisFit", () => {
+  const r = (tx: number, gx: number | null): TargetResult => ({
+    target: { x: tx, y: 0 },
+    samples: gx === null ? 0 : 20,
+    gaze: gx === null ? null : { x: gx, y: 0 },
+    errorPx: gx === null ? null : Math.abs(gx - tx),
+    precisionPx: gx === null ? null : 1,
+  });
+
+  it("recupera ganancia y ordenada de una relación lineal exacta", () => {
+    const fit = axisFit([r(0, 50), r(100, 150), r(200, 250), r(300, 350)], "x");
+    expect(fit.gain).toBeCloseTo(1);
+    expect(fit.offsetPx).toBeCloseTo(50);
+    expect(fit.r2).toBeCloseTo(1);
+    expect(fit.biasPx).toBeCloseTo(50);
+  });
+
+  it("detecta compresión: la mirada se mueve la mitad que el objetivo", () => {
+    const fit = axisFit([r(0, 0), r(100, 50), r(200, 100), r(300, 150)], "x");
+    expect(fit.gain).toBeCloseTo(0.5);
+    expect(fit.biasPx).toBeCloseTo(-75);
+  });
+
+  it("ignora objetivos sin lectura y exige 3 medidos y varianza en el objetivo", () => {
+    expect(axisFit([r(0, 0), r(100, 100), r(200, null)], "x")).toEqual({ gain: null, offsetPx: null, r2: null, biasPx: null });
+    expect(axisFit([r(5, 1), r(5, 2), r(5, 3)], "x").gain).toBeNull();
+    expect(axisFit([r(0, 0), r(100, 100), r(200, 200), r(300, null)], "x").gain).toBeCloseTo(1);
+  });
+
+  it("mirada constante: ganancia 0 y R² 0, sin dividir entre cero", () => {
+    const fit = axisFit([r(0, 77), r(100, 77), r(200, 77)], "x");
+    expect(fit.gain).toBeCloseTo(0);
+    expect(fit.r2).toBe(0);
+  });
+});
+
+describe("viewportSpan", () => {
+  it("tamaño físico y semiángulos: monitor ultrawide de 80 cm a 50 cm", () => {
+    const g: Geometry = { screenWidthPx: 2560, screenWidthCm: 80, distanceCm: 50 };
+    const s = viewportSpan({ width: 2519, height: 914 }, g);
+    expect(s.widthCm).toBeCloseTo(78.7, 1);
+    expect(s.heightCm).toBeCloseTo(28.6, 1);
+    expect(s.halfAngleXDeg).toBeCloseTo(38.2, 0);
+    expect(s.halfAngleYDeg).toBeCloseTo(15.9, 0);
+  });
+
+  it("laptop de 31 cm a 50 cm abarca ±17° en horizontal", () => {
+    const g: Geometry = { screenWidthPx: 1440, screenWidthCm: 31, distanceCm: 50 };
+    expect(viewportSpan({ width: 1440, height: 800 }, g).halfAngleXDeg).toBeCloseTo(17.2, 0);
   });
 });

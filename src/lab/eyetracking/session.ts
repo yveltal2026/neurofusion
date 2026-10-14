@@ -1,12 +1,20 @@
 import {
+  axisFit,
+  median,
   summarize,
   verdict,
+  viewportSpan,
+  type AxisFit,
   type DeviceType,
   type FrameStats,
   type Geometry,
   type SessionRecord,
   type TargetResult,
+  type ViewportSpan,
 } from "./metrics";
+
+/** Disposición de calibración usada: permite comparar sesiones hechas antes y después de cambiarla. */
+export const CALIBRATION_LAYOUT = "v2-corners-last";
 
 export type Lighting = "buena" | "media" | "mala";
 
@@ -28,9 +36,19 @@ export interface SessionInput {
   engineId: string;
   /** Tiempo desde «iniciar» hasta la primera lectura (descarga de modelos + cámara), en ms. */
   readyMs: number;
-  calibration: { passes: number; clicks: number; durationMs: number };
+  calibration: { passes: number; clicks: number; durationMs: number; layout?: string };
   validation: { results: TargetResult[]; stream: FrameStats; durationMs: number };
   createdAt: Date;
+}
+
+/** Lectura por eje y del área de prueba: ayuda a distinguir sesgo, compresión y tamaño de pantalla. */
+export interface Diagnostics {
+  x: AxisFit;
+  y: AxisFit;
+  /** Mediana del error absoluto por eje como fracción del viewport (0–1); null si no hubo medición. */
+  normalizedErrorX: number | null;
+  normalizedErrorY: number | null;
+  span: ViewportSpan;
 }
 
 /** Formato que se descarga y que lee `scripts/aggregate-eyetracking.ts`. Es compatible con SessionRecord. */
@@ -45,6 +63,7 @@ export interface ExportedSession extends SessionRecord {
   engineId: string;
   readyMs: number;
   calibration: SessionInput["calibration"];
+  diagnostics: Diagnostics;
   validation: {
     durationMs: number;
     targets: TargetResult[];
@@ -55,6 +74,9 @@ export interface ExportedSession extends SessionRecord {
 /** Ensambla la sesión exportable y le aplica los criterios de salida. */
 export function buildSession(input: SessionInput): ExportedSession {
   const summary = summarize(input.validation.results, input.geometry);
+  const measured = input.validation.results.filter((r) => r.gaze !== null);
+  const absErr = (axis: "x" | "y", size: number) =>
+    measured.length ? median(measured.map((r) => Math.abs(r.gaze![axis] - r.target[axis]))) / size : null;
   return {
     version: 1,
     createdAt: input.createdAt.toISOString(),
@@ -67,7 +89,14 @@ export function buildSession(input: SessionInput): ExportedSession {
     environment: input.environment,
     engineId: input.engineId,
     readyMs: Math.round(input.readyMs),
-    calibration: input.calibration,
+    calibration: { ...input.calibration, layout: input.calibration.layout ?? CALIBRATION_LAYOUT },
+    diagnostics: {
+      x: axisFit(input.validation.results, "x"),
+      y: axisFit(input.validation.results, "y"),
+      normalizedErrorX: absErr("x", input.viewport.width),
+      normalizedErrorY: absErr("y", input.viewport.height),
+      span: viewportSpan(input.viewport, input.geometry),
+    },
     summary,
     fps: input.validation.stream.fps,
     verdict: verdict(summary, input.validation.stream.fps, input.device),

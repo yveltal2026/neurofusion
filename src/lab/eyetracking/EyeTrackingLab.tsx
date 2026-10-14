@@ -51,11 +51,14 @@ function guessDevice(): DeviceType {
   return Math.min(window.screen.width, window.screen.height) < 600 ? "phone" : "tablet";
 }
 
-/** Orden inverso en la segunda pasada para no repetir el mismo recorrido. */
+/**
+ * Todas las pasadas usan el mismo orden: la librería solo conserva las últimas muestras, y ese orden
+ * termina con las esquinas y el centro (ver calibrationGrid).
+ */
 function buildCalibrationPoints(passes: number): Point[] {
   const grid = calibrationGrid(window.innerWidth, window.innerHeight);
   const out: Point[] = [];
-  for (let p = 0; p < passes; p++) out.push(...(p % 2 ? [...grid].reverse() : grid));
+  for (let p = 0; p < passes; p++) out.push(...grid);
   return out;
 }
 

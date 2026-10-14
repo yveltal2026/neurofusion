@@ -75,20 +75,30 @@ export function pxToDeg(px: number, g: Geometry): number {
   return cmToDeg(pxToCm(px, g), g.distanceCm);
 }
 
-/** Cuadrícula 3×3 de calibración: esquinas, bordes y centro, con margen del 10 %. */
+/**
+ * WebEyeTrack 0.0.2 conserva solo las últimas `maxPoints` (5) muestras de calibración y, al llegar la
+ * siguiente, ajusta con ellas una matriz afín: en la práctica pesan los últimos 6 clics. Por eso el
+ * orden importa más que la cantidad (se comprobó leyendo `pruneCalibData`/`adapt` del bundle).
+ */
+export const LIBRARY_CALIBRATION_WINDOW = 6;
+
+/**
+ * Cuadrícula 3×3 de calibración con margen del 10 %. Se recorre de modo que los últimos
+ * LIBRARY_CALIBRATION_WINDOW puntos (los únicos que cuentan) incluyan las 4 esquinas y el centro:
+ * puntos medios de los bordes primero, esquinas después y el centro al final.
+ * Dos puntos consecutivos quedan siempre a más de 5 % entre sí (la librería ignora clics más cercanos).
+ */
 export function calibrationGrid(width: number, height: number): Point[] {
-  // Orden que alterna lados para que dos puntos consecutivos queden siempre lejos entre sí
-  // (la librería ignora clics a menos de 5 % del anterior, y un salto grande ayuda a no “arrastrar” la vista).
   const fractions: [number, number][] = [
+    [0.5, 0.1],
+    [0.5, 0.9],
+    [0.1, 0.5],
+    [0.9, 0.5],
     [0.1, 0.1],
     [0.9, 0.9],
     [0.9, 0.1],
     [0.1, 0.9],
     [0.5, 0.5],
-    [0.5, 0.1],
-    [0.5, 0.9],
-    [0.1, 0.5],
-    [0.9, 0.5],
   ];
   return fractions.map(([fx, fy]) => ({ x: fx * width, y: fy * height }));
 }
@@ -206,6 +216,65 @@ export function summarize(results: TargetResult[], g: Geometry): Summary {
     medianErrorDeg: medErr === null ? null : pxToDeg(medErr, g),
     p75ErrorDeg: p75 === null ? null : pxToDeg(p75, g),
     medianPrecisionPx: precs.length ? median(precs) : null,
+  };
+}
+
+export interface AxisFit {
+  /** Pendiente de mirada = offset + gain · objetivo. 1 es lo ideal; < 1 indica respuesta comprimida. */
+  gain: number | null;
+  /** Ordenada de la recta en píxeles. */
+  offsetPx: number | null;
+  /** Qué tanto de la variación de la mirada explica el objetivo (0–1). */
+  r2: number | null;
+  /** Sesgo medio con signo: mirada − objetivo, en píxeles. */
+  biasPx: number | null;
+}
+
+/** Regresión lineal de la mirada mediana contra la posición del objetivo en un eje (mín. 3 objetivos medidos). */
+export function axisFit(results: TargetResult[], axis: "x" | "y"): AxisFit {
+  const pts = results.filter((r): r is TargetResult & { gaze: Point } => r.gaze !== null);
+  const empty: AxisFit = { gain: null, offsetPx: null, r2: null, biasPx: null };
+  if (pts.length < 3) return empty;
+  const xs = pts.map((r) => r.target[axis]);
+  const ys = pts.map((r) => r.gaze[axis]);
+  const n = pts.length;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let sxx = 0;
+  let sxy = 0;
+  let syy = 0;
+  for (let i = 0; i < n; i++) {
+    sxx += (xs[i] - mx) ** 2;
+    sxy += (xs[i] - mx) * (ys[i] - my);
+    syy += (ys[i] - my) ** 2;
+  }
+  if (sxx === 0) return empty;
+  const gain = sxy / sxx;
+  return {
+    gain,
+    offsetPx: my - gain * mx,
+    r2: syy === 0 ? 0 : (sxy * sxy) / (sxx * syy),
+    biasPx: ys.reduce((a, y, i) => a + (y - xs[i]), 0) / n,
+  };
+}
+
+export interface ViewportSpan {
+  widthCm: number;
+  heightCm: number;
+  /** Semiángulo visual (°) que abarca el área de prueba desde el centro, a la distancia declarada. */
+  halfAngleXDeg: number;
+  halfAngleYDeg: number;
+}
+
+/** Tamaño físico y ángulo visual del área de prueba; permite comparar un monitor grande con una laptop. */
+export function viewportSpan(viewport: { width: number; height: number }, g: Geometry): ViewportSpan {
+  const widthCm = pxToCm(viewport.width, g);
+  const heightCm = pxToCm(viewport.height, g);
+  return {
+    widthCm,
+    heightCm,
+    halfAngleXDeg: cmToDeg(widthCm / 2, g.distanceCm),
+    halfAngleYDeg: cmToDeg(heightCm / 2, g.distanceCm),
   };
 }
 

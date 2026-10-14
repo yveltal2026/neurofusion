@@ -6,6 +6,8 @@ function fmt(v: number | null, digits = 1): string {
   return v === null || !Number.isFinite(v) ? "—" : v.toFixed(digits);
 }
 
+const pct = (v: number | null) => (v === null ? null : v * 100);
+
 function Stat({ label, value, unit, hint }: { label: string; value: string; unit?: string; hint?: string }) {
   return (
     <div className="rounded-md border border-border bg-background px-3.5 py-3">
@@ -77,6 +79,39 @@ export function ResultsView({ session }: { session: ExportedSession }) {
         <Stat label="Carga inicial" value={fmt(session.readyMs / 1000)} unit="s" hint="modelos + cámara" />
         <Stat label="Calibración" value={`${session.calibration.clicks}`} unit="clics" hint={`${fmt(session.calibration.durationMs / 1000, 0)} s`} />
       </dl>
+
+      <Card className="space-y-2">
+        <h2 className="text-base font-semibold">Diagnóstico por eje</h2>
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat
+            label="Ganancia horizontal"
+            value={fmt(session.diagnostics.x.gain, 2)}
+            hint={`sesgo ${fmt(session.diagnostics.x.biasPx, 0)} px · R² ${fmt(session.diagnostics.x.r2, 2)}`}
+          />
+          <Stat
+            label="Ganancia vertical"
+            value={fmt(session.diagnostics.y.gain, 2)}
+            hint={`sesgo ${fmt(session.diagnostics.y.biasPx, 0)} px · R² ${fmt(session.diagnostics.y.r2, 2)}`}
+          />
+          <Stat
+            label="Error en % del área"
+            value={`${fmt(pct(session.diagnostics.normalizedErrorX), 0)} / ${fmt(pct(session.diagnostics.normalizedErrorY), 0)}`}
+            unit="%"
+            hint="horizontal / vertical"
+          />
+          <Stat
+            label="Área de prueba"
+            value={`${fmt(session.diagnostics.span.widthCm, 0)}×${fmt(session.diagnostics.span.heightCm, 0)}`}
+            unit="cm"
+            hint={`±${fmt(session.diagnostics.span.halfAngleXDeg, 0)}° × ±${fmt(session.diagnostics.span.halfAngleYDeg, 0)}°`}
+          />
+        </dl>
+        <p className="text-xs text-muted">
+          Ganancia 1 = la mirada se mueve lo mismo que el objetivo; menos de 0.6 en un eje significa que casi no distingue
+          posiciones en ese eje. Un sesgo grande y constante apunta a un problema de calibración o de postura. Como
+          referencia, una laptop de 31 cm a 50 cm abarca ±17° en horizontal.
+        </p>
+      </Card>
 
       <Card className="space-y-3">
         <h2 className="text-base font-semibold">Objetivos vs. mirada</h2>
