@@ -11,10 +11,14 @@ import {
 } from "@/tools/survey/engine";
 import { loadSurveyRecords } from "@/tools/survey/results/load";
 import { SurveyResultsView } from "@/tools/survey/ui/results-view";
+import { variantConfigSchema } from "@/tools/variants/config";
+import { computeVariantAggregates } from "@/tools/variants/results/aggregate";
+import { loadVariantRecords } from "@/tools/variants/results/load";
+import { VariantResultsView } from "@/tools/variants/ui/results-view";
 
 export const metadata = { title: "Resultados · NeuroFusion" };
 
-export default async function SurveyResponsesPage({
+export default async function ResponsesPage({
   params,
 }: PageProps<"/studies/[id]/responses">) {
   const { id } = await params;
@@ -24,7 +28,7 @@ export default async function SurveyResponsesPage({
     .from("studies")
     .select("*")
     .eq("id", id)
-    .eq("tool_type", "survey")
+    .in("tool_type", ["survey", "iat_variant"])
     .maybeSingle<StudyRow>();
   if (!study) notFound();
   const { data: project } = await supabase
@@ -32,12 +36,38 @@ export default async function SurveyResponsesPage({
     .select("name")
     .eq("id", study.project_id)
     .maybeSingle();
-  const config = surveyConfigSchema.safeParse(study.config);
 
-  const records = config.success ? await loadSurveyRecords(supabase, id) : [];
-  const aggregates = config.success
-    ? computeSurveyAggregates(config.data, records)
-    : null;
+  const isVariant = study.tool_type === "iat_variant";
+  const invalid = (
+    <Alert tone="warning">
+      La configuración guardada de este estudio no es válida.
+    </Alert>
+  );
+
+  let body = invalid;
+  if (isVariant) {
+    const config = variantConfigSchema.safeParse(study.config);
+    if (config.success) {
+      const records = await loadVariantRecords(supabase, id);
+      body = (
+        <VariantResultsView
+          config={config.data}
+          aggregates={computeVariantAggregates(config.data, records)}
+        />
+      );
+    }
+  } else {
+    const config = surveyConfigSchema.safeParse(study.config);
+    if (config.success) {
+      const records = await loadSurveyRecords(supabase, id);
+      body = (
+        <SurveyResultsView
+          config={config.data}
+          aggregates={computeSurveyAggregates(config.data, records)}
+        />
+      );
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -45,10 +75,10 @@ export default async function SurveyResponsesPage({
         study={study}
         projectName={project?.name}
         active="responses"
-        variant="survey"
+        variant={isVariant ? "variant" : "survey"}
         actions={
           <Link
-            href={`/api/studies/${id}/export/survey_responses`}
+            href={`/api/studies/${id}/export/${isVariant ? "variant_results" : "survey_responses"}`}
             prefetch={false}
             className={buttonClass("secondary")}
           >
@@ -56,13 +86,7 @@ export default async function SurveyResponsesPage({
           </Link>
         }
       />
-      {config.success && aggregates ? (
-        <SurveyResultsView config={config.data} aggregates={aggregates} />
-      ) : (
-        <Alert tone="warning">
-          La configuración guardada de este estudio no es válida.
-        </Alert>
-      )}
+      {body}
     </div>
   );
 }

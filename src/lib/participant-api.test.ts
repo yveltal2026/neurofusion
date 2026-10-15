@@ -31,6 +31,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 import { demoConfig } from "@/tools/iat/demo";
 import { generateMagicToken } from "@/lib/magic-link";
 import type { SurveyConfig } from "@/tools/survey/engine";
+import { validVariantConfig } from "@/tools/variants/defaults";
 import {
   apiMessage,
   availabilityError,
@@ -38,6 +39,7 @@ import {
   loadParticipantStudyByToken,
   loadStudyByToken,
   loadSurveyByToken,
+  loadVariantByToken,
 } from "./participant-api";
 
 const surveyConfig: SurveyConfig = {
@@ -50,7 +52,7 @@ const surveyConfig: SurveyConfig = {
 };
 
 function row(
-  tool_type: "iat" | "survey",
+  tool_type: "iat" | "survey" | "iat_variant",
   config: unknown,
   extra: Record<string, unknown> = {},
 ) {
@@ -163,8 +165,27 @@ describe("carga del estudio del participante", () => {
     expect(
       db.queries
         .filter((q) => q.column === "tool_type")
-        .every((q) => (q.value as string[]).join() === "iat,survey"),
+        .every((q) => (q.value as string[]).join() === "iat,survey,iat_variant"),
     ).toBe(true);
+  });
+
+  it("variante del IAT: sólo pide estudios de tipo iat_variant y valida su configuración", async () => {
+    const token = generateMagicToken();
+    await loadVariantByToken(token);
+    expect(db.queries.find((q) => q.column === "tool_type")?.value).toEqual(["iat_variant"]);
+
+    db.result = { data: row("iat_variant", validVariantConfig("gnat")), error: null };
+    const ok = await loadVariantByToken(token);
+    expect(ok.ok && ok.study.config.variant).toBe("gnat");
+
+    db.result = { data: row("iat_variant", { version: 1 }), error: null };
+    expect(await loadVariantByToken(token)).toEqual({ ok: false, code: "server_error" });
+  });
+
+  it("el cargador genérico entrega las variantes con su herramienta", async () => {
+    db.result = { data: row("iat_variant", validVariantConfig("priming")), error: null };
+    const res = await loadParticipantStudyByToken(generateMagicToken());
+    expect(res.ok && res.tool).toBe("iat_variant");
   });
 });
 

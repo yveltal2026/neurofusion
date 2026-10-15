@@ -7,8 +7,11 @@ import { rawTrialsCsv, sessionSummaryCsv } from "@/tools/iat/results/views";
 import { surveyConfigSchema } from "@/tools/survey/engine";
 import { surveyCsv } from "@/tools/survey/results/csv";
 import { loadSurveyRecords } from "@/tools/survey/results/load";
+import { variantConfigSchema } from "@/tools/variants/config";
+import { variantCsv } from "@/tools/variants/results/csv";
+import { loadVariantRecords } from "@/tools/variants/results/load";
 
-const kindSchema = z.enum(["raw_trials", "session_summary", "survey_responses"]);
+const kindSchema = z.enum(["raw_trials", "session_summary", "survey_responses", "variant_results"]);
 
 /** Exporta los datos del estudio a CSV. Usa la sesión del investigador, así que RLS decide qué ve. */
 export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id]/export/[kind]">) {
@@ -31,6 +34,15 @@ export async function GET(_req: NextRequest, ctx: RouteContext<"/api/studies/[id
     const surveyConfig = surveyConfigSchema.safeParse(survey.config);
     if (!surveyConfig.success) return NextResponse.json({ error: "Configuración inválida" }, { status: 500 });
     return csvResponse(surveyCsv(surveyConfig.data, await loadSurveyRecords(supabase, id)), kind.data);
+  }
+
+  // Variantes del IAT: una fila por participante, con validez y banderas.
+  if (kind.data === "variant_results") {
+    const { data: variant } = await supabase.from("studies").select("id, config").eq("id", id).eq("tool_type", "iat_variant").maybeSingle();
+    if (!variant) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    const variantConfig = variantConfigSchema.safeParse(variant.config);
+    if (!variantConfig.success) return NextResponse.json({ error: "Configuración inválida" }, { status: 500 });
+    return csvResponse(variantCsv(variantConfig.data, await loadVariantRecords(supabase, id)), kind.data);
   }
 
   const { data: study } = await supabase.from("studies").select("id, config").eq("id", id).eq("tool_type", "iat").maybeSingle();

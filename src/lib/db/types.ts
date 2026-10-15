@@ -16,7 +16,7 @@ export type DuplicatePolicy = "device_cookie" | "device_cookie_and_ip" | "none";
 export interface StudyRow {
   id: string;
   project_id: string;
-  tool_type: "iat" | "seo" | "visual" | "survey";
+  tool_type: "iat" | "seo" | "visual" | "survey" | "iat_variant";
   name: string;
   status: StudyStatus;
   config: unknown;

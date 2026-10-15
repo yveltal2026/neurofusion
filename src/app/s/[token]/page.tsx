@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { apiMessage, availabilityError, loadParticipantStudyByToken } from "@/lib/participant-api";
 import { Runner } from "@/tools/iat/runner/Runner";
 import { SurveyRunner } from "@/tools/survey/runner/SurveyRunner";
+import { VariantRunner } from "@/tools/variants/runner/VariantRunner";
 
 // La liga es privada: no debe indexarse ni mostrar vistas previas con datos del estudio.
 export const metadata: Metadata = {
@@ -31,5 +32,6 @@ export default async function ParticipantPage({ params, searchParams }: PageProp
 
   // La pantalla del participante depende de la herramienta del estudio.
   if (loaded.tool === "iat") return <Runner token={token} config={loaded.study.config} preview={preview} />;
+  if (loaded.tool === "iat_variant") return <VariantRunner token={token} config={loaded.study.config} preview={preview} />;
   return <SurveyRunner token={token} config={loaded.study.config} preview={preview} />;
 }

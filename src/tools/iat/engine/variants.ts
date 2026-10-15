@@ -1,12 +1,9 @@
 /**
  * Variantes del IAT: puntuación pura de SC-IAT, Go/No-Go (GNAT) y priming afectivo.
  *
- * ESTADO: motor de puntuación con pruebas. Todavía NO hay runner, wizard ni rutas de
- * API para estas variantes (el runner actual es de 4 categorías y bloques de dos teclas).
- * Antes de usarlas con participantes hay que: (1) construir el runner con ventana de
- * respuesta, (2) hacer que el servidor regenere el plan y revise los tiempos como hace
- * con el IAT, y (3) cotejar las constantes con las publicaciones citadas: aquí son
- * parámetros configurables con valores por defecto de la literatura, no una réplica validada.
+ * Lo usan el servidor (src/tools/variants/score.ts) y las pruebas. Las constantes son parámetros
+ * configurables con valores por defecto tomados de la literatura citada; NO se han cotejado
+ * contra los conjuntos de datos originales de esas publicaciones (ver docs/METODOLOGIA.md).
  *
  * Todo es código puro (sin I/O) para correr igual en cliente, servidor y pruebas.
  */
@@ -15,9 +12,14 @@ import { MAX_FAST_FRACTION } from "./dscore";
 import { mean, sampleSd } from "./math";
 import { MAX_ERROR_RATE } from "./validity";
 
-export const VARIANTS_ENGINE_VERSION = "nf-iat-variants-0.1";
+export const VARIANTS_ENGINE_VERSION = "nf-iat-variants-1.0";
 
-export type VariantFlag = "high_error_rate" | "fast_responses" | "insufficient_data";
+export type VariantFlag =
+  | "high_error_rate"
+  | "fast_responses"
+  | "insufficient_data"
+  /** GNAT: d′ global bajo (el participante casi no distingue señal de ruido). Heurística propia, no de la literatura. */
+  | "low_discrimination";
 
 // ---------------------------------------------------------------- SC-IAT
 
@@ -40,7 +42,7 @@ export interface ScIatOptions {
   windowMs?: number;
   /** Se descartan las latencias menores (por defecto 350 ms). */
   minRtMs?: number;
-  /** Penalización en ms que se suma a la media de aciertos del bloque al sustituir un error (por defecto 600, Greenwald et al., 2003). */
+  /** Penalización en ms que se suma a la media de aciertos del bloque al sustituir un error (por defecto 400, según la descripción del SC-IAT de Karpinski y Steinman, 2006; el IAT clásico usa 600). */
   errorPenaltyMs?: number;
 }
 
@@ -60,7 +62,7 @@ export interface ScIatResult {
 export function scoreScIat(trials: readonly ScIatTrial[], opts: ScIatOptions = {}): ScIatResult {
   const windowMs = opts.windowMs ?? 1500;
   const minRtMs = opts.minRtMs ?? 350;
-  const penalty = opts.errorPenaltyMs ?? 600;
+  const penalty = opts.errorPenaltyMs ?? 400;
 
   const total = trials.length;
   // Sin respuesta a tiempo = error con latencia igual a la ventana.
@@ -155,15 +157,22 @@ export function scoreGnat(counts: GnatCounts, correction: "loglinear" | "none" =
   return { dPrime: zh - zf, criterion: -(zh + zf) / 2, hitRate: counts.hits / signal, falseAlarmRate: counts.falseAlarms / noise, flags };
 }
 
-// ---------------------------------------------------------------- Priming afectivo
+// ---------------------------------------------------------------- Priming evaluativo
 
 /**
- * Priming afectivo (Fazio et al., 1986): un prime (la marca) precede a una palabra objetivo positiva o negativa.
- * El efecto es cuánto se acelera la respuesta cuando prime y objetivo son congruentes (misma valencia
- * que la que se espera del prime) frente a incongruentes.
+ * Priming evaluativo (Fazio et al., 1986; Hermans et al., 2001): un prime (la marca) precede a una
+ * palabra objetivo positiva o negativa que el participante clasifica por su valencia. Si el prime
+ * activa una evaluación positiva, las palabras positivas se clasifican más rápido que las negativas.
+ *
+ * Como la valencia de una marca no se conoce de antemano, no se define «congruencia»: el sesgo de
+ * cada prime es media(RT negativas) − media(RT positivas) y el efecto de la marca se expresa
+ * contra un prime de control (p. ej. una cadena sin significado), que absorbe la ventaja general
+ * de las palabras positivas.
  */
 export interface PrimingTrial {
-  congruent: boolean;
+  /** Identificador del prime (concepto o control). */
+  prime: string;
+  targetValence: "positive" | "negative";
   rtMs: number;
   error: boolean;
 }
@@ -172,17 +181,22 @@ export interface PrimingOptions {
   /** Latencias fuera de [minRtMs, maxRtMs] se descartan (por defecto 200 y 2000 ms). */
   minRtMs?: number;
   maxRtMs?: number;
-  /** Mínimo de ensayos válidos por condición para calcular (por defecto 4). */
-  minPerCondition?: number;
+  /** Mínimo de ensayos válidos por valencia y prime para calcular (por defecto 4). */
+  minPerCell?: number;
+}
+
+export interface PrimeScore {
+  prime: string;
+  /** media(RT a palabras negativas) − media(RT a positivas), en ms. Positivo = favorece lo positivo. */
+  biasMs: number | null;
+  meanPositive: number | null;
+  meanNegative: number | null;
+  nPositive: number;
+  nNegative: number;
 }
 
 export interface PrimingResult {
-  /** Media incongruente − media congruente, en ms. Positivo = facilitación por congruencia. */
-  effectMs: number | null;
-  meanCongruent: number | null;
-  meanIncongruent: number | null;
-  nCongruent: number;
-  nIncongruent: number;
+  byPrime: PrimeScore[];
   errorRate: number;
   flags: VariantFlag[];
 }
@@ -190,19 +204,34 @@ export interface PrimingResult {
 export function scorePriming(trials: readonly PrimingTrial[], opts: PrimingOptions = {}): PrimingResult {
   const minRt = opts.minRtMs ?? 200;
   const maxRt = opts.maxRtMs ?? 2000;
-  const minN = opts.minPerCondition ?? 4;
+  const minN = opts.minPerCell ?? 4;
   const errors = trials.filter((t) => t.error).length;
   const errorRate = trials.length ? errors / trials.length : 0;
-  const ok = trials.filter((t) => !t.error && t.rtMs >= minRt && t.rtMs <= maxRt);
-  const con = ok.filter((t) => t.congruent).map((t) => t.rtMs);
-  const inc = ok.filter((t) => !t.congruent).map((t) => t.rtMs);
   const flags: VariantFlag[] = [];
   if (errorRate > MAX_ERROR_RATE) flags.push("high_error_rate");
-  if (con.length < minN || inc.length < minN) {
-    flags.push("insufficient_data");
-    return { effectMs: null, meanCongruent: con.length ? mean(con) : null, meanIncongruent: inc.length ? mean(inc) : null, nCongruent: con.length, nIncongruent: inc.length, errorRate, flags };
-  }
-  const mc = mean(con);
-  const mi = mean(inc);
-  return { effectMs: mi - mc, meanCongruent: mc, meanIncongruent: mi, nCongruent: con.length, nIncongruent: inc.length, errorRate, flags };
+
+  const primes = [...new Set(trials.map((t) => t.prime))];
+  const byPrime = primes.map((prime): PrimeScore => {
+    const ok = trials.filter((t) => t.prime === prime && !t.error && t.rtMs >= minRt && t.rtMs <= maxRt);
+    const pos = ok.filter((t) => t.targetValence === "positive").map((t) => t.rtMs);
+    const neg = ok.filter((t) => t.targetValence === "negative").map((t) => t.rtMs);
+    const enough = pos.length >= minN && neg.length >= minN;
+    return {
+      prime,
+      biasMs: enough ? mean(neg) - mean(pos) : null,
+      meanPositive: pos.length ? mean(pos) : null,
+      meanNegative: neg.length ? mean(neg) : null,
+      nPositive: pos.length,
+      nNegative: neg.length,
+    };
+  });
+  if (byPrime.length === 0 || byPrime.some((p) => p.biasMs === null)) flags.push("insufficient_data");
+  return { byPrime, errorRate, flags };
+}
+
+/** Efecto de un prime contra el de control: bias(prime) − bias(control). Null si falta alguno. */
+export function primingEffect(result: PrimingResult, prime: string, baseline: string): number | null {
+  const a = result.byPrime.find((p) => p.prime === prime)?.biasMs;
+  const b = result.byPrime.find((p) => p.prime === baseline)?.biasMs;
+  return a == null || b == null ? null : a - b;
 }

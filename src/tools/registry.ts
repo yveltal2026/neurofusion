@@ -4,7 +4,7 @@
  */
 import type { IconName } from "@/components/brand/icon";
 
-export type ToolType = "iat" | "seo" | "visual" | "survey";
+export type ToolType = "iat" | "seo" | "visual" | "survey" | "iat_variant";
 
 export interface ToolDefinition {
   type: ToolType;
@@ -51,6 +51,15 @@ export const TOOLS: ToolDefinition[] = [
     description:
       "Preguntas propias e instrumentos estandarizados (SUS, NPS, SAM, intención de compra, actitud). El servidor valida y puntúa; los resultados salen con intervalos de confianza y CSV.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/survey`,
+  },
+  {
+    type: "iat_variant",
+    name: "Variantes del IAT (SC-IAT, Go/No-Go, priming)",
+    shortName: "Variantes IAT",
+    icon: "bolt",
+    description:
+      "Mide una sola marca sin comparación (SC-IAT) o con una o dos marcas por Go/No-Go y priming evaluativo. El servidor valida los tiempos y puntúa; los resultados traen advertencias de calidad.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/variants`,
   },
 ];
 

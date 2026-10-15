@@ -22,6 +22,7 @@ import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol
 import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
 import { SeoOverview } from "@/tools/seo/ui/overview";
 import { SurveyOverview } from "@/tools/survey/ui/overview";
+import { VariantOverview } from "@/tools/variants/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
 import { deleteStudy, regenerateLink } from "./actions";
 
@@ -56,6 +57,19 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "visual")
     return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "iat_variant") {
+    const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
+    return (
+      <VariantOverview
+        study={study}
+        projectName={project?.name ?? null}
+        link={link}
+        created={sp.created === "1"}
+        copied={sp.copied === "1"}
+        blocked={sp.blocked === "battery"}
+      />
+    );
+  }
   if (study.tool_type === "survey") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
     return (

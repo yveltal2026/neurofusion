@@ -27,6 +27,7 @@ const t = (key: TabKey, label: string, path = ""): Tab => ({ key, label, icon: I
 const TABS = {
   iat: [t("overview", "Resumen"), t("data", "Datos", "/data"), t("analysis", "Análisis", "/analysis")],
   survey: [t("overview", "Resumen"), t("responses", "Resultados", "/responses")],
+  variant: [t("overview", "Resumen"), t("responses", "Resultados", "/responses")],
   seo: [t("overview", "Auditorías"), t("settings", "Ajustes", "/settings")],
   pieces: [
     t("overview", "Piezas"),

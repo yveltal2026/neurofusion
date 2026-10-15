@@ -71,9 +71,9 @@ describe("duplicateStudy", () => {
     expect(mocks.inserted).not.toHaveProperty("max_responses");
   });
 
-  it("sólo copia IAT y encuesta", async () => {
+  it("sólo copia IAT, encuesta y variantes del IAT", async () => {
     await duplicateStudy(form({ id: ID, projectId: PROJECT })).catch(() => {});
-    expect(mocks.toolFilter).toEqual(["iat", "survey"]);
+    expect(mocks.toolFilter).toEqual(["iat", "survey", "iat_variant"]);
   });
 
   it("usa el nombre indicado y lo recorta a 160 caracteres", async () => {

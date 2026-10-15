@@ -63,17 +63,27 @@ Se admite teclado (E/I) y botones táctiles. El RT táctil se toma en `pointerdo
 - Temas sensibles (política, salud…): documentar consentimiento informado y uso ético de datos. El consentimiento aceptado se versiona por sesión.
 - La IA sólo redacta la interpretación a partir de agregados; las cifras oficiales son las de las tablas y gráficas.
 
-## Variantes del IAT (motor de puntuación, sin runner todavía)
+## Variantes del IAT (SC-IAT, Go/No-Go, priming evaluativo)
 
-`src/tools/iat/engine/variants.ts` puntúa tres variantes. **Aún no hay runner, wizard ni API para ellas**: el runner actual es de cuatro categorías y bloques de dos teclas. Antes de ofrecerlas a participantes hacen falta (1) un runner con ventana de respuesta, (2) que el servidor regenere el plan y revise los tiempos como hace con el IAT, y (3) cotejar las constantes con las publicaciones. Las constantes son **parámetros configurables con valores de la literatura**, no una réplica validada; las pruebas verifican la aritmética con ejemplos calculados a mano, no contra conjuntos de datos publicados.
+Herramienta «Variantes del IAT» (`tool_type = iat_variant`). Motor de puntuación en `src/tools/iat/engine/variants.ts`; configuración, plan de ensayos y validación del servidor en `src/tools/variants/`. Los **parámetros son configurables en el wizard** y sus valores iniciales vienen de la literatura, pero **no se han cotejado contra los conjuntos de datos de las publicaciones originales**: las pruebas verifican la aritmética con ejemplos calculados a mano y el flujo completo cliente-servidor, no una réplica de resultados publicados. Cambiar los parámetros vuelve los resultados no comparables con los de otros estudios.
 
-| Variante | Medida | Referencia | Parámetros por defecto |
-|---|---|---|---|
-| SC-IAT (un solo concepto) | D = (media con polo negativo − media con polo positivo) / DE de todas las latencias | Karpinski y Steinman (2006) | ventana 1500 ms; descarta < 350 ms; error → media de aciertos del bloque + 600 ms (Greenwald et al., 2003) |
-| Go/No-Go (GNAT) | d′ = z(aciertos) − z(falsas alarmas), con corrección log-lineal | Nosek y Banaji (2001); Hautus (1995) | corrección log-lineal; d′ y criterio c |
-| Priming afectivo | media incongruente − media congruente (ms), sólo aciertos | Fazio et al. (1986) | rango válido 200–2000 ms; mínimo 4 ensayos por condición |
+| Variante | Conceptos | Tarea | Medida principal | Referencia | Parámetros por defecto |
+|---|---|---|---|---|---|
+| SC-IAT | exactamente 1 | Dos teclas; el concepto comparte tecla con el polo positivo en un bloque y con el negativo en el otro. Ventana de respuesta; sin respuesta a tiempo cuenta como error | D = (media con polo negativo − media con polo positivo) / DE de todas las latencias usadas. D > 0: asociación más rápida con lo positivo | Karpinski y Steinman (2006) | ventana 1500 ms; 24 ensayos de práctica y 72 de prueba por emparejamiento; se descartan respuestas < 350 ms; un error se sustituye por la media de aciertos del bloque + 400 ms |
+| Go/No-Go (GNAT) | 1 o 2 | Un bloque por combinación concepto + polo: responder («go») sólo a los estímulos de la combinación y abstenerse ante el resto. La palabra queda en pantalla hasta el plazo | d′ por bloque = z(aciertos) − z(falsas alarmas) con corrección log-lineal (Hautus, 1995). Con un concepto: d′(con positivo) − d′(con negativo). Con dos: ese contraste de A menos el de B | Nosek y Banaji (2001) | plazo 700 ms; 40 ensayos por bloque (mitad señal, mitad ruido); 8 de práctica por bloque |
+| Priming evaluativo | 1 o 2 | Un prime (la marca o una cadena de control «XXXXXX») y, tras un blanco, una palabra buena o mala que se clasifica por su valencia | Sesgo del prime = media(RT a negativas) − media(RT a positivas), sólo aciertos. Efecto de la marca = sesgo(marca) − sesgo(control). Con dos conceptos: efecto A − efecto B | Fazio et al. (1986); Hermans et al. (2001) | prime 200 ms + blanco 100 ms (SOA 300 ms); tope de respuesta 2000 ms; 2 repeticiones de cada combinación; rango válido 200–2000 ms; mínimo 4 ensayos por celda |
 
-Las tres conservan las advertencias de validez del IAT (tasa de error > 30 % y > 10 % de respuestas rápidas).
+**Por qué el priming no usa «congruencia».** El priming afectivo clásico (Fazio et al., 1986) usa primes de valencia conocida. La valencia de una marca es justo lo que se quiere medir, así que aquí se compara cómo cambia la ventaja de las palabras positivas tras la marca frente a un prime de control. Es una adaptación nuestra del paradigma, no una réplica de un protocolo publicado.
+
+**Qué envía el navegador y qué decide el servidor.** El plan de ensayos (qué estímulo, en qué orden, qué tecla es la correcta, qué lado es el positivo) es una función pura de la configuración y del id de sesión. El navegador sólo envía la tecla pulsada y la latencia de cada ensayo, junto con la huella (hash) del plan; el servidor regenera el plan, rechaza lo que no coincide (cantidad, orden, tecla que no corresponde a la variante, tecla sin latencia, latencia mayor que el plazo + 250 ms de tolerancia por el temporizador del navegador) y calcula los aciertos y las puntuaciones. Nunca recibe estímulos, aciertos ni puntuaciones del cliente. Los ensayos de práctica se guardan pero no puntúan.
+
+**Advertencias de calidad** (el participante queda fuera del promedio principal, se cuenta, se explica y sigue en el CSV; la vista de resultados muestra cómo cambiaría el promedio si se incluyera):
+- `high_error_rate`: errores (y tiempos agotados) > 30 % de los ensayos de medición (mismo umbral que el IAT).
+- `fast_responses`: SC-IAT, > 10 % de respuestas correctas < 350 ms; GNAT, > 10 % de respuestas «go» < 200 ms (anticipaciones; el 200 ms es un criterio propio).
+- `insufficient_data`: no se pudo calcular (celdas con muy pocos ensayos, sin variación, tasas de 0 o 1 sin corrección).
+- `low_discrimination` (sólo GNAT): d′ global < 0,5. **Criterio propio, no de la literatura**: señala al participante que responde casi al azar o siempre/nunca.
+
+**Limitaciones.** Las latencias dependen del dispositivo y del navegador (temporizadores, tasa de refresco, táctil). Los tiempos de presentación del priming (200 ms) y los plazos del GNAT son más sensibles que los del IAT clásico; se recomienda computadora con teclado y el wizard lo avisa. Una sola medición implícita no basta para una conclusión sobre una marca.
 
 ## Precio en encuestas (Van Westendorp y Gabor-Granger)
 

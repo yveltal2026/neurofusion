@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalQuantile } from "@/lib/sample-size";
-import { scoreGnat, scorePriming, scoreScIat, type ScIatTrial } from "./variants";
+import { primingEffect, scoreGnat, scorePriming, scoreScIat, type ScIatTrial } from "./variants";
 
 const sc = (pairing: ScIatTrial["pairing"], rt: number | null, error = false): ScIatTrial => ({ pairing, rtMs: rt, error });
 
@@ -33,16 +33,16 @@ describe("SC-IAT", () => {
     expect(scoreScIat(trials).d!).toBeLessThan(0);
   });
 
-  it("sustituye los errores por la media de aciertos del bloque + 600 ms", () => {
+  it("sustituye los errores por la media de aciertos del bloque + 400 ms", () => {
     const trials = [
       sc("target_positive", 500),
       sc("target_positive", 600),
-      sc("target_positive", 900, true), // error → 550 + 600 = 1150
+      sc("target_positive", 900, true), // error → 550 + 400 = 950
       sc("target_negative", 700),
       sc("target_negative", 800),
     ];
     const r = scoreScIat(trials);
-    expect(r.meanTargetPositive).toBeCloseTo((500 + 600 + 1150) / 3, 6);
+    expect(r.meanTargetPositive).toBeCloseTo((500 + 600 + 950) / 3, 6);
   });
 
   it("la ausencia de respuesta a tiempo cuenta como error", () => {
@@ -55,7 +55,7 @@ describe("SC-IAT", () => {
     ];
     const r = scoreScIat(trials);
     expect(r.errorRate).toBeCloseTo(1 / 5, 6);
-    expect(r.meanTargetPositive).toBeCloseTo((500 + 600 + 1150) / 3, 6);
+    expect(r.meanTargetPositive).toBeCloseTo((500 + 600 + 950) / 3, 6);
   });
 
   it("descarta respuestas demasiado rápidas y marca el exceso", () => {
@@ -136,31 +136,55 @@ describe("GNAT", () => {
   });
 });
 
-describe("priming afectivo", () => {
-  it("efecto = media incongruente − media congruente, sólo con aciertos", () => {
+describe("priming evaluativo", () => {
+  const pt = (prime: string, targetValence: "positive" | "negative", rtMs: number, error = false) => ({ prime, targetValence, rtMs, error });
+  const cell = (prime: string, valence: "positive" | "negative", rts: number[]) => rts.map((r) => pt(prime, valence, r));
+
+  it("sesgo = media(negativas) − media(positivas) por prime, sólo con aciertos", () => {
     const trials = [
-      ...[500, 520, 510, 510].map((rtMs) => ({ congruent: true, rtMs, error: false })),
-      ...[560, 580, 570, 570].map((rtMs) => ({ congruent: false, rtMs, error: false })),
-      { congruent: false, rtMs: 900, error: true },
+      ...cell("marca", "positive", [500, 520, 510, 510]),
+      ...cell("marca", "negative", [560, 580, 570, 570]),
+      pt("marca", "negative", 900, true),
     ];
     const r = scorePriming(trials);
-    expect(r.meanCongruent).toBe(510);
-    expect(r.meanIncongruent).toBe(570);
-    expect(r.effectMs).toBe(60);
+    const marca = r.byPrime.find((p) => p.prime === "marca")!;
+    expect(marca.meanPositive).toBe(510);
+    expect(marca.meanNegative).toBe(570);
+    expect(marca.biasMs).toBe(60);
     expect(r.errorRate).toBeCloseTo(1 / 9, 6);
   });
 
-  it("descarta latencias fuera de rango", () => {
-    const base = [500, 510, 520, 530].map((rtMs) => ({ congruent: true, rtMs, error: false }));
-    const inc = [600, 610, 620, 630].map((rtMs) => ({ congruent: false, rtMs, error: false }));
-    const r = scorePriming([...base, ...inc, { congruent: true, rtMs: 5000, error: false }, { congruent: false, rtMs: 100, error: false }]);
-    expect(r.nCongruent).toBe(4);
-    expect(r.nIncongruent).toBe(4);
+  it("el efecto de la marca se mide contra el prime de control", () => {
+    const trials = [
+      ...cell("marca", "positive", [500, 500, 500, 500]),
+      ...cell("marca", "negative", [600, 600, 600, 600]), // sesgo 100
+      ...cell("control", "positive", [520, 520, 520, 520]),
+      ...cell("control", "negative", [560, 560, 560, 560]), // sesgo 40
+    ];
+    const r = scorePriming(trials);
+    expect(primingEffect(r, "marca", "control")).toBe(60);
+    expect(primingEffect(r, "marca", "otro")).toBeNull();
   });
 
-  it("marca datos insuficientes", () => {
-    const r = scorePriming([{ congruent: true, rtMs: 500, error: false }]);
-    expect(r.effectMs).toBeNull();
+  it("descarta latencias fuera de rango", () => {
+    const trials = [
+      ...cell("marca", "positive", [500, 510, 520, 530]),
+      ...cell("marca", "negative", [600, 610, 620, 630]),
+      pt("marca", "positive", 5000),
+      pt("marca", "negative", 100),
+    ];
+    const marca = scorePriming(trials).byPrime[0];
+    expect(marca.nPositive).toBe(4);
+    expect(marca.nNegative).toBe(4);
+  });
+
+  it("marca datos insuficientes si una celda no llega al mínimo", () => {
+    const r = scorePriming([pt("marca", "positive", 500), pt("marca", "negative", 600)]);
+    expect(r.byPrime[0].biasMs).toBeNull();
     expect(r.flags).toContain("insufficient_data");
+  });
+
+  it("sin ensayos es insuficiente", () => {
+    expect(scorePriming([]).flags).toContain("insufficient_data");
   });
 });

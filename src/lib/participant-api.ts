@@ -6,6 +6,7 @@ import { isPlausibleToken } from "@/lib/magic-link";
 import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
 import { batteryConfigSchema, type BatteryConfig } from "@/tools/battery/engine";
 import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
+import { variantConfigSchema, type VariantConfig } from "@/tools/variants/config";
 
 /** Códigos de error públicos que entiende el runner del participante. */
 export type ApiErrorCode =
@@ -59,7 +60,7 @@ export function apiError(code: ApiErrorCode, extra: Record<string, unknown> = {}
 }
 
 /** Herramientas que tienen participantes y, por tanto, liga mágica. */
-export type ParticipantToolType = "iat" | "survey";
+export type ParticipantToolType = "iat" | "survey" | "iat_variant";
 
 export interface ParticipantStudy<C> {
   id: string;
@@ -71,6 +72,7 @@ export interface ParticipantStudy<C> {
 
 export type StudyForParticipant = ParticipantStudy<IatConfig>;
 export type SurveyStudyForParticipant = ParticipantStudy<SurveyConfig>;
+export type VariantStudyForParticipant = ParticipantStudy<VariantConfig>;
 
 export type LoadResult<C> = { ok: true; study: ParticipantStudy<C> } | { ok: false; code: ApiErrorCode };
 export type LoadStudyResult = LoadResult<IatConfig>;
@@ -79,6 +81,7 @@ export type LoadStudyResult = LoadResult<IatConfig>;
 export type LoadedParticipantStudy =
   | { ok: true; tool: "iat"; study: StudyForParticipant }
   | { ok: true; tool: "survey"; study: SurveyStudyForParticipant }
+  | { ok: true; tool: "iat_variant"; study: VariantStudyForParticipant }
   | { ok: false; code: ApiErrorCode };
 
 interface StudyRowForParticipant {
@@ -135,10 +138,20 @@ export async function loadSurveyByToken(token: string): Promise<LoadResult<Surve
   return found.ok ? toStudy(found.row, surveyConfigSchema) : found;
 }
 
+/** Variante del IAT (SC-IAT, Go/No-Go, priming) por token. Un token de otra herramienta se trata como liga inválida. */
+export async function loadVariantByToken(token: string): Promise<LoadResult<VariantConfig>> {
+  const found = await fetchStudyRow(token, ["iat_variant"]);
+  return found.ok ? toStudy(found.row, variantConfigSchema) : found;
+}
+
 /** Estudio de cualquier herramienta con participantes, para decidir qué pantalla mostrar. */
 export async function loadParticipantStudyByToken(token: string): Promise<LoadedParticipantStudy> {
-  const found = await fetchStudyRow(token, ["iat", "survey"]);
+  const found = await fetchStudyRow(token, ["iat", "survey", "iat_variant"]);
   if (!found.ok) return found;
+  if (found.row.tool_type === "iat_variant") {
+    const variant = toStudy(found.row, variantConfigSchema);
+    return variant.ok ? { ok: true, tool: "iat_variant", study: variant.study } : variant;
+  }
   if (found.row.tool_type === "survey") {
     const survey = toStudy(found.row, surveyConfigSchema);
     return survey.ok ? { ok: true, tool: "survey", study: survey.study } : survey;

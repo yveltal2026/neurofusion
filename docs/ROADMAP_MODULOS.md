@@ -93,6 +93,7 @@ Para cada uno: qué es, datos que guarda, cómo se sabe que está terminado.
 
 - **Qué es.** SC-IAT (una sola marca), Go/No-Go y priming afectivo, reutilizando `src/tools/iat/engine`. Cada variante lleva su algoritmo de puntuación y su referencia.
 - **Listo cuando.** Casos de prueba contra ejemplos publicados; el wizard solo ofrece la variante adecuada al número de conceptos; el análisis conserva las advertencias de validez.
+- **Estado.** Construido de punta a punta (wizard, corredor, API con plan regenerado por el servidor, almacenamiento, resultados con advertencias y CSV; ver `docs/METODOLOGIA.md`). Cumplido: el wizard solo ofrece la variante que admite el número de conceptos y el análisis conserva y explica las advertencias de validez. **Pendiente: cotejar las puntuaciones y los parámetros contra conjuntos de datos publicados**; hoy las pruebas usan ejemplos calculados a mano.
 
 ### 6. Precio
 

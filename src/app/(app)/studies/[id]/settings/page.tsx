@@ -19,7 +19,7 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
   const { data: study } = await supabase.from("studies").select("*").eq("id", id).maybeSingle<StudyRow>();
   if (!study) notFound();
   // El IAT tiene sus ajustes (liga, cupo, candado) en la página de resumen.
-  if (study.tool_type === "iat") redirect(`/studies/${id}`);
+  if (study.tool_type === "iat" || study.tool_type === "iat_variant") redirect(`/studies/${id}`);
   const { data: project } = await supabase.from("projects").select("name").eq("id", study.project_id).maybeSingle();
 
   const seo = study.tool_type === "seo" ? seoConfigSchema.safeParse(study.config) : null;

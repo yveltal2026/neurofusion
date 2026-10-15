@@ -55,7 +55,7 @@ export async function regenerateLink(formData: FormData) {
   const id = idSchema.safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
-  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).in("tool_type", ["iat", "survey"]);
+  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).in("tool_type", ["iat", "survey", "iat_variant"]);
   revalidatePath(`/studies/${id.data}`);
 }
 
@@ -110,7 +110,7 @@ export async function duplicateStudy(formData: FormData) {
     .from("studies")
     .select("name, tool_type, config, duplicate_policy")
     .eq("id", id)
-    .in("tool_type", ["iat", "survey"])
+    .in("tool_type", ["iat", "survey", "iat_variant"])
     .maybeSingle();
   if (!source) return;
 
