@@ -28,7 +28,7 @@ export function StudyHeader({
           </Link>
           <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>
           <p className="mt-1 text-xs text-muted">
-            <span className="uppercase tracking-wide">{getTool(study.tool_type)?.name ?? study.tool_type}</span>
+            <span className="uppercase tracking-wide">{getTool(variant === "eye" ? "eyetracking" : study.tool_type)?.name ?? study.tool_type}</span>
             {subtitle ? <> · {subtitle}</> : null}
           </p>
         </div>

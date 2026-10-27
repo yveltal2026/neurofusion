@@ -41,7 +41,7 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
       ) : null}
       {visual?.success ? (
         <Card className="space-y-4">
-          <h2 className="font-medium">Contexto del análisis</h2>
+          <h2 className="font-medium">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
           <VisualContextForm studyId={study.id} config={visual.data} />
         </Card>
       ) : null}

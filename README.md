@@ -1,12 +1,13 @@
 # NeuroFusion
 
-Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Tres herramientas:
+Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Cuatro herramientas:
 
 | Herramienta | Para qué |
 |---|---|
 | **IAT** (Test de Asociación Implícita) | Asociaciones implícitas con participantes reales vía liga mágica |
 | **Auditoría SEO** | Rastreo, on-page, datos estructurados, enlaces y Core Web Vitals; plan de acción redactado por IA |
-| **Análisis visual con IA** | Piezas gráficas y capturas web (mapa de atención estimado, recorrido, zonas ciegas, métricas de imagen), modo journey con IFD y estudios opcionales con eye tracking real por webcam |
+| **Análisis visual con IA** | Piezas gráficas y capturas web (mapa de atención estimado, recorrido, zonas ciegas, métricas de imagen) y modo journey con IFD |
+| **Eye tracking con webcam** | Mirada de participantes sobre imágenes, calibración, controles de deriva y mapas de atención medidos |
 
 SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en [`docs/HERRAMIENTAS_SEO_VISUAL.md`](docs/HERRAMIENTAS_SEO_VISUAL.md). Lo que sigue en «Qué hace» describe el flujo del IAT.
 
@@ -18,9 +19,11 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
 
-### Estudios visuales con eye tracking
+### Estudios de eye tracking con webcam
 
-1. Crea un estudio de **Piezas con eye tracking** en un proyecto y sube de 1 a 5 imágenes PNG, JPEG o WebP. Cada pieza se muestra durante 10 segundos. Tras la primera sesión, las piezas quedan fijadas para que las respuestas sean comparables.
+Creación dedicada: `/projects/[id]/studies/new/eyetracking`. Tiene formulario, resumen, imágenes y resultados propios; los estudios de IA no ofrecen opciones de webcam. Los estudios de webcam existentes se reconocen por su configuración y conservan sus enlaces y datos. Se reutiliza el almacenamiento de imágenes (`tool_type=visual` + `config.eyeTracking`); esta separación no requiere migración adicional.
+
+1. En **Nuevo estudio**, elige **Eye tracking con webcam** (herramienta separada de **Análisis visual con IA**) y sube de 1 a 5 imágenes PNG, JPEG o WebP. Configura de 5 a 30 segundos por imagen (10 por defecto). Tras la primera sesión, las piezas quedan fijadas para que las respuestas sean comparables.
 2. Comparte la liga mágica desde el resumen del estudio. La vista previa ejecuta el recorrido sin guardar datos. Los participantes aceptan el uso de cámara, calibran por defecto en dos etapas de 9 puntos, validan en otros 8 objetivos y miran las piezas. La cámara requiere HTTPS o localhost.
 3. El video se procesa en el dispositivo. El servidor guarda coordenadas normalizadas dentro de cada imagen, tiempos y calidad de calibración en `eye_tracking_runs`; no recibe ni guarda video. El investigador ve mapas agregados de sesiones con calibración aceptable, puede excluir sesiones y descargar las lecturas en CSV desde **Miradas**.
 4. El motor WebEyeTrack descarga recursos de `cdn.jsdelivr.net` y `storage.googleapis.com`; ambos dominios deben estar disponibles en los dispositivos participantes. Aplica también `20261027000000_visual_eyetracking.sql` antes de usar el flujo. La precisión y compatibilidad con Safari/iOS deben medirse en dispositivos reales siguiendo [`docs/EYETRACKING-SPIKE.md`](docs/EYETRACKING-SPIKE.md); el simulador `?engine=fake` comprueba la interfaz, no la precisión.

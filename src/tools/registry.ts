@@ -2,7 +2,7 @@
  * Registro de herramientas de investigación. Un proyecto puede contener
  * estudios de distintas herramientas.
  */
-export type ToolType = "iat" | "seo" | "visual";
+export type ToolType = "iat" | "seo" | "visual" | "eyetracking";
 
 export interface ToolDefinition {
   type: ToolType;
@@ -37,8 +37,23 @@ export const TOOLS: ToolDefinition[] = [
       "Evalúa piezas gráficas, anuncios y capturas web: mapa de atención estimado, recorrido visual, zonas ciegas y métricas de imagen. Incluye el modo journey con el Índice de Fricción Digital (IFD).",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/visual`,
   },
+  {
+    type: "eyetracking",
+    name: "Eye tracking con webcam",
+    shortName: "Eye tracking",
+    description: "Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención medidos con webcam.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/eyetracking`,
+  },
 ];
 
 export function getTool(type: string): ToolDefinition | undefined {
   return TOOLS.find((t) => t.type === type);
+}
+
+/** Los estudios de webcam existentes comparten almacenamiento de imágenes con Visual. */
+export function getStudyTool(study: { tool_type: string; config: unknown }): ToolDefinition | undefined {
+  const config = study.config;
+  const eye = study.tool_type === "visual" && typeof config === "object" && config !== null
+    && "mode" in config && config.mode === "pieces" && "eyeTracking" in config && Boolean(config.eyeTracking);
+  return getTool(eye ? "eyetracking" : study.tool_type);
 }

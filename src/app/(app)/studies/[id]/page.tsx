@@ -16,6 +16,8 @@ import { iatConfigSchema } from "@/tools/iat/config";
 import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol";
 import { SeoOverview } from "@/tools/seo/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
+import { EyeOverview } from "@/tools/eyetracking/ui/overview";
+import { getStudyTool } from "@/tools/registry";
 import { deleteStudy, regenerateLink } from "./actions";
 
 export async function generateMetadata({ params }: PageProps<"/studies/[id]">) {
@@ -47,6 +49,7 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", study.project_id).maybeSingle();
 
   if (study.tool_type === "seo") return <SeoOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (getStudyTool(study)?.type === "eyetracking") return <EyeOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "visual") return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   return <IatOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
 }

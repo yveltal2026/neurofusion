@@ -679,7 +679,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "setup" || stage === "loading" ? (
         <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted uppercase">{study ? "Estudio visual" : "Laboratorio · interno"}</p>
+            <p className="text-xs font-medium tracking-wide text-muted uppercase">{study ? "Estudio de eye tracking" : "Laboratorio · interno"}</p>
             <h1 className="text-2xl font-semibold">{study ? study.title : "Prueba de eye tracking con webcam"}</h1>
             <p className="text-sm text-muted">
               {study

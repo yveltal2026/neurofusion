@@ -4,7 +4,6 @@ import { randomInt, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { generateMagicToken } from "@/lib/magic-link";
 import { AiError, generateStructured, getAnalysisProvider, type ContentPart } from "@/lib/ai";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, StudyRow, VisualAssetRow } from "@/lib/db/types";
@@ -60,6 +59,9 @@ export async function createVisualStudy(raw: unknown): Promise<VisualFormState> 
   if (input && input.mode === "journey") input.panel = { seed: randomInt(1, 2_147_483_647), ...(input.panel as object) };
   const config = visualConfigSchema.safeParse(input);
   if (!config.success) return { error: config.error.issues[0]?.message ?? "La configuración no es válida" };
+  if (config.data.mode === "pieces" && config.data.eyeTracking) {
+    return { error: "Crea este estudio desde la herramienta Eye tracking con webcam." };
+  }
 
   const { supabase } = await requireUser();
   const { data, error } = await supabase
@@ -70,7 +72,7 @@ export async function createVisualStudy(raw: unknown): Promise<VisualFormState> 
       name: parsed.data.name,
       status: "published",
       config: config.data,
-      access_token: config.data.mode === "pieces" && config.data.eyeTracking ? generateMagicToken() : null,
+      access_token: null,
     })
     .select("id")
     .single();
@@ -268,6 +270,9 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   const { supabase } = await requireUser();
   const loaded = await loadVisualStudy(supabase, studyId.data);
   if (!loaded) return { error: "Estudio no encontrado" };
+  if (loaded.config.mode === "pieces" && loaded.config.eyeTracking) {
+    return { error: "Este estudio mide la mirada con webcam. El análisis con IA pertenece a otra herramienta." };
+  }
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle<VisualAssetRow>();
   if (!row) return { error: "Imagen no encontrada" };
 
@@ -355,6 +360,8 @@ export async function restoreAiAois(fd: FormData) {
   const assetId = uuid.safeParse(fd.get("assetId"));
   if (!studyId.success || !assetId.success) return;
   const { supabase } = await requireUser();
+  const loaded = await loadVisualStudy(supabase, studyId.data);
+  if (!loaded || (loaded.config.mode === "pieces" && loaded.config.eyeTracking)) return;
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle<VisualAssetRow>();
   if (!row) return;
   const asset = toVisualAsset(row);

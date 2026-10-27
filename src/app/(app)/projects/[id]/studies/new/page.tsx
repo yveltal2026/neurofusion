@@ -32,16 +32,6 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
             </Link>
           </li>
         ))}
-        <li>
-          <Link href={`/projects/${id}/studies/new/visual?mode=eyetracking`} className="block">
-            <Card className="h-full transition hover:border-primary">
-              <h2 className="font-medium">Eye tracking con webcam</h2>
-              <p className="mt-1 text-sm text-muted">
-                Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención.
-              </p>
-            </Card>
-          </Link>
-        </li>
       </ul>
     </div>
   );

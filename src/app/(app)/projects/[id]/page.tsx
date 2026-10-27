@@ -4,7 +4,7 @@ import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
-import { getTool } from "@/tools/registry";
+import { getStudyTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
 
 const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
@@ -22,10 +22,10 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
   const { data: studies } = await supabase
     .from("studies")
-    .select("id, name, tool_type, status, created_at")
+    .select("id, name, tool_type, config, status, created_at")
     .eq("project_id", id)
     .order("created_at", { ascending: false })
-    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "status" | "created_at">[]>();
+    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "config" | "status" | "created_at">[]>();
 
   return (
     <div className="space-y-8">
@@ -62,7 +62,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                   <Card className="flex items-center justify-between transition hover:border-primary">
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs uppercase text-muted">
-                      {getTool(s.tool_type)?.shortName ?? s.tool_type}
+                      {getStudyTool(s)?.shortName ?? s.tool_type}
                       {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
                   </Card>
