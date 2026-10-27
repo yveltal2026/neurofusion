@@ -70,7 +70,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id} className="border-t border-border">
-                    <td className="py-2 pr-4 font-mono text-xs">{run.session.participant_ref}</td>
+                    <td className="whitespace-nowrap py-2 pr-4 font-display text-xs font-semibold tabular-nums">{run.session.participant_ref}</td>
                     <td className="pr-4">{run.session.device_type}</td>
                     <td className="pr-4">{run.quality.medianErrorDeg?.toFixed(1) ?? "—"}°</td>
                     <td className="pr-4">{run.quality.driftChecks?.length

@@ -14,9 +14,12 @@ import {
 } from "recharts";
 import type { ConcordanceRow, DirectionRow, HistogramRow, MeanDRow } from "@/tools/iat/analysis/charts";
 
-/** Paleta apta para daltonismo (Okabe–Ito). */
+/**
+ * Paleta apta para daltonismo (basada en Okabe–Ito). La marca A usa el morado de Neuro (luminancia baja) frente al
+ * naranja de la B (luminancia alta): se distinguen también sin color. Las demás series siguen Okabe–Ito.
+ */
 export const COLORS = {
-  a: "#0072B2",
+  a: "var(--chart-1)", // Neuro: morado en claro, lila en profundo (la marca A es la serie 1)
   b: "#E69F00",
   neutral: "#8c8c8c",
   consistent: "#009E73",

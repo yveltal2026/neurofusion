@@ -54,7 +54,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
         <Link href={`/studies/${id}/data`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Datos
         </Link>
-        <h1 className="mt-1 font-mono text-xl font-semibold">{view.participant_ref}</h1>
+        <h1 className="mt-1 font-display text-xl font-semibold tabular-nums">{view.participant_ref}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 
@@ -76,7 +76,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
         {view.status !== "completed" ? <p className="text-sm text-muted">Esta sesión no se completó, por lo que no tiene resultados.</p> : null}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-muted">
+            <thead className="font-display text-xs font-semibold text-muted">
               <tr>
                 <th className="py-2 pr-4">Dimensión</th>
                 <th className="py-2 pr-4">D</th>
@@ -119,7 +119,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
           {!view.excluded ? (
             <label className="space-y-1 text-sm">
               <span className="text-muted">Motivo (opcional)</span>
-              <input name="reason" maxLength={200} className="block h-10 w-72 rounded-md border border-border bg-background px-3 text-sm" placeholder="Ej. duplicado, respondió al azar" />
+              <input name="reason" maxLength={200} className="block h-10 w-72 rounded-md border border-control bg-background px-3 text-sm" placeholder="Ej. duplicado, respondió al azar" />
             </label>
           ) : (
             <p className="text-sm text-muted">Excluida{view.excluded_reason ? `: ${view.excluded_reason}` : ""}.</p>

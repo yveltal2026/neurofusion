@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 
 /**
- * Iconos de la marca (Manual FRSKO v3.7, cap. 13): lienzo de 40 × 40, trazo de 2, extremos y uniones
- * redondos, sin relleno salvo UNA burbuja menta por icono. El trazo toma el color del texto
- * (teal sobre claro, crema sobre profundo) y la burbuja siempre es `--primary`.
+ * Iconos de la marca (Manual FRSKO v4.1, cap. 13): lienzo de 40 × 40, trazo de 2, extremos y uniones
+ * redondos, sin relleno salvo UNA burbuja por icono. El trazo toma el color del texto (teal sobre claro,
+ * crema sobre profundo) y la burbuja va en el color de la submarca dentro de su propia pieza: aquí, Neuro
+ * (`--neuro`: morado en claro, lila en profundo).
  * No mezclar con otras familias de iconos ni usar emojis como iconos.
  */
 const GLYPHS = {
@@ -273,7 +274,7 @@ const GLYPHS = {
 export type IconName = keyof typeof GLYPHS;
 
 function Bubble({ cx, cy, r }: { cx: number; cy: number; r: number }) {
-  return <circle cx={cx} cy={cy} r={r} fill="var(--primary)" stroke="none" />;
+  return <circle cx={cx} cy={cy} r={r} fill="var(--neuro)" stroke="none" />;
 }
 
 /** Icono de marca. Decorativo por defecto (`aria-hidden`); pasa `title` si es la única etiqueta del control. */

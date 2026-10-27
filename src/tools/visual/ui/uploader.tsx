@@ -71,7 +71,7 @@ export function AssetUploader({
       <div className="flex flex-wrap items-center gap-2">
         <FilePicker key={log.length ? "after" : "before"} label="Elegir imágenes" accept={ACCEPT.join(",")} multiple onFiles={setFiles} disabled={busy} />
         {withPlacement ? (
-          <select value={placement} onChange={(e) => setPlacement(e.target.value)} className="rounded-md border border-border bg-background px-2 py-1.5 text-sm" aria-label="Formato">
+          <select value={placement} onChange={(e) => setPlacement(e.target.value)} className="rounded-md border border-control bg-background px-2 py-1.5 text-sm" aria-label="Formato">
             <option value="">Formato (opcional)</option>
             {PLACEMENTS.map((p) => (
               <option key={p.id} value={p.id}>

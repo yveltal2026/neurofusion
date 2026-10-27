@@ -98,7 +98,7 @@ export function VariantBuilder({ projectId, projectName }: { projectId: string; 
 
         {errors.length > 0 ? (
           <Alert tone="error">
-            <ul className="list-disc space-y-0.5 pl-4">
+            <ul className="space-y-1">
               {errors.map((e) => (
                 <li key={e}>{e}</li>
               ))}

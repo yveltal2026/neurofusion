@@ -1,28 +1,55 @@
 import Image from "next/image";
 
-// viewBox oficial de los SVG: 2200.6 × 938.8
-const RATIO = 938.8 / 2200.6;
-// Manual de marca, cap. 3: con la palabra de abajo no baja de 120 px de ancho en pantalla.
-const MIN_WIDTH = 120;
+// Manual de marca v4.1, cap. 3 y 4: el logo toma la forma según su ancho en pantalla.
+//   completo (con «neuro»)  desde 140 px
+//   sin palabra de abajo    de 96 a 139 px
+//   la s con su ola         por debajo de 96 px, nunca menos de 24 px
+const VARIANTS = {
+  full: { file: "frsko_neuro", ratio: 886.5 / 2075.9, min: 140, alt: "frsko neuro" },
+  short: { file: "frsko_neuro_sin_palabra", ratio: 576.5 / 2075.9, min: 96, alt: "frsko" },
+  ico: { file: "frsko_neuro_s_ola", ratio: 546 / 544, min: 24, alt: "frsko" },
+} as const;
+
+export type LogoVariant = keyof typeof VARIANTS;
+
+function variantFor(width: number): LogoVariant {
+  if (width >= VARIANTS.full.min) return "full";
+  if (width >= VARIANTS.short.min) return "short";
+  return "ico";
+}
 
 /**
- * Logo oficial «frsko neuro». Siempre se usa el archivo del logo, nunca texto en una tipografía.
- * El modo claro lleva letras teal y el profundo letras crema; el cambio sigue prefers-color-scheme.
+ * Logo oficial «frsko neuro» con la ola en la s. Siempre se usa el archivo del logo, nunca texto en una tipografía.
+ * `tone="auto"` sigue prefers-color-scheme (letras teal en claro, crema en profundo); `tone="deep"` fuerza la
+ * versión para fondo teal (encabezados y portadas profundas).
  */
-export function Logo({ width = 140, className = "" }: { width?: number; className?: string }) {
-  const w = Math.max(width, MIN_WIDTH);
-  const h = Math.round(w * RATIO);
+export function Logo({
+  width = 140,
+  tone = "auto",
+  variant,
+  className = "",
+}: {
+  width?: number;
+  tone?: "auto" | "deep";
+  variant?: LogoVariant;
+  className?: string;
+}) {
+  const v = VARIANTS[variant ?? variantFor(width)];
+  const w = Math.max(width, 24);
+  const h = Math.round(w * v.ratio);
+  const light = `/brand/${v.file}.svg`;
+  const dark = `/brand/${v.file}_fondo_oscuro.svg`;
+  if (tone === "deep") {
+    return (
+      <span className={`inline-flex ${className}`}>
+        <Image src={dark} alt={v.alt} width={w} height={h} priority />
+      </span>
+    );
+  }
   return (
     <span className={`inline-flex ${className}`}>
-      <Image src="/brand/frsko_neuro.svg" alt="frsko neuro" width={w} height={h} priority className="dark:hidden" />
-      <Image
-        src="/brand/frsko_neuro_fondo_oscuro.svg"
-        alt="frsko neuro"
-        width={w}
-        height={h}
-        priority
-        className="hidden dark:block"
-      />
+      <Image src={light} alt={v.alt} width={w} height={h} priority className="dark:hidden" />
+      <Image src={dark} alt={v.alt} width={w} height={h} priority className="hidden dark:block" />
     </span>
   );
 }

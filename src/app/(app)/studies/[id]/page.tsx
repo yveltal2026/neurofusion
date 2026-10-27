@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Tag } from "@/components/ui/tag";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { StudyRow } from "@/lib/db/types";
@@ -125,7 +126,7 @@ async function IatOverview({
             </Link>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
             <p className="mt-2 flex items-center gap-2 text-xs text-muted">
-              <span className="uppercase">IAT</span>
+              <Tag>IAT</Tag>
               <StatusBadge tone={study.status === "published" ? "success" : study.status === "closed" ? "warning" : "neutral"}>
                 {STATUS_LABEL[study.status]}
               </StatusBadge>

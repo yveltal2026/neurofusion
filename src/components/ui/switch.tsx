@@ -20,7 +20,7 @@ export function Switch({
       />
       <span
         aria-hidden="true"
-        className="relative h-6 w-10 shrink-0 rounded-full border-2 border-heading/60 transition-colors duration-150 after:absolute after:left-0.5 after:top-1/2 after:size-3.5 after:-translate-y-1/2 after:rounded-full after:bg-heading/70 after:transition-transform after:duration-150 peer-checked:border-heading peer-checked:bg-heading peer-checked:after:translate-x-4 peer-checked:after:bg-background peer-focus-visible:ring-2 peer-focus-visible:ring-heading peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface peer-disabled:opacity-50 motion-reduce:transition-none motion-reduce:after:transition-none"
+        className="relative h-6 w-10 shrink-0 rounded-full border-2 border-control transition-colors duration-150 after:absolute after:left-0.5 after:top-1/2 after:size-3.5 after:-translate-y-1/2 after:rounded-full after:bg-control after:transition-transform after:duration-150 peer-checked:border-primary peer-checked:bg-primary peer-checked:after:translate-x-4 peer-checked:after:bg-primary-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-surface peer-disabled:opacity-50 motion-reduce:transition-none motion-reduce:after:transition-none"
       />
       {label}
     </label>

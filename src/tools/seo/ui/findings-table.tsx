@@ -38,12 +38,12 @@ export function FindingsTable({ findings }: { findings: Finding[] }) {
           aria-label="Filtrar hallazgos por texto o URL"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="ml-auto rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+          className="ml-auto rounded-md border border-control bg-background px-3 py-1.5 text-sm"
         />
       </div>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-foreground/5 text-xs uppercase text-muted">
+          <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
             <tr>
               <th className="px-3 py-2">Severidad</th>
               <th className="px-3 py-2">Elemento</th>

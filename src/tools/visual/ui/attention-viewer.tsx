@@ -380,11 +380,11 @@ export function AttentionViewer({
               <div className="space-y-2 rounded-lg border border-border p-3">
                 <label className="block space-y-1">
                   <span className="text-xs font-medium">Etiqueta</span>
-                  <input value={sel.label} maxLength={80} onChange={(e) => update(sel.id, { label: e.target.value })} className="w-full rounded border border-border bg-background px-2 py-1" />
+                  <input value={sel.label} maxLength={80} onChange={(e) => update(sel.id, { label: e.target.value })} className="w-full rounded border border-control bg-background px-2 py-1" />
                 </label>
                 <label className="block space-y-1">
                   <span className="text-xs font-medium">Tipo</span>
-                  <select value={sel.kind} onChange={(e) => update(sel.id, { kind: e.target.value as AoiKind })} className="w-full rounded border border-border bg-background px-2 py-1">
+                  <select value={sel.kind} onChange={(e) => update(sel.id, { kind: e.target.value as AoiKind })} className="w-full rounded border border-control bg-background px-2 py-1">
                     {AOI_KINDS.map((k) => (
                       <option key={k} value={k}>
                         {AOI_KIND_LABEL[k]}
@@ -399,7 +399,7 @@ export function AttentionViewer({
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1">
                     <span className="text-xs font-medium">Importancia</span>
-                    <select value={sel.importance} onChange={(e) => update(sel.id, { importance: Number(e.target.value) })} className="w-full rounded border border-border bg-background px-2 py-1">
+                    <select value={sel.importance} onChange={(e) => update(sel.id, { importance: Number(e.target.value) })} className="w-full rounded border border-control bg-background px-2 py-1">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <option key={n}>{n}</option>
                       ))}
@@ -414,7 +414,7 @@ export function AttentionViewer({
                       value={sel.order ?? ""}
                       placeholder="—"
                       onChange={(e) => update(sel.id, { order: e.target.value ? Math.max(1, Math.min(50, Number(e.target.value))) : null })}
-                      className="w-full rounded border border-border bg-background px-2 py-1"
+                      className="w-full rounded border border-control bg-background px-2 py-1"
                     />
                   </label>
                 </div>
@@ -438,7 +438,7 @@ export function AttentionViewer({
                             if (box[2] - box[0] < 0.01 || box[3] - box[1] < 0.01) return;
                             update(sel.id, { box });
                           }}
-                          className="w-full rounded border border-border bg-background px-2 py-1"
+                          className="w-full rounded border border-control bg-background px-2 py-1"
                         />
                       </label>
                     ))}

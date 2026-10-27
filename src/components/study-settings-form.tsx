@@ -57,7 +57,7 @@ export function StudySettingsForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Estado de la liga" hint="Sólo los estudios «publicados» aceptan participantes.">
-          <select name="status" defaultValue={status} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+          <select name="status" defaultValue={status} className="h-10 w-full rounded-md border border-control bg-background px-3 text-sm">
             <option value="published">Publicado (acepta respuestas)</option>
             <option value="closed">Cerrado</option>
             <option value="draft">Borrador (liga inactiva)</option>
@@ -70,7 +70,7 @@ export function StudySettingsForm({
           <Input key={localClose} name="closes_local" type="datetime-local" defaultValue={localClose} />
         </Field>
         <Field label="Candado contra participación repetida">
-          <select name="duplicate_policy" defaultValue={duplicatePolicy} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+          <select name="duplicate_policy" defaultValue={duplicatePolicy} className="h-10 w-full rounded-md border border-control bg-background px-3 text-sm">
             <option value="device_cookie">Cookie de dispositivo (recomendado)</option>
             <option value="device_cookie_and_ip">Cookie + marcar posibles duplicados por IP</option>
             <option value="none">Sin candado (pilotos y demos de clase)</option>

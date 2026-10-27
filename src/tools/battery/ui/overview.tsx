@@ -78,7 +78,7 @@ export function BatteryOverview({
             {battery.name}
           </h1>
           <p className="mt-1 text-xs text-muted">
-            <span className="uppercase tracking-wide">Batería</span> ·{" "}
+            <span className="font-display font-semibold text-neuro-ink">Batería</span> ·{" "}
             {STATUS_LABEL[battery.status]}
           </p>
         </div>
@@ -147,7 +147,7 @@ export function BatteryOverview({
               ["Abandonaron", summary.abandoned],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="text-xs uppercase tracking-wide text-muted">
+                <dt className="font-display text-xs font-semibold text-muted">
                   {label}
                 </dt>
                 <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
@@ -181,7 +181,7 @@ export function BatteryOverview({
             <Card className="space-y-3 overflow-x-auto">
               <h3 className="font-medium">Últimos participantes</h3>
               <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-muted">
+                <thead className="font-display text-xs font-semibold text-muted">
                   <tr>
                     <th className="py-1 pr-4 font-medium">Código</th>
                     <th className="py-1 pr-4 font-medium">Estado</th>
@@ -192,7 +192,7 @@ export function BatteryOverview({
                 <tbody>
                   {summary.participants.slice(0, 20).map((p) => (
                     <tr key={p.id} className="border-t border-border">
-                      <td className="py-1.5 pr-4 font-mono text-xs">
+                      <td className="whitespace-nowrap py-1.5 pr-4 font-display text-xs font-semibold tabular-nums">
                         {p.participantRef}
                         {p.excluded ? (
                           <span className="ml-2 text-muted">(excluido)</span>

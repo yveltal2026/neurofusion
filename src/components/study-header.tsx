@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconTile } from "@/components/ui/icon-tile";
+import { Tag } from "@/components/ui/tag";
 import { getTool } from "@/tools/registry";
 import { StudyTabs, type TabsVariant } from "./study-tabs";
 
@@ -32,7 +33,7 @@ export function StudyHeader({
             </Link>
             <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>
             <p className="mt-1 text-xs text-muted">
-              <span className="uppercase tracking-wide">{tool?.name ?? study.tool_type}</span>
+              <Tag>{tool?.name ?? study.tool_type}</Tag>
               {subtitle ? <> · {subtitle}</> : null}
             </p>
           </div>

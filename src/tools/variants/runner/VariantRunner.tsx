@@ -172,7 +172,7 @@ export function VariantRunner({
     [plan, submit],
   );
 
-  // Modo neutro: el acento es el color de texto de la marca, no la menta (la menta sobre crema no se lee).
+  // Modo neutro: el acento es el color de texto de la marca, no el morado de acción (la pantalla del participante es la más calmada).
   const theme: CSSProperties =
     config.theme.mode === "custom" && config.theme.accent
       ? ({ "--primary": config.theme.accent, "--primary-foreground": readableOn(config.theme.accent) } as CSSProperties)

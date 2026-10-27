@@ -89,7 +89,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
             <h2 className="font-medium">Última medición · {new Date(latest[0].created_at).toLocaleString("es-MX")}</h2>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
-                <thead className="bg-foreground/5 text-xs uppercase text-muted">
+                <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
                   <tr>
                     <th className="px-3 py-2">#</th>
                     <th className="px-3 py-2">Sitio</th>
@@ -134,7 +134,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <caption className="sr-only">Éxito estimado por tarea y sitio</caption>
-                  <thead className="text-xs uppercase text-muted">
+                  <thead className="font-display text-xs font-semibold text-muted">
                     <tr>
                       <th className="py-1 pr-3">Tarea</th>
                       {byConfigOrder(latest).map((m) => (
@@ -197,7 +197,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
                   ].map(([title, data]) => (
                     <div key={title as string} className="overflow-x-auto rounded-lg border border-border">
                       <table className="w-full text-left text-sm">
-                        <thead className="bg-foreground/5 text-xs uppercase text-muted">
+                        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
                           <tr>
                             <th className="px-3 py-2">{title as string}</th>
                             <th className="px-3 py-2">Perfiles</th>
@@ -252,7 +252,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
           <h2 className="font-medium">Serie histórica en el proyecto</h2>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-foreground/5 text-xs uppercase text-muted">
+              <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
                 <tr>
                   <th className="px-3 py-2">Fecha</th>
                   <th className="px-3 py-2">Estudio</th>

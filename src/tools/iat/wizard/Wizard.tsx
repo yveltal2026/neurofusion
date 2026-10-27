@@ -186,7 +186,7 @@ export function Wizard({ projectId, projectName, aiAvailable = false }: { projec
 
           {errors.length > 0 ? (
             <Alert tone="error">
-              <ul className="list-disc space-y-0.5 pl-4">
+              <ul className="space-y-1">
                 {errors.map((e) => (
                   <li key={e}>{e}</li>
                 ))}
@@ -617,7 +617,7 @@ function ParticipantStep({ config, update }: StepProps) {
                 <select
                   value={f.type}
                   onChange={(e) => setField(i, convertField(f, e.target.value as ExtraField["type"]))}
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-md border border-control bg-background px-3 text-sm"
                 >
                   {(Object.keys(FIELD_TYPE_LABEL) as ExtraField["type"][]).map((t) => (
                     <option key={t} value={t}>
@@ -679,7 +679,7 @@ function LikertEditor({ field, onChange }: { field: Extract<ExtraField, { type: 
           <select
             value={field.points}
             onChange={(e) => set({ points: Number(e.target.value) })}
-            className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+            className="h-10 w-full rounded-md border border-control bg-background px-3 text-sm"
           >
             {Array.from({ length: LIKERT_MAX_POINTS - LIKERT_MIN_POINTS + 1 }, (_, i) => LIKERT_MIN_POINTS + i).map((n) => (
               <option key={n} value={n}>

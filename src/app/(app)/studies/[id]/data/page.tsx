@@ -57,7 +57,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
     return s ? `?${s}` : "";
   };
 
-  const selectClass = "h-9 rounded-md border border-border bg-background px-2 text-sm";
+  const selectClass = "h-9 rounded-md border border-control bg-background px-2 text-sm";
 
   return (
     <div className="space-y-6">
@@ -122,16 +122,16 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="only">Sólo excluidas</option>
             </select>
           </label>
-          <button type="submit" className={buttonClass("secondary", "h-9")}>
+          <button type="submit" className={buttonClass("secondary", "", "sm")}>
             Filtrar
           </button>
         </form>
-        <div className="flex gap-2">
-          <a href={`/api/studies/${id}/export/session_summary`} className={buttonClass("secondary", "h-9")}>
+        <div className="flex flex-wrap gap-2">
+          <a href={`/api/studies/${id}/export/session_summary`} className={buttonClass("secondary", "", "sm")}>
             <Icon name="download" className="size-5" />
             session_summary.csv
           </a>
-          <a href={`/api/studies/${id}/export/raw_trials`} className={buttonClass("secondary", "h-9")}>
+          <a href={`/api/studies/${id}/export/raw_trials`} className={buttonClass("secondary", "", "sm")}>
             <Icon name="download" className="size-5" />
             raw_trials.csv
           </a>
@@ -154,7 +154,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-foreground/5 text-xs uppercase text-muted">
+            <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
               <tr>
                 <th className="px-3 py-2">Sesión</th>
                 <th className="px-3 py-2">Estado</th>
@@ -173,7 +173,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               {rows.map((s) => (
                 <tr key={s.id} className={s.excluded ? "opacity-50" : undefined}>
                   <td className="px-3 py-2">
-                    <Link href={`/studies/${id}/data/${s.id}`} className="font-mono text-xs text-heading hover:underline">
+                    <Link href={`/studies/${id}/data/${s.id}`} className="whitespace-nowrap font-display text-xs font-semibold tabular-nums text-neuro-ink hover:underline">
                       {s.participant_ref}
                     </Link>
                   </td>
@@ -214,12 +214,12 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
           </span>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Link className={buttonClass("secondary", "h-9")} href={`/studies/${id}/data${query({ page: String(page - 1) })}`}>
+              <Link className={buttonClass("secondary", "", "sm")} href={`/studies/${id}/data${query({ page: String(page - 1) })}`}>
                 ← Anterior
               </Link>
             ) : null}
             {page < pages ? (
-              <Link className={buttonClass("secondary", "h-9")} href={`/studies/${id}/data${query({ page: String(page + 1) })}`}>
+              <Link className={buttonClass("secondary", "", "sm")} href={`/studies/${id}/data${query({ page: String(page + 1) })}`}>
                 Siguiente →
               </Link>
             ) : null}

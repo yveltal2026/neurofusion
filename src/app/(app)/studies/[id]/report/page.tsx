@@ -119,7 +119,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
           <h2 className="text-lg font-medium">Calificaciones · {site.name}</h2>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-foreground/5 text-xs uppercase text-muted">
+              <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
                 <tr>
                   <th className="px-3 py-2">Ítem</th>
                   <th className="px-3 py-2">Valor</th>

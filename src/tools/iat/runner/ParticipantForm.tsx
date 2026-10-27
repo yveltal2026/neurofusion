@@ -13,7 +13,7 @@ type Values = Record<string, string | string[]>;
 const str = (v: string | string[] | undefined): string => (typeof v === "string" ? v : "");
 const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : []);
 
-const SELECT_CLASS = "h-10 w-full rounded-md border border-border bg-background px-3 text-sm";
+const SELECT_CLASS = "h-10 w-full rounded-md border border-control bg-background px-3 text-sm";
 
 /** Convierte lo tecleado en el payload tipado que espera el esquema (omite vacíos). */
 function toPayload(config: IatConfig, v: Values): Record<string, unknown> {
