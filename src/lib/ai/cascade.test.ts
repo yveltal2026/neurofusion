@@ -129,6 +129,19 @@ describe("createCascadeProvider", () => {
     expect((await p.complete(REQ)).text).toBe("ok");
   });
 
+  it("omite niveles intermedios si ya no queda tiempo y siempre deja correr al último", async () => {
+    let t = 0;
+    const calls: string[] = [];
+    const slow = tier("lento", async () => {
+      calls.push("lento");
+      t += 100_000; // consume casi todo el presupuesto de 110 s
+      throw new AiError("tardó", "provider");
+    });
+    const p = createCascadeProvider([slow, tier("medio", "no", calls), tier("ultimo", "ok", calls)], { ...fresh(), now: () => t });
+    expect((await p.complete(REQ)).text).toBe("ok");
+    expect(calls).toEqual(["lento", "ultimo"]);
+  });
+
   it("respeta la señal de cancelación del llamador", async () => {
     let seen: AbortSignal | undefined;
     const p = createCascadeProvider(
@@ -246,11 +259,13 @@ describe("configuración de la cascada", () => {
   const ids = (env: Record<string, string>, cascade?: string) => resolveTiers(env, cascade).map((t) => t.id);
   const ALL = { GEMINI_API_KEY_FREE: "f", GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" };
 
-  it("por defecto: gratuita potente → gratuita menos potente → paga barata → paga cara → Claude", () => {
+  it("por defecto: gratuitos → Haiku → Gemini barato → Sonnet → Gemini caro → Claude (último)", () => {
     expect(ids(ALL)).toEqual([
       "gemini-free:gemini-3.8-flash",
       "gemini-free:gemini-3.5-flash-lite",
+      "anthropic:claude-haiku-5-5",
       "gemini-paid:gemini-3.8-flash",
+      "anthropic:claude-sonnet-5-5",
       "gemini-paid:gemini-4-argon",
       "anthropic:default",
     ]);
@@ -258,7 +273,19 @@ describe("configuración de la cascada", () => {
 
   it("omite los niveles sin API key", () => {
     expect(ids({ GEMINI_API_KEY_FREE: "f" })).toEqual(["gemini-free:gemini-3.8-flash", "gemini-free:gemini-3.5-flash-lite"]);
-    expect(ids({ GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" })).toEqual(["gemini-paid:gemini-3.8-flash", "gemini-paid:gemini-4-argon", "anthropic:default"]);
+    expect(ids({ GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" })).toEqual([
+      "anthropic:claude-haiku-5-5",
+      "gemini-paid:gemini-3.8-flash",
+      "anthropic:claude-sonnet-5-5",
+      "gemini-paid:gemini-4-argon",
+      "anthropic:default",
+    ]);
+  });
+
+  it("ANTHROPIC_MODEL fija el último nivel; si coincide con uno anterior no se repite", () => {
+    expect(ids({ ...ALL, ANTHROPIC_MODEL: "claude-opus-5-5" }).at(-1)).toBe("anthropic:claude-opus-5-5");
+    const dup = ids({ ...ALL, ANTHROPIC_MODEL: "claude-sonnet-5-5" });
+    expect(dup.filter((i) => i === "anthropic:claude-sonnet-5-5")).toHaveLength(1);
   });
 
   it("GEMINI_API_KEY es alias de la gratuita", () => {
@@ -266,8 +293,8 @@ describe("configuración de la cascada", () => {
   });
 
   it("AI_CASCADE reemplaza el orden y los modelos; Claude toma ANTHROPIC_MODEL", () => {
-    const env = { ...ALL, ANTHROPIC_MODEL: "claude-sonnet-5-5" };
-    expect(ids(env, "gemini-free:m1, gemini-paid:m2 ,anthropic")).toEqual(["gemini-free:m1", "gemini-paid:m2", "anthropic:claude-sonnet-5-5"]);
+    const env = { ...ALL, ANTHROPIC_MODEL: "claude-opus-5-5" };
+    expect(ids(env, "gemini-free:m1, gemini-paid:m2 ,anthropic")).toEqual(["gemini-free:m1", "gemini-paid:m2", "anthropic:claude-opus-5-5"]);
     expect(ids(ALL, "anthropic:claude-opus-5-5,gemini-free:m1")).toEqual(["anthropic:claude-opus-5-5", "gemini-free:m1"]);
   });
 

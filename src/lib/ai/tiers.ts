@@ -7,8 +7,10 @@ import { AiError } from "./types";
 type Env = Record<string, string | undefined>;
 
 /**
- * Orden por defecto de la cascada (se reemplaza con AI_CASCADE):
- * gratuita potente → gratuita menos potente → de paga barata → de paga más cara → Claude.
+ * Orden por defecto de la cascada (se reemplaza con AI_CASCADE), de menor a mayor costo:
+ * gratuita potente → gratuita menos potente → Claude Haiku (el de paga más barato) → Gemini de
+ * paga barato → Claude Sonnet → Gemini de paga más caro → Claude (último recurso; su modelo se
+ * fija con ANTHROPIC_MODEL, por defecto Opus). Un fallo del proveedor pasa al siguiente nivel.
  * Modelos vigentes a oct-2026 (Gemini 2.5 ya no se entrega a proyectos nuevos y los Pro salieron
  * del nivel gratuito). Los nombres cambian: confírmalos con models.list y ajusta AI_CASCADE.
  * "free" y "paid" son dos API keys distintas de Gemini: la gratuita es la de un proyecto de
@@ -17,7 +19,9 @@ type Env = Record<string, string | undefined>;
 export const DEFAULT_CASCADE = [
   "gemini-free:gemini-3.8-flash",
   "gemini-free:gemini-3.5-flash-lite",
+  "anthropic:claude-haiku-5-5",
   "gemini-paid:gemini-3.8-flash",
+  "anthropic:claude-sonnet-5-5",
   "gemini-paid:gemini-4-argon",
   "anthropic",
 ].join(",");

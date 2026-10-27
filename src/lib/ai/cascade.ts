@@ -20,8 +20,10 @@ export interface CascadeOptions {
 
 const DEFAULT_PER_TIER_MS = 45_000;
 const DEFAULT_TOTAL_MS = 110_000;
-/** Tiempo mínimo que se le reserva al último nivel, y piso del tope de los anteriores. */
+/** Tiempo que siempre se le reserva al último nivel. */
 const MIN_SLICE_MS = 15_000;
+/** Mínimo útil para intentar un nivel intermedio; con menos se omite. */
+const MIN_USEFUL_MS = 5_000;
 
 /**
  * Tras agotar la cuota o fallar la clave, ese nivel se salta un rato para no gastar una
@@ -68,7 +70,13 @@ export function createCascadeProvider(tiers: Tier[], opts: CascadeOptions = {}):
         const tier = order[i];
         const isLast = i === order.length - 1;
         const remaining = total - (now() - start);
-        const timeoutMs = isLast ? Math.max(remaining, MIN_SLICE_MS) : Math.min(perTier, Math.max(remaining - MIN_SLICE_MS, MIN_SLICE_MS));
+        // Un nivel intermedio sólo corre si, tras él, aún queda tiempo para el último: así la
+        // cascada completa nunca pasa del presupuesto aunque varios niveles se queden colgados.
+        if (!isLast && remaining - MIN_SLICE_MS < MIN_USEFUL_MS) {
+          log(`[ai] sin tiempo para ${tier.label}; se omite`);
+          continue;
+        }
+        const timeoutMs = isLast ? Math.max(remaining, MIN_SLICE_MS) : Math.min(perTier, remaining - MIN_SLICE_MS);
         const timeout = AbortSignal.timeout(timeoutMs);
         const signal = req.signal ? AbortSignal.any([req.signal, timeout]) : timeout;
 
@@ -89,7 +97,7 @@ export function createCascadeProvider(tiers: Tier[], opts: CascadeOptions = {}):
 
       const last = failures[failures.length - 1];
       const allRateLimited = failures.every((f) => f.kind === "rate_limit");
-      const suffix = order.length > 1 ? ` Se intentaron ${order.length} proveedores de IA.` : "";
+      const suffix = failures.length > 1 ? ` Se intentaron ${failures.length} proveedores de IA.` : "";
       throw new AiError(`${last.message}${suffix}`, allRateLimited ? "rate_limit" : last.kind);
     },
   };
