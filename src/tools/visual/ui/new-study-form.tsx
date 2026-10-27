@@ -20,8 +20,8 @@ const DEFAULT_TASKS: JourneyTask[] = [
 const select = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
 
-export function NewVisualStudyForm({ projectId }: { projectId: string }) {
-  const [mode, setMode] = useState<"pieces" | "journey" | "eyetracking">("pieces");
+export function NewVisualStudyForm({ projectId, initialMode = "pieces" }: { projectId: string; initialMode?: "pieces" | "eyetracking" }) {
+  const [mode, setMode] = useState<"pieces" | "journey" | "eyetracking">(initialMode);
   const [name, setName] = useState("");
   const [objective, setObjective] = useState("");
   const [brand, setBrand] = useState("");
@@ -93,7 +93,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
         </div>
       </fieldset>
 
-      <Field label="Objetivo" hint="Qué debe lograr el material o el sitio. La IA evalúa contra esto.">
+      <Field label="Objetivo" hint={mode === "eyetracking" ? "Qué quieres investigar sobre la atención de tus participantes." : "Qué debe lograr el material o el sitio. La IA evalúa contra esto."}>
         <Textarea value={objective} onChange={(e) => setObjective(e.target.value)} required maxLength={600} placeholder="Que el usuario identifique la promoción de 12 MSI y haga clic en «Comprar»." />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
