@@ -24,14 +24,25 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
   ctx.clearRect(0, 0, W, H);
   const s = W / 800;
   const px = (b: Aoi["box"]) => [b[0] * W, b[1] * H, (b[2] - b[0]) * W, (b[3] - b[1]) * H] as const;
+  // Rótulos: se recortan al ancho útil, no se salen de la imagen y no se encima uno sobre otro.
+  const placed: [number, number, number, number][] = [];
   const label = (text: string, x: number, y: number, bg: string) => {
     ctx.font = `600 ${Math.round(13 * s)}px system-ui, sans-serif`;
-    const w = ctx.measureText(text).width + 8 * s;
     const h = 18 * s;
+    const maxW = Math.min(W - 8 * s, 260 * s);
+    let t = text;
+    while (t.length > 4 && ctx.measureText(t).width + 8 * s > maxW) t = `${t.slice(0, -2).trimEnd()}…`;
+    const w = ctx.measureText(t).width + 8 * s;
+    const lx = Math.min(Math.max(0, x), Math.max(0, W - w));
+    let ly = Math.max(0, y - h);
+    for (let tries = 0; tries < 8 && placed.some(([px0, py0, pw, ph]) => lx < px0 + pw && lx + w > px0 && ly < py0 + ph && ly + h > py0); tries++) {
+      ly = ly - h >= 0 ? ly - h : Math.min(H - h, ly + h * (tries + 1));
+    }
+    placed.push([lx, ly, w, h]);
     ctx.fillStyle = bg;
-    ctx.fillRect(x, Math.max(0, y - h), w, h);
+    ctx.fillRect(lx, ly, w, h);
     ctx.fillStyle = "#fff";
-    ctx.fillText(text, x + 4 * s, Math.max(h, y) - 5 * s);
+    ctx.fillText(t, lx + 4 * s, ly + h - 5 * s);
   };
 
   if (mode === "heatmap") {

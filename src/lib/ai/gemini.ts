@@ -54,45 +54,62 @@ function toHttpError(status: number, body: GeminiErrorBody | null, label: string
   return new AiError(`Error del proveedor de IA (${label}, ${status}).`, "provider", detail);
 }
 
+export type GeminiThinkingLevel = "minimal" | "low" | "medium" | "high";
+
 /**
  * Gemini por REST (sin SDK). "free" y "paid" sólo distinguen la etiqueta: lo que determina el
  * nivel de uso es la API key (proyecto de Google sin facturación vs. con facturación).
+ *
+ * `thinkingLevel` acota el razonamiento interno: los modelos Flash recientes razonan mucho por
+ * defecto y con imágenes pueden tardar más de 45 s. Si el modelo no admite ese campo (HTTP 400
+ * que menciona «thinking») se reintenta una vez sin él.
  */
 export function createGeminiProvider(opts: {
   apiKey: string;
   model: string;
   tier: "free" | "paid";
+  thinkingLevel?: GeminiThinkingLevel;
   fetchImpl?: typeof fetch;
 }): AnalysisProvider {
   const label = `Gemini ${opts.tier === "free" ? "gratuito" : "de paga"}`;
   const model = opts.model.replace(/^models\//, "");
   const doFetch = opts.fetchImpl ?? fetch;
 
+  async function send(req: CompletionRequest, thinking: GeminiThinkingLevel | undefined): Promise<Response> {
+    try {
+      return await doFetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": opts.apiKey },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: req.system }] },
+          contents: toGeminiContents(req.messages),
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 16000,
+            ...(thinking ? { thinkingConfig: { thinkingLevel: thinking } } : {}),
+          },
+        }),
+        signal: req.signal,
+      });
+    } catch (e) {
+      const timedOut = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+      const name = e instanceof Error ? e.name : "Error";
+      throw new AiError(timedOut ? `${label} tardó demasiado en responder.` : `No se pudo conectar con ${label}.`, "provider", safeDetail(`${name}: ${e instanceof Error ? e.message : String(e)}`));
+    }
+  }
+
   return {
     name: "gemini",
     model,
     async complete(req: CompletionRequest): Promise<CompletionResult> {
-      let res: Response;
-      try {
-        res = await doFetch(`${ENDPOINT}/${encodeURIComponent(model)}:generateContent`, {
-          method: "POST",
-          headers: { "content-type": "application/json", "x-goog-api-key": opts.apiKey },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: req.system }] },
-            contents: toGeminiContents(req.messages),
-            generationConfig: { responseMimeType: "application/json", maxOutputTokens: 16000 },
-          }),
-          signal: req.signal,
-        });
-      } catch (e) {
-        const timedOut = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
-        const name = e instanceof Error ? e.name : "Error";
-        throw new AiError(timedOut ? `${label} tardó demasiado en responder.` : `No se pudo conectar con ${label}.`, "provider", safeDetail(`${name}: ${e instanceof Error ? e.message : String(e)}`));
-      }
-
+      let res = await send(req, opts.thinkingLevel);
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as GeminiErrorBody | null;
-        throw toHttpError(res.status, body, label);
+        let body = (await res.json().catch(() => null)) as GeminiErrorBody | null;
+        if (opts.thinkingLevel && res.status === 400 && /thinking/i.test(body?.error?.message ?? "")) {
+          res = await send(req, undefined);
+          body = res.ok ? null : ((await res.json().catch(() => null)) as GeminiErrorBody | null);
+        }
+        if (!res.ok) throw toHttpError(res.status, body, label);
       }
 
       const json = (await res.json().catch(() => null)) as GeminiResponse | null;
