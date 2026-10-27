@@ -7,8 +7,8 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { EyeTrackingRunRow, StudyRow } from "@/lib/db/types";
 import { visualConfigSchema } from "@/tools/visual/config";
-import { buildEyeHeatmap } from "@/tools/visual/eye/heatmap";
-import { eyeObservationSchema, eyeQualitySchema, type EyeObservation } from "@/tools/visual/eye/schema";
+import { EyeResults } from "@/tools/eyetracking/ui/eye-results";
+import { eyeObservationSchema, eyeQualitySchema } from "@/tools/visual/eye/schema";
 import { assetUrls, loadAssets } from "@/tools/visual/results";
 
 export const metadata = { title: "Miradas reales · NeuroFusion" };
@@ -47,35 +47,19 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
       <StudyHeader study={study} projectName={project?.name} active="results" variant="eye" subtitle="Miradas medidas con webcam" />
       <Card className="space-y-2">
         <h2 className="font-medium">Calidad de las sesiones</h2>
-        <p className="text-sm">{runs.length} sesiones consultadas · {good.length} incluidas en mapas · {runs.filter((r) => !r.quality.passed).length} con baja calidad · {runs.filter((r) => r.session.excluded).length} excluidas.</p>
-        <p className="text-xs text-muted">Los mapas incluyen sólo sesiones que cumplieron los umbrales de calibración. Cada sesión aporta el mismo peso, sin importar los fotogramas por segundo.</p>
+        <p className="text-sm">{runs.length} sesiones consultadas · {good.length} incluidas en resultados · {runs.filter((r) => !r.quality.passed).length} con baja calidad · {runs.filter((r) => r.session.excluded).length} excluidas.</p>
+        <p className="text-xs text-muted">Los resultados incluyen sólo sesiones que cumplieron los umbrales de calibración y no están excluidas. Los posibles duplicados se marcan abajo para revisión. Las métricas se estiman a partir de lecturas de webcam.</p>
         <a href={`/api/studies/${id}/eye/export`} className={buttonClass("secondary", "inline-flex")}>Descargar lecturas CSV</a>
         {(stored?.length ?? 0) === 100 ? <Alert tone="warning">Se muestran las 100 sesiones más recientes.</Alert> : null}
       </Card>
       {assets.length === 0 ? <Alert tone="warning">Aún no hay piezas para medir.</Alert> : assets.map((asset) => {
-        const observations: EyeObservation[] = good.flatMap((run) => run.observations.filter((o) => o.assetId === asset.row.id));
-        const heat = buildEyeHeatmap(observations);
-        const url = urls[asset.row.storage_path];
-        return (
-          <Card key={asset.row.id} className="space-y-3">
-            <div>
-              <h2 className="font-medium">{asset.row.title}</h2>
-              <p className="text-xs text-muted">{observations.length} sesiones válidas · {observations.reduce((n, o) => n + o.samples.length, 0)} lecturas dentro de la imagen</p>
-            </div>
-            {url ? (
-              <div className="relative mx-auto w-full max-w-4xl overflow-hidden rounded border border-border" style={{ aspectRatio: `${asset.row.width} / ${asset.row.height}` }}>
-                {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage */}
-                <img src={url} alt={asset.row.title} className="absolute inset-0 size-full object-contain" />
-                <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 size-full" aria-label="Mapa de atención medido">
-                  {heat.map((cell, i) => (
-                    <circle key={i} cx={cell.x} cy={cell.y} r={0.035} fill="var(--danger)" opacity={Math.min(0.7, 0.12 + cell.strength * 0.5)} />
-                  ))}
-                </svg>
-              </div>
-            ) : <Alert tone="warning">No se pudo abrir la imagen almacenada.</Alert>}
-            {!heat.length ? <p className="text-sm text-muted">Todavía no hay lecturas de calidad suficiente para esta pieza.</p> : null}
-          </Card>
-        );
+        const participants = good.flatMap((run) => run.observations.filter((o) => o.assetId === asset.row.id).map((observation) => ({
+          sessionId: run.id, participant: run.session.participant_ref, observation,
+        })));
+        return <Card key={asset.row.id}>
+          <EyeResults studyId={id} assetId={asset.row.id} title={asset.row.title} imageUrl={urls[asset.row.storage_path]}
+            width={asset.row.width} height={asset.row.height} aois={asset.aois} participants={participants} />
+        </Card>;
       })}
       {runs.length ? (
         <Card className="space-y-3">
@@ -93,7 +77,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                       ? `${Math.max(...run.quality.driftChecks.map((c) => c.maxErrorDeg ?? 0)).toFixed(1)}° · ${run.quality.driftChecks.length} controles`
                       : "—"}</td>
                     <td className="pr-4">
-                      {run.session.excluded ? "Excluida" : run.quality.measurementStatus === "limited" ? "Precisión limitada · fuera de mapas" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
+                      {run.session.excluded ? "Excluida" : run.quality.measurementStatus === "limited" ? "Precisión limitada · fuera de resultados" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
                       {run.quality.recovery ? <p className="text-xs text-muted">
                         {run.quality.recovery.interruptions} pausas · {run.quality.recovery.recalibrations} recalibraciones · {run.quality.recovery.repeatedAssetIds.length} imágenes repetidas
                       </p> : null}
