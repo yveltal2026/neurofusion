@@ -1,6 +1,6 @@
 import { createAnthropicProvider } from "./anthropic";
 import type { Tier } from "./cascade";
-import { createGeminiProvider } from "./gemini";
+import { createGeminiProvider, type GeminiThinkingLevel } from "./gemini";
 import { createOpenAiProvider } from "./openai";
 import { AiError } from "./types";
 
@@ -25,6 +25,15 @@ export const DEFAULT_CASCADE = [
   "gemini-paid:gemini-4-argon",
   "anthropic",
 ].join(",");
+
+const THINKING_LEVELS: readonly GeminiThinkingLevel[] = ["minimal", "low", "medium", "high"];
+
+/** GEMINI_THINKING_LEVEL: minimal | low | medium | high | off. Por defecto «low» (respuestas rápidas). */
+export function geminiThinkingLevel(env: Env): GeminiThinkingLevel | undefined {
+  const v = (env.GEMINI_THINKING_LEVEL ?? "").trim().toLowerCase();
+  if (v === "off") return undefined;
+  return (THINKING_LEVELS as readonly string[]).includes(v) ? (v as GeminiThinkingLevel) : "low";
+}
 
 export function geminiKeys(env: Env): { free: string | undefined; paid: string | undefined } {
   return {
@@ -52,7 +61,7 @@ function parseSpec(spec: string, env: Env): Entry | null {
       const tier = kind === "gemini-free" ? "free" : "paid";
       const apiKey = keys[tier];
       if (!apiKey) return null;
-      return { id: `${kind}:${model}`, label: `Gemini ${tier === "free" ? "gratuito" : "de paga"} (${model})`, build: () => createGeminiProvider({ apiKey, model, tier }) };
+      return { id: `${kind}:${model}`, label: `Gemini ${tier === "free" ? "gratuito" : "de paga"} (${model})`, build: () => createGeminiProvider({ apiKey, model, tier, thinkingLevel: geminiThinkingLevel(env) }) };
     }
     case "anthropic": {
       const apiKey = env.ANTHROPIC_API_KEY;

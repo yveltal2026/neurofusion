@@ -190,6 +190,7 @@ describe("cobertura de la lectura de la IA", () => {
     expect(PIECE_SYSTEM_PROMPT).toMatch(/NO qué tan importante es/);
     expect(PIECE_SYSTEM_PROMPT).toMatch(/usa null sólo para elementos decorativos/);
     expect(PIECE_SYSTEM_PROMPT).toMatch(/\[ymin, xmin, ymax, xmax\]/);
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/VARIAS líneas la caja debe abarcar TODAS las líneas/);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/FALTAN/);
   });
 

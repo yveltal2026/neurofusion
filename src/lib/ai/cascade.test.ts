@@ -7,7 +7,7 @@ import { createCascadeProvider, type Tier } from "./cascade";
 import { createGeminiProvider, toGeminiContents } from "./gemini";
 import { getAnalysisProvider, isAiConfigured } from "./index";
 import { generateStructured } from "./structured";
-import { resolveTiers } from "./tiers";
+import { geminiThinkingLevel, resolveTiers } from "./tiers";
 import { AiError, safeDetail, type AnalysisProvider, type CompletionRequest } from "./types";
 
 const REQ: CompletionRequest = { system: "s", messages: [{ role: "user", content: "hola" }] };
@@ -355,5 +355,80 @@ describe("diagnóstico en logs", () => {
     });
     const err = await createGeminiProvider({ apiKey: "KEY", model: "m", tier: "paid", fetchImpl: f }).complete(REQ).catch((e) => e);
     expect(err.detail).toBe("TypeError: fetch failed");
+  });
+});
+
+
+describe("Gemini · razonamiento acotado y tiempos de espera", () => {
+  const ok = { candidates: [{ content: { parts: [{ text: '{"a":1}' }] }, finishReason: "STOP" }] };
+  const reply = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
+  const bodyOf = (f: ReturnType<typeof vi.fn<typeof fetch>>, i = 0) => JSON.parse(String(f.mock.calls[i][1]?.body));
+
+  it("envía thinkingConfig.thinkingLevel cuando se configura", async () => {
+    const f = vi.fn<typeof fetch>(async () => reply(200, ok));
+    await createGeminiProvider({ apiKey: "K", model: "m", tier: "free", thinkingLevel: "low", fetchImpl: f }).complete(REQ);
+    expect(bodyOf(f).generationConfig.thinkingConfig).toEqual({ thinkingLevel: "low" });
+  });
+
+  it("sin thinkingLevel no manda thinkingConfig", async () => {
+    const f = vi.fn<typeof fetch>(async () => reply(200, ok));
+    await createGeminiProvider({ apiKey: "K", model: "m", tier: "free", fetchImpl: f }).complete(REQ);
+    expect(bodyOf(f).generationConfig.thinkingConfig).toBeUndefined();
+  });
+
+  it("si el modelo rechaza el campo (400 que menciona thinking) reintenta una vez sin él", async () => {
+    const f = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(reply(400, { error: { status: "INVALID_ARGUMENT", message: "Unknown name \"thinkingLevel\" at generation_config.thinking_config" } }))
+      .mockResolvedValueOnce(reply(200, ok));
+    const r = await createGeminiProvider({ apiKey: "K", model: "m", tier: "free", thinkingLevel: "low", fetchImpl: f }).complete(REQ);
+    expect(r.text).toBe('{"a":1}');
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(bodyOf(f, 0).generationConfig.thinkingConfig).toBeDefined();
+    expect(bodyOf(f, 1).generationConfig.thinkingConfig).toBeUndefined();
+  });
+
+  it("un 400 que no habla de thinking no se reintenta y deja su detalle", async () => {
+    const f = vi.fn<typeof fetch>(async () => reply(400, { error: { status: "INVALID_ARGUMENT", message: "Request payload size exceeds the limit" } }));
+    const err = await createGeminiProvider({ apiKey: "K", model: "m", tier: "free", thinkingLevel: "low", fetchImpl: f }).complete(REQ).catch((e) => e);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(err).toMatchObject({ kind: "provider", detail: expect.stringContaining("payload size") });
+  });
+
+  it("GEMINI_THINKING_LEVEL: por defecto «low», admite los demás niveles y «off»", () => {
+    expect(geminiThinkingLevel({})).toBe("low");
+    expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "HIGH" })).toBe("high");
+    expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "off" })).toBeUndefined();
+    expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "raro" })).toBe("low");
+  });
+
+  it("un nivel que agotó su propio tope de tiempo se salta en las siguientes peticiones", async () => {
+    let t = 1_000;
+    const calls: string[] = [];
+    const hang = (req: CompletionRequest) =>
+      new Promise<string>((_, reject) => {
+        req.signal?.addEventListener("abort", () => reject(new AiError("tardó", "provider", "TimeoutError")));
+      });
+    const p = createCascadeProvider([tier("lento", hang, calls), tier("rapido", "ok", calls)], { log: () => {}, cooldowns: new Map(), now: () => t, perTierTimeoutMs: 20 });
+    await p.complete(REQ);
+    await p.complete(REQ); // «lento» está en pausa: ni se intenta
+    expect(calls).toEqual(["lento", "rapido", "rapido"]);
+    t += 121_000;
+    await p.complete(REQ); // la pausa terminó
+    expect(calls).toEqual(["lento", "rapido", "rapido", "lento", "rapido"]);
+  });
+
+  it("si cancela el llamador (no el tope del nivel) no se pausa ningún nivel", async () => {
+    const calls: string[] = [];
+    const ctl = new AbortController();
+    const abortable = (req: CompletionRequest) =>
+      new Promise<string>((_, reject) => {
+        req.signal?.addEventListener("abort", () => reject(new AiError("cancelado", "provider")));
+        setTimeout(() => ctl.abort(), 5);
+      });
+    const cooldowns = new Map<string, number>();
+    const p = createCascadeProvider([tier("a", abortable, calls)], { log: () => {}, cooldowns });
+    await p.complete({ ...REQ, signal: ctl.signal }).catch(() => {});
+    expect(cooldowns.size).toBe(0);
   });
 });

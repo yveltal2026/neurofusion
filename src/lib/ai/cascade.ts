@@ -30,6 +30,8 @@ const MIN_USEFUL_MS = 5_000;
  * llamada (y latencia) en cada petición. Los errores transitorios no pausan el nivel.
  */
 const COOLDOWN_MS: Partial<Record<AiError["kind"], number>> = { rate_limit: 60_000, auth: 600_000 };
+/** Un nivel que agotó su tope de tiempo se salta un rato: seguiría tardando y consumiría el presupuesto de los demás. */
+const TIMEOUT_COOLDOWN_MS = 120_000;
 
 const sharedCooldowns = new Map<string, number>();
 
@@ -89,7 +91,9 @@ export function createCascadeProvider(tiers: Tier[], opts: CascadeOptions = {}):
           const err = asAiError(e);
           if (err.kind === "config") throw err;
           failures.push(err);
-          const pause = COOLDOWN_MS[err.kind];
+          // ¿Se agotó el tope de ESTE nivel (y no lo canceló el llamador)?
+          const ownTimeout = timeout.aborted && !req.signal?.aborted;
+          const pause = ownTimeout ? TIMEOUT_COOLDOWN_MS : COOLDOWN_MS[err.kind];
           if (pause) cooldowns.set(tier.id, now() + pause);
           log(`[ai] ${tier.label} falló (${err.kind}${err.detail ? `: ${err.detail}` : ""}); ${isLast ? "sin más niveles" : "probando el siguiente"}`);
         }

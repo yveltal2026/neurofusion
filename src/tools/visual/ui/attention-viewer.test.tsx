@@ -173,4 +173,27 @@ describe("AttentionViewer · dibujo sobre el canvas", () => {
     expect(labels).not.toContain("Frío · Titular");
     expect(calls.some((c) => c.fn === "drawImage")).toBe(true); // el calor sigue dibujándose
   });
+
+  it("los rótulos no se salen de la imagen ni se encima uno sobre otro", () => {
+    const rec: { calls: { fn: string; args: unknown[] }[] }[] = [];
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
+      const r = recordingContext(this);
+      rec.push(r);
+      return r.ctx;
+    } as unknown as HTMLCanvasElement["getContext"];
+    const aois: Aoi[] = [
+      { id: "A", label: "Texto al borde derecho", kind: "text", box: [0.93, 0.5, 0.99, 0.55], attention: 0.1, importance: 5, order: null },
+      { id: "B", label: "Elemento encimado 1", kind: "text", box: [0.3, 0.5, 0.4, 0.55], attention: 0.1, importance: 5, order: null },
+      { id: "C", label: "Elemento encimado 2", kind: "text", box: [0.3, 0.5, 0.4, 0.55], attention: 0.1, importance: 4, order: null },
+    ];
+    render(<AttentionViewer imageUrl="https://x/y.png" width={800} height={800} aois={aois} initialMode="blind" />);
+    const texts = rec.flatMap((r) => r.calls).filter((c) => c.fn === "fillText");
+    // measureText simulado = 40 px: el texto (x + 4) debe terminar antes del borde (800 px)
+    for (const t of texts) expect((t.args[1] as number) <= 800 && (t.args[1] as number) >= 0).toBe(true);
+    const edge = texts.find((t) => String(t.args[0]).includes("borde derecho"));
+    expect((edge?.args[1] as number) + 40).toBeLessThanOrEqual(800);
+    // los dos rótulos con la misma esquina quedan a alturas distintas
+    const ys = texts.filter((t) => String(t.args[0]).includes("encimado")).map((t) => t.args[2] as number);
+    expect(new Set(ys).size).toBe(2);
+  });
 });
