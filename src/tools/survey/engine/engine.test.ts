@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   blockInstructions,
+  groupBipolar,
   buildAnswerSchema,
   computeSurveyAggregates,
   cronbachAlpha,
@@ -725,5 +726,31 @@ describe("validación por elementos (cliente) coherente con la del servidor", ()
         JSON.stringify(c),
       ).toBe(schema.safeParse(c).success);
     }
+  });
+});
+
+describe("groupBipolar", () => {
+  const attitude = {
+    ...config,
+    blocks: [{ kind: "instrument" as const, id: "att", instrumentId: "attitude" as const, required: true }],
+  };
+
+  it("agrupa los ítems de actitud: mismo enunciado, polos distintos", () => {
+    const groups = groupBipolar(listItems(attitude));
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveLength(3);
+    expect(groups[0]!.map((i) => i.type === "scale" && `${i.minLabel}-${i.maxLabel}`)).toEqual([
+      "Mala-Buena",
+      "Desfavorable-Favorable",
+      "Desagradable-Agradable",
+    ]);
+  });
+
+  it("no agrupa ítems con enunciados distintos (SUS, SAM) ni preguntas sueltas", () => {
+    const sus = { ...config, blocks: [{ kind: "instrument" as const, id: "sus", instrumentId: "sus" as const, required: true }] };
+    expect(groupBipolar(listItems(sus)).every((g) => g.length === 1)).toBe(true);
+    const sam = { ...config, blocks: [{ kind: "instrument" as const, id: "sam", instrumentId: "sam" as const, required: true }] };
+    expect(groupBipolar(listItems(sam)).every((g) => g.length === 1)).toBe(true);
+    expect(groupBipolar(listItems(config)).every((g) => g.length === 1)).toBe(true);
   });
 });

@@ -5,7 +5,14 @@ import { Icon, type IconName } from "@/components/brand/icon";
 import { Field, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { Switch } from "@/components/ui/switch";
-import { getInstrument, renderItemText } from "../engine";
+import {
+  getInstrument,
+  listPriceItems,
+  priceInstructions,
+  renderItemText,
+  type InstrumentDef,
+  type InstrumentItem,
+} from "../engine";
 import { INSTRUMENT_CATALOG, PRICE_CATALOG } from "./catalog";
 import { parsePrices, type DraftBlock } from "./model";
 
@@ -102,6 +109,112 @@ export function BlockSection({
 
 const CARD = "space-y-4 rounded-lg border border-border bg-surface p-5";
 
+/** Une los ítems consecutivos que repiten enunciado y sólo cambian de polos (diferencial semántico). */
+function groupByStem(items: readonly InstrumentItem[]): InstrumentItem[][] {
+  const groups: InstrumentItem[][] = [];
+  for (const item of items) {
+    const prev = groups.at(-1);
+    if (
+      prev &&
+      prev[0]!.text === item.text &&
+      item.minLabel &&
+      item.maxLabel &&
+      prev[0]!.minLabel &&
+      prev[0]!.maxLabel
+    )
+      prev.push(item);
+    else groups.push([item]);
+  }
+  return groups;
+}
+
+function PreviewBox({
+  children,
+  instructions,
+}: {
+  children: ReactNode;
+  instructions?: string;
+}) {
+  return (
+    <div className="space-y-3 rounded-md bg-primary/10 px-4 py-3 text-sm">
+      <p className="text-xs text-muted">Así lo verá el participante</p>
+      {instructions ? <p className="text-muted">{instructions}</p> : null}
+      {children}
+    </div>
+  );
+}
+
+/** Fila de polos opuestos tal como se ve en la encuesta: palabras en los extremos y la escala debajo. */
+function PoleRow({
+  min,
+  max,
+  from,
+  to,
+}: {
+  min: string;
+  max: string;
+  from: number;
+  to: number;
+}) {
+  const points = Array.from({ length: to - from + 1 }, (_, i) => i);
+  return (
+    <div aria-hidden="true" className="space-y-1.5">
+      <div className="flex justify-between gap-4 text-sm font-semibold text-heading">
+        <span>{min}</span>
+        <span className="text-right">{max}</span>
+      </div>
+      <div className="flex gap-1.5">
+        {points.map((n) => (
+          <span
+            key={n}
+            className="h-3 flex-1 rounded-full border border-heading/40"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InstrumentPreview({
+  def,
+  subject,
+}: {
+  def: InstrumentDef;
+  subject: string;
+}) {
+  const groups = groupByStem(def.items);
+  const render = (group: InstrumentItem[]) =>
+    group.length > 1 ? (
+      <div className="space-y-2">
+        <p className="font-medium">{renderItemText(group[0]!, subject)}</p>
+        {group.map((item) => (
+          <PoleRow
+            key={item.n}
+            min={item.minLabel!}
+            max={item.maxLabel!}
+            from={def.scale.min}
+            to={def.scale.max}
+          />
+        ))}
+      </div>
+    ) : (
+      <p>{renderItemText(group[0]!, subject)}</p>
+    );
+  return (
+    <PreviewBox instructions={def.instructions}>
+      {groups.length === 1 ? (
+        render(groups[0]!)
+      ) : (
+        <ol className="list-decimal space-y-1 pl-5">
+          {groups.map((g) => (
+            <li key={g[0]!.n}>{render(g)}</li>
+          ))}
+        </ol>
+      )}
+    </PreviewBox>
+  );
+}
+
 export function InstrumentCard({
   block,
   problems,
@@ -133,18 +246,7 @@ export function InstrumentCard({
           maxLength={80}
         />
       </Field>
-      <div className="rounded-md bg-primary/10 px-4 py-3 text-sm">
-        <p className="text-xs text-muted">Así lo verá el participante</p>
-        {def.items.length === 1 ? (
-          <p>{renderItemText(def.items[0]!, subject)}</p>
-        ) : (
-          <ol className="mt-1 list-decimal space-y-1 pl-5">
-            {def.items.map((item) => (
-              <li key={item.n}>{renderItemText(item, subject)}</li>
-            ))}
-          </ol>
-        )}
-      </div>
+      <InstrumentPreview def={def} subject={subject} />
       <p className="text-xs text-muted">
         {def.source} {def.notes}
       </p>
@@ -157,6 +259,44 @@ export function InstrumentCard({
         />
       </div>
     </div>
+  );
+}
+
+function PricePreview({ block }: { block: PriceBlock }) {
+  const gg = block.method === "gabor_granger";
+  const prices = parsePrices(block.pricesText).filter(Number.isFinite);
+  const engineBlock = {
+    kind: "price" as const,
+    id: block.id,
+    method: block.method,
+    subject: block.subject.trim() || undefined,
+    currency: block.currency.trim() || undefined,
+    prices: gg ? prices : undefined,
+    required: block.required,
+  };
+  const first = listPriceItems(engineBlock)[0];
+  return (
+    <PreviewBox instructions={priceInstructions(engineBlock)}>
+      {first ? (
+        <div className="space-y-2">
+          <p className="font-medium">{first.label}</p>
+          {first.type === "number" ? (
+            <p
+              aria-hidden="true"
+              className="flex w-48 items-center justify-between rounded-md border border-dashed border-heading/40 px-3 py-2 text-xs text-muted"
+            >
+              Escribe un número
+              <span className="font-semibold text-heading">{first.unit}</span>
+            </p>
+          ) : (
+            <p aria-hidden="true" className="flex gap-4 text-sm">
+              <span>○ Sí</span>
+              <span>○ No</span>
+            </p>
+          )}
+        </div>
+      ) : null}
+    </PreviewBox>
   );
 }
 
@@ -187,7 +327,10 @@ export function PriceCard({
             maxLength={80}
           />
         </Field>
-        <Field label="Moneda" hint="Se muestra junto a los precios.">
+        <Field
+          label="Moneda"
+          hint="Sólo el código, como MXN o USD. No escribas un precio aquí."
+        >
           <Input
             value={block.currency}
             onChange={(e) => onChange({ currency: e.target.value })}
@@ -225,6 +368,7 @@ export function PriceCard({
           ) : null}
         </div>
       ) : null}
+      <PricePreview block={block} />
       <p className="text-xs text-muted">
         {gg
           ? `El participante responde sí o no a cada uno de los ${prices.length} precios. `

@@ -396,3 +396,72 @@ describe("SurveyRunner · vista previa", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
+
+describe("SurveyRunner · claridad para quien responde solo", () => {
+  const guided: SurveyConfig = {
+    version: 1,
+    title: "Marca",
+    texts: { consent: defaultConsentText("Marca"), thankYou: DEFAULT_THANK_YOU },
+    blocks: [
+      { kind: "instrument", id: "att", instrumentId: "attitude", subject: "Nespresso", required: true },
+      { kind: "price", id: "vw", method: "van_westendorp", subject: "Nespresso", currency: "MXN", required: true },
+      { kind: "price", id: "gg", method: "gabor_granger", subject: "Nespresso", prices: [80, 120, 160], required: true },
+    ],
+  };
+
+  async function open() {
+    const user = userEvent.setup();
+    render(<SurveyRunner token={TOKEN} config={guided} preview />);
+    return user;
+  }
+
+  it("la bienvenida dice cuánto dura y que no hay respuestas correctas", async () => {
+    await open();
+    expect(screen.getByText(/Son 3 partes y toma unos \d+ minutos?\./)).toBeTruthy();
+    expect(screen.getByText(/No hay respuestas correctas ni incorrectas/)).toBeTruthy();
+    expect(screen.getByText(/sin ayuda de nadie/)).toBeTruthy();
+  });
+
+  it("actitud: el enunciado repetido se lee una vez y cada fila muestra sus dos palabras", async () => {
+    const user = await open();
+    await consentAndStart(user);
+    expect(screen.getAllByText("Mi opinión general sobre Nespresso es:")).toHaveLength(1);
+    for (const [min, max] of [
+      ["Mala", "Buena"],
+      ["Desfavorable", "Favorable"],
+      ["Desagradable", "Agradable"],
+    ]) {
+      const row = screen.getByRole("radiogroup", { name: `${min} a ${max}` });
+      expect(within(row).getByText(min!)).toBeTruthy();
+      expect(within(row).getByText(max!)).toBeTruthy();
+      expect(within(row).getAllByRole("radio")).toHaveLength(7);
+    }
+    // Se puede responder y la selección se conserva.
+    const row = screen.getByRole("radiogroup", { name: "Mala a Buena" });
+    await user.click(within(row).getByRole("radio", { name: /^6/ }));
+    expect((within(row).getByRole("radio", { name: /^6/ }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("precio: explica qué responder y la moneda va junto al campo, no en el enunciado", async () => {
+    const user = await open();
+    await consentAndStart(user);
+    const rows = screen.getAllByRole("radiogroup");
+    for (const r of rows) await user.click(within(r).getAllByRole("radio")[3]!);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByText(/Te haremos cuatro preguntas sobre cuánto pagarías/)).toBeTruthy();
+    expect(screen.getByText(/de la más baja a la más alta/)).toBeTruthy();
+    expect(screen.getAllByText("MXN")).toHaveLength(4);
+    expect(screen.queryByText(/precio en/)).toBeNull();
+  });
+
+  it("Gabor-Granger: explica que cada precio es hipotético", async () => {
+    const user = await open();
+    await consentAndStart(user);
+    for (const r of screen.getAllByRole("radiogroup")) await user.click(within(r).getAllByRole("radio")[3]!);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    for (const input of screen.getAllByRole("spinbutton")) await user.type(input, "100");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(screen.getByText(/Te mostraremos 3 precios posibles de Nespresso/)).toBeTruthy();
+    expect(screen.getByText(/Imagina que ese fuera el precio real/)).toBeTruthy();
+  });
+});

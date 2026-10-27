@@ -600,6 +600,22 @@ function describeIssue(
   };
 }
 
+/** Errores que el esquema del motor no cubre: la moneda es un código (MXN), nunca un precio. */
+function currencyIssues(d: SurveyDraft): BuildIssue[] {
+  const out: BuildIssue[] = [];
+  d.blocks.forEach((b, i) => {
+    if (b.kind === "price" && /\d/.test(b.currency))
+      out.push(
+        describeIssue(
+          d,
+          ["blocks", i, "currency"],
+          "La moneda es sólo el código (por ejemplo MXN o USD), sin cifras. El precio no se escribe aquí.",
+        ),
+      );
+  });
+  return out;
+}
+
 /** Convierte el borrador en la configuración validada del motor, o lista lo que falta corregir. */
 export function buildConfig(d: SurveyDraft): BuildResult {
   const parsed = surveyConfigSchema.safeParse({
@@ -609,11 +625,17 @@ export function buildConfig(d: SurveyDraft): BuildResult {
     texts: { consent: d.consent.trim(), thankYou: d.thankYou.trim() },
     blocks: d.blocks.map(toBlock),
   });
-  if (parsed.success) return { ok: true, config: parsed.data };
+  const extra = currencyIssues(d);
+  if (parsed.success && extra.length === 0)
+    return { ok: true, config: parsed.data };
   const issues: BuildIssue[] = [];
-  for (const issue of parsed.error.issues) {
-    const found = describeIssue(d, issue.path, issue.message);
-    if (!issues.some((i) => i.text === found.text)) issues.push(found);
+  const found = parsed.success
+    ? []
+    : parsed.error.issues.map((issue) =>
+        describeIssue(d, issue.path, issue.message),
+      );
+  for (const issue of [...found, ...extra]) {
+    if (!issues.some((i) => i.text === issue.text)) issues.push(issue);
   }
   return { ok: false, errors: issues.map((i) => i.text), issues };
 }

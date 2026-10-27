@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Icon } from "@/components/brand/icon";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -15,13 +16,15 @@ import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice, type DeviceInfo } from "@/tools/iat/runner/device";
 import {
   blockInstructions,
+  groupBipolar,
   itemsOfBlock,
+  listItems,
   validateItems,
   type SurveyAnswers,
   type SurveyConfig,
 } from "../engine";
 import { surveyApi } from "./api";
-import { ItemField } from "./ItemField";
+import { BipolarGroup, ItemField } from "./ItemField";
 
 type Stage =
   | { kind: "welcome" }
@@ -105,6 +108,8 @@ export function SurveyRunner({
   const completedRef = useRef(false);
 
   const blocks = config.blocks;
+  // Estimado: unos 15 segundos por elemento, mínimo un minuto.
+  const minutes = Math.max(1, Math.round(listItems(config).length / 4));
 
   // Pre-chequeo: avisa de inmediato si ya participó o la encuesta cerró.
   useEffect(() => {
@@ -241,6 +246,25 @@ export function SurveyRunner({
               {config.intro}
             </p>
           ) : null}
+          <ul className="space-y-2 rounded-md bg-primary/10 px-4 py-3 text-sm">
+            <li className="flex items-center gap-3">
+              <Icon name="clock" className="size-5" />
+              {blocks.length === 1
+                ? "Es una sola parte"
+                : `Son ${blocks.length} partes`}
+              {` y toma unos ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`}
+            </li>
+            <li className="flex items-center gap-3">
+              <Icon name="check" className="size-5" />
+              No hay respuestas correctas ni incorrectas: queremos tu opinión
+              sincera.
+            </li>
+            <li className="flex items-center gap-3">
+              <Icon name="device" className="size-5" />
+              Puedes responder desde tu celular o tu computadora, sin ayuda de
+              nadie.
+            </li>
+          </ul>
           <div className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
             {config.texts.consent}
           </div>
@@ -289,24 +313,47 @@ export function SurveyRunner({
               next(stage.index);
             }}
           >
-            {items.map((item) => (
-              <ItemField
-                key={item.id}
-                item={item}
-                value={answers[item.id]}
-                error={errors[item.id]}
-                onChange={(v) => {
-                  setAnswers((a) => ({ ...a, [item.id]: v }));
-                  setErrors((er) => {
-                    if (!er[item.id] && !er._form) return er;
-                    const rest = { ...er };
-                    delete rest[item.id];
-                    delete rest._form;
-                    return rest;
-                  });
-                }}
-              />
-            ))}
+            {groupBipolar(items).map((group) => {
+              const clear = (ids: string[]) =>
+                setErrors((er) => {
+                  if (!ids.some((id) => er[id]) && !er._form) return er;
+                  const rest = { ...er };
+                  for (const id of ids) delete rest[id];
+                  delete rest._form;
+                  return rest;
+                });
+              if (group.length > 1)
+                return (
+                  <BipolarGroup
+                    key={group[0]!.id}
+                    items={
+                      group as Extract<
+                        (typeof group)[number],
+                        { type: "scale" }
+                      >[]
+                    }
+                    values={answers}
+                    errors={errors}
+                    onChange={(id, v) => {
+                      setAnswers((a) => ({ ...a, [id]: v }));
+                      clear([id]);
+                    }}
+                  />
+                );
+              const item = group[0]!;
+              return (
+                <ItemField
+                  key={item.id}
+                  item={item}
+                  value={answers[item.id]}
+                  error={errors[item.id]}
+                  onChange={(v) => {
+                    setAnswers((a) => ({ ...a, [item.id]: v }));
+                    clear([item.id]);
+                  }}
+                />
+              );
+            })}
             {Object.keys(errors).some((k) => k !== "_form") ? (
               <Alert tone="error">
                 Revisa las preguntas marcadas para continuar.
@@ -364,7 +411,10 @@ export function SurveyRunner({
   } else if (stage.kind === "thanks") {
     body = (
       <Screen>
-        <div className="flex flex-col items-center space-y-4 text-center" data-testid="thanks">
+        <div
+          className="flex flex-col items-center space-y-4 text-center"
+          data-testid="thanks"
+        >
           <IconTile name="check" size="lg" />
           <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
           <p className="whitespace-pre-line text-sm leading-relaxed">

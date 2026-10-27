@@ -186,8 +186,9 @@ const PURCHASE_INTENT: InstrumentDef = {
 const ATTITUDE: InstrumentDef = {
   id: "attitude",
   scaleDisplay: "endpoints",
-  instructions: "Elige el punto que mejor represente tu opinión.",
-  version: "att-es-1.0",
+  instructions:
+    "En cada línea, toca el punto más cercano a la palabra que mejor represente tu opinión.",
+  version: "att-es-1.1",
   name: "Actitud hacia la marca o el anuncio (diferencial semántico, 7 puntos)",
   scale: { min: 1, max: 7 },
   defaultSubject: "esta marca",

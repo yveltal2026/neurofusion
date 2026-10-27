@@ -138,7 +138,7 @@ export function ItemField({
           ))}
         </div>
         {item.minLabel || item.maxLabel ? (
-          <div className="flex justify-between gap-4 text-xs text-muted">
+          <div className="flex justify-between gap-4 text-sm text-muted">
             <span>
               {item.min} = {item.minLabel ?? ""}
             </span>
@@ -157,20 +157,27 @@ export function ItemField({
       <div className="space-y-1.5">
         <label className="block space-y-1.5">
           <span className="text-base font-medium text-heading">{label}</span>
-          <Input
-            type="number"
-            inputMode="decimal"
-            min={item.min}
-            max={item.max}
-            value={typeof value === "number" ? String(value) : ""}
-            onChange={(e) =>
-              onChange(
-                e.target.value === "" ? undefined : Number(e.target.value),
-              )
-            }
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
-          />
+          <span className="flex items-center gap-3">
+            <Input
+              type="number"
+              inputMode="decimal"
+              min={item.min}
+              max={item.max}
+              value={typeof value === "number" ? String(value) : ""}
+              onChange={(e) =>
+                onChange(
+                  e.target.value === "" ? undefined : Number(e.target.value),
+                )
+              }
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
+            />
+            {item.unit ? (
+              <span className="shrink-0 text-sm font-semibold text-heading">
+                {item.unit}
+              </span>
+            ) : null}
+          </span>
         </label>
         {err}
       </div>
@@ -183,6 +190,7 @@ export function ItemField({
       <label className="block space-y-1.5">
         <span className="text-base font-medium text-heading">{label}</span>
         <Textarea
+          placeholder="Escribe tu respuesta aquí"
           value={typeof value === "string" ? value : ""}
           onChange={(e) =>
             onChange(e.target.value === "" ? undefined : e.target.value)
@@ -193,5 +201,80 @@ export function ItemField({
       </label>
       {err}
     </div>
+  );
+}
+
+/**
+ * Escalas de polos opuestos que comparten enunciado («Mi opinión sobre X es:» … mala / buena).
+ * El enunciado se lee una vez y cada fila muestra sus dos palabras en los extremos, para que se vea
+ * qué cambia entre una fila y otra.
+ */
+export function BipolarGroup({
+  items,
+  values,
+  errors,
+  onChange,
+}: {
+  items: Extract<SurveyItem, { type: "scale" }>[];
+  values: Record<string, unknown>;
+  errors: Record<string, string | undefined>;
+  onChange: (id: string, value: unknown) => void;
+}) {
+  const first = items[0]!;
+  const label = `${first.label}${first.required ? "" : " (opcional)"}`;
+  return (
+    <fieldset className="space-y-4">
+      <legend className="text-base font-medium">{label}</legend>
+      {items.map((item) => {
+        const points = Array.from(
+          { length: item.max - item.min + 1 },
+          (_, i) => item.min + i,
+        );
+        const errorId = `${item.id}-error`;
+        return (
+          <div
+            key={item.id}
+            role="radiogroup"
+            aria-label={`${item.minLabel} a ${item.maxLabel}`}
+            aria-describedby={errors[item.id] ? errorId : undefined}
+            className="space-y-2 rounded-md border border-border bg-surface p-3"
+          >
+            <div className="flex justify-between gap-4 text-sm font-semibold text-heading">
+              <span>{item.minLabel}</span>
+              <span className="text-right">{item.maxLabel}</span>
+            </div>
+            <div
+              className="grid gap-1.5"
+              style={{
+                gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {points.map((n) => (
+                <label
+                  key={n}
+                  className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm transition-colors duration-150 hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-heading has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-heading motion-reduce:transition-none"
+                >
+                  <input
+                    type="radio"
+                    name={item.id}
+                    value={n}
+                    checked={values[item.id] === n}
+                    onChange={() => onChange(item.id, n)}
+                    className="sr-only"
+                    aria-label={`${n}${n === item.min ? ` (${item.minLabel})` : n === item.max ? ` (${item.maxLabel})` : ""}`}
+                  />
+                  {n}
+                </label>
+              ))}
+            </div>
+            {errors[item.id] ? (
+              <p id={errorId} className="text-sm text-danger">
+                {errors[item.id]}
+              </p>
+            ) : null}
+          </div>
+        );
+      })}
+    </fieldset>
   );
 }

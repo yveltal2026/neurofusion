@@ -219,6 +219,8 @@ export type SurveyItem =
       type: "number";
       min?: number;
       max?: number;
+      /** Unidad que se muestra junto al campo (p. ej. la moneda de un precio). */
+      unit?: string;
     }
   | {
       id: string;
@@ -256,36 +258,38 @@ function scaleLabelsOf(
   };
 }
 
+/** Elementos respondibles de un bloque de precio (cuatro de Van Westendorp o uno por precio de Gabor-Granger). */
+export function listPriceItems(
+  b: Extract<z.infer<typeof blockSchema>, { kind: "price" }>,
+): SurveyItem[] {
+  const subject = b.subject ?? "este producto";
+  const currency = b.currency ?? "MXN";
+  if (b.method === "van_westendorp")
+    return VW_QUESTIONS.map((q, i) => ({
+      id: priceItemId(b.id, i + 1),
+      blockId: b.id,
+      label: q.text.replaceAll("{subject}", subject),
+      required: b.required,
+      type: "number" as const,
+      min: 0,
+      unit: currency,
+    }));
+  return (b.prices ?? []).map((price, i) => ({
+    id: priceItemId(b.id, i + 1),
+    blockId: b.id,
+    label: `Si ${subject} costara ${price} ${currency}, ¿lo comprarías?`,
+    required: b.required,
+    type: "select" as const,
+    options: [GG_YES, GG_NO],
+  }));
+}
+
 /** Aplana la configuración en elementos respondibles, en orden. */
 export function listItems(config: SurveyConfig): SurveyItem[] {
   const out: SurveyItem[] = [];
   for (const b of config.blocks) {
     if (b.kind === "price") {
-      const subject = b.subject ?? "este producto";
-      const currency = b.currency ?? "MXN";
-      if (b.method === "van_westendorp") {
-        VW_QUESTIONS.forEach((q, i) =>
-          out.push({
-            id: priceItemId(b.id, i + 1),
-            blockId: b.id,
-            label: `${q.text.replaceAll("{subject}", subject)} (precio en ${currency})`,
-            required: b.required,
-            type: "number",
-            min: 0,
-          }),
-        );
-      } else {
-        (b.prices ?? []).forEach((price, i) =>
-          out.push({
-            id: priceItemId(b.id, i + 1),
-            blockId: b.id,
-            label: `Si ${subject} costara ${price} ${currency}, ¿lo comprarías?`,
-            required: b.required,
-            type: "select",
-            options: [GG_YES, GG_NO],
-          }),
-        );
-      }
+      out.push(...listPriceItems(b));
       continue;
     }
     if (b.kind === "instrument") {
@@ -410,9 +414,55 @@ export function itemsOfBlock(
 
 /** Indicación del instrumento de un bloque (si la tiene), para mostrarla encima de sus ítems. */
 export function blockInstructions(block: SurveyBlock): string | undefined {
-  return block.kind === "instrument"
-    ? getInstrument(block.instrumentId).instructions
-    : undefined;
+  if (block.kind === "instrument")
+    return getInstrument(block.instrumentId).instructions;
+  if (block.kind === "price") return priceInstructions(block);
+  return undefined;
+}
+
+/**
+ * Indicación que abre un bloque de precio: qué se pide, en qué unidad y qué significa la cifra que
+ * se ve en pantalla. El participante la lee solo, sin instructor.
+ */
+export function priceInstructions(
+  b: Extract<SurveyBlock, { kind: "price" }>,
+): string {
+  const subject = b.subject ?? "este producto";
+  const currency = b.currency ?? "MXN";
+  if (b.method === "van_westendorp")
+    return `Imagina que estás pensando en comprar ${subject}. Te haremos cuatro preguntas sobre cuánto pagarías. En cada una escribe sólo un número, en ${currency}. Tus cuatro respuestas deben ir de la más baja a la más alta. No hay respuestas correctas: queremos tu opinión.`;
+  const n = b.prices?.length ?? 0;
+  return `Te mostraremos ${n} precios posibles de ${subject}, uno por pregunta. Imagina que ese fuera el precio real y elige si lo comprarías o no. No hay respuestas correctas: queremos tu opinión.`;
+}
+
+/**
+ * Agrupa elementos de escala consecutivos que comparten enunciado y escala y sólo difieren en los polos
+ * (diferencial semántico: «Mi opinión sobre X es: mala … buena»). Cada grupo se muestra con el
+ * enunciado una vez y una fila por polo. Los demás elementos quedan solos.
+ */
+export function groupBipolar(items: readonly SurveyItem[]): SurveyItem[][] {
+  const groups: SurveyItem[][] = [];
+  for (const item of items) {
+    const last = groups.at(-1)?.[0];
+    const prev = groups.at(-1);
+    const bipolar = (i: SurveyItem) =>
+      i.type === "scale" && Boolean(i.minLabel) && Boolean(i.maxLabel);
+    if (
+      prev &&
+      last &&
+      bipolar(item) &&
+      bipolar(last) &&
+      item.type === "scale" &&
+      last.type === "scale" &&
+      item.label === last.label &&
+      item.min === last.min &&
+      item.max === last.max &&
+      item.blockId === last.blockId
+    )
+      prev.push(item);
+    else groups.push([item]);
+  }
+  return groups;
 }
 
 /**

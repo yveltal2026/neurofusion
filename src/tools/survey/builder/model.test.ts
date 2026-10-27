@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { listItems } from "../engine";
 import {
   addInstrumentBlock,
+  addPriceBlock,
   addQuestion,
   addQuestionsBlock,
   buildConfig,
@@ -302,5 +303,21 @@ describe("edición estilo formulario", () => {
     );
     const noTitle = buildConfig(setTitle(d, ""));
     expect(!noTitle.ok && noTitle.issues.some((i) => i.field === "title")).toBe(true);
+  });
+});
+
+describe("moneda de un bloque de precio", () => {
+  it("rechaza cifras en la moneda y señala el bloque", () => {
+    let d = setTitle(emptyDraft(), "Precio");
+    d = addPriceBlock(d, "van_westendorp");
+    const id = d.blocks[0]!.id;
+    const bad = buildConfig(updateBlock(d, id, { currency: "80 MXN" }));
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) {
+      expect(bad.issues).toContainEqual(
+        expect.objectContaining({ blockId: id, message: expect.stringMatching(/sólo el código/) }),
+      );
+    }
+    expect(buildConfig(updateBlock(d, id, { currency: "USD" })).ok).toBe(true);
   });
 });

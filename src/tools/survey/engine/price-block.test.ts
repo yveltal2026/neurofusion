@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { addPriceBlock, buildConfig, emptyDraft, parsePrices, setTitle, updateBlock } from "../builder/model";
 import { computeSurveyAggregates, type SurveyResponse } from "./aggregate";
 import { GG_NO, GG_YES } from "./price";
-import { buildAnswerSchema, listItems, surveyConfigSchema, type SurveyConfig } from "./schema";
+import { blockInstructions, buildAnswerSchema, listItems, surveyConfigSchema, type SurveyConfig } from "./schema";
 
 const base = { version: 1, title: "Precio", texts: { consent: "c", thankYou: "t" } };
 
@@ -19,7 +19,19 @@ describe("bloque de precio · esquema", () => {
     expect(items.map((i) => i.id)).toEqual(["vw_1", "vw_2", "vw_3", "vw_4"]);
     expect(items.every((i) => i.type === "number")).toBe(true);
     expect(items[0]!.label).toContain("esta suscripción");
-    expect(items[0]!.label).toContain("MXN");
+    // La moneda va como unidad junto al campo, no dentro del enunciado.
+    expect(items[0]).toMatchObject({ type: "number", unit: "MXN" });
+    expect(items[0]!.label).not.toContain("MXN");
+  });
+
+  it("cada bloque de precio explica qué responder y en qué unidad", () => {
+    const vw = vwConfig().blocks[0]!;
+    expect(blockInstructions(vw)).toMatch(/cuatro preguntas/);
+    expect(blockInstructions(vw)).toMatch(/en MXN/);
+    expect(blockInstructions(vw)).toMatch(/de la más baja a la más alta/);
+    const gg = ggConfig().blocks[0]!;
+    expect(blockInstructions(gg)).toMatch(/3 precios posibles/);
+    expect(blockInstructions(gg)).toMatch(/precio real/);
   });
 
   it("Gabor-Granger genera un ítem sí/no por precio", () => {
