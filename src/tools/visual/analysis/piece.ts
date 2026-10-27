@@ -2,10 +2,22 @@ import { z } from "zod";
 import { AOI_KINDS, type Aoi } from "../engine/aoi";
 import { tileBoxToImage, type TilePlan } from "../engine/tiles";
 
-export const VISION_ENGINE_VERSION = "nf-vision-1.0";
+export const VISION_ENGINE_VERSION = "nf-vision-1.1";
 
 const score = z.object({ score: z.number().int().min(1).max(5), evidence: z.string().trim().min(1).max(400) });
 const coord = z.number().min(0).max(1000);
+
+/**
+ * Cajas de la IA. El orden de las coordenadas es el punto frágil: Gemini devuelve de forma
+ * nativa [ymin, xmin, ymax, xmax] (convención de Google, 0–1000) y los demás modelos suelen
+ * asumir [x, y, x, y]; con un orden ambiguo las cajas salen transpuestas (y con ellas el mapa
+ * de calor). Por eso el prompt pide `box2d` con el orden dicho explícitamente. `box` se acepta
+ * sólo para análisis guardados antes de nf-vision-1.1, que usaban [x0, y0, x1, y1].
+ */
+const boxFields = z.object({
+  box2d: z.tuple([coord, coord, coord, coord]).optional(),
+  box: z.tuple([coord, coord, coord, coord]).optional(),
+});
 
 export const pieceAiSchema = z.object({
   summary: z.string().trim().min(1).max(1200),
@@ -18,11 +30,12 @@ export const pieceAiSchema = z.object({
         label: z.string().trim().min(1).max(80),
         kind: z.enum(AOI_KINDS),
         tile: z.number().int().min(0).max(10).default(0),
-        box: z.tuple([coord, coord, coord, coord]),
+        ...boxFields.shape,
         attention: z.number().int().min(1).max(5),
         importance: z.number().int().min(1).max(5),
         order: z.number().int().min(1).max(50).nullable(),
-      }),
+      })
+        .refine((e) => e.box2d !== undefined || e.box !== undefined, "Cada elemento necesita «box2d»"),
     )
     .max(20),
   criteria: z.object({
@@ -62,7 +75,7 @@ const FORMAT = `{
   "summary": "lectura general en 2-4 frases",
   "message": "lo que comunica la pieza en una frase",
   "firstSeconds": "qué percibe alguien en los primeros 2-3 segundos",
-  "elements": [ { "id": "E1", "label": "nombre corto", "kind": "${AOI_KINDS.join(" | ")}", "tile": 0, "box": [x0, y0, x1, y1], "attention": 1-5, "importance": 1-5, "order": 1 } ],
+  "elements": [ { "id": "E1", "label": "nombre corto", "kind": "${AOI_KINDS.join(" | ")}", "tile": 0, "box2d": [ymin, xmin, ymax, xmax], "attention": 1-5, "importance": 1-5, "order": 1 } ],
   "criteria": { "clarity": {"score": 1-5, "evidence": "..."}, "hierarchy": {...}, "cta": {...}, "legibility": {...}, "brand": {...}, "load": {...} },
   "issues": [ { "severity": "high | medium | low", "elementId": "E1 o null", "problem": "...", "recommendation": "..." } ],
   "strengths": ["..."],
@@ -78,7 +91,7 @@ QUÉ HACES
 
 REGLAS
 1. Es una ESTIMACIÓN experta, no eye tracking ni datos de personas reales. No inventes porcentajes, tiempos ni métricas.
-2. Coordenadas: "box" en enteros 0-1000 relativos a la imagen indicada en "tile" (0 = primera imagen recibida), [x0, y0, x1, y1] con origen arriba a la izquierda. Ajusta las cajas al elemento, sin márgenes grandes.
+2. Coordenadas: "box2d" son 4 enteros 0-1000 relativos a la imagen indicada en "tile" (0 = primera imagen recibida), en este orden EXACTO: [ymin, xmin, ymax, xmax]. Primero los valores VERTICALES (ymin = borde superior, ymax = borde inferior) y después los HORIZONTALES (xmin = borde izquierdo, xmax = borde derecho). El origen [0, 0] es la esquina superior izquierda y [1000, 1000] la inferior derecha. Se debe cumplir ymin < ymax y xmin < xmax. Ajusta cada caja al elemento, sin márgenes grandes, y comprueba que realmente encierre lo que dice su "label" (p. ej. un elemento de la parte baja de la imagen debe tener ymin y ymax altos).
 3. Máximo 20 elementos; prioriza los que importan para el objetivo. Incluye siempre el CTA/acción principal si existe; si no existe, dilo en "issues".
 4. "load": 5 = visualmente ligera y ordenada; 1 = saturada.
 5. Si la imagen está recortada (página larga), menciónalo en "limitations".
@@ -111,6 +124,15 @@ export function buildPieceUserText(ctx: {
   return `${lines.join("\n")}\n\nAnaliza la pieza y responde con el JSON.`;
 }
 
+/** Caja de un elemento como [x0, y0, x1, y1] (0–1000), venga de `box2d` ([y, x, y, x]) o del `box` anterior. */
+function elementBox(e: PieceAiResult["elements"][number]): [number, number, number, number] {
+  if (e.box2d) {
+    const [ymin, xmin, ymax, xmax] = e.box2d;
+    return [xmin, ymin, xmax, ymax];
+  }
+  return e.box ?? [0, 0, 0, 0];
+}
+
 /** Elementos de la IA → AOIs (coordenadas 0–1 de la imagen completa). */
 export function elementsToAois(result: PieceAiResult, plan: TilePlan): Aoi[] {
   return result.elements
@@ -118,7 +140,7 @@ export function elementsToAois(result: PieceAiResult, plan: TilePlan): Aoi[] {
       id: e.id || `E${i + 1}`,
       label: e.label,
       kind: e.kind,
-      box: tileBoxToImage(plan, e.tile, e.box),
+      box: tileBoxToImage(plan, e.tile, elementBox(e)),
       attention: e.attention / 5,
       importance: e.importance,
       order: e.order,
