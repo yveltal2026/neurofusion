@@ -9,14 +9,16 @@ type Env = Record<string, string | undefined>;
 /**
  * Orden por defecto de la cascada (se reemplaza con AI_CASCADE):
  * gratuita potente → gratuita menos potente → de paga barata → de paga más cara → Claude.
+ * Modelos vigentes a oct-2026 (Gemini 2.5 ya no se entrega a proyectos nuevos y los Pro salieron
+ * del nivel gratuito). Los nombres cambian: confírmalos con models.list y ajusta AI_CASCADE.
  * "free" y "paid" son dos API keys distintas de Gemini: la gratuita es la de un proyecto de
  * Google sin facturación y la de paga la de un proyecto con facturación activa.
  */
 export const DEFAULT_CASCADE = [
-  "gemini-free:gemini-2.5-pro",
-  "gemini-free:gemini-2.5-flash",
-  "gemini-paid:gemini-2.5-flash",
-  "gemini-paid:gemini-2.5-pro",
+  "gemini-free:gemini-3.8-flash",
+  "gemini-free:gemini-3.5-flash-lite",
+  "gemini-paid:gemini-3.8-flash",
+  "gemini-paid:gemini-4-argon",
   "anthropic",
 ].join(",");
 
@@ -42,7 +44,7 @@ function parseSpec(spec: string, env: Env): Entry | null {
   switch (kind) {
     case "gemini-free":
     case "gemini-paid": {
-      if (!model) throw new AiError(`AI_CASCADE: «${spec}» necesita un modelo, p. ej. «${kind}:gemini-2.5-flash».`, "config");
+      if (!model) throw new AiError(`AI_CASCADE: «${spec}» necesita un modelo, p. ej. «${kind}:gemini-3.8-flash».`, "config");
       const tier = kind === "gemini-free" ? "free" : "paid";
       const apiKey = keys[tier];
       if (!apiKey) return null;

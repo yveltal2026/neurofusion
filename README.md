@@ -76,10 +76,10 @@ Toda función con IA (análisis IAT, auditoría SEO, herramienta visual, asisten
 Pasa al siguiente nivel si el actual agota su cuota, la key es inválida, el proveedor falla, tarda demasiado (45 s por nivel; 110 s en total), corta la respuesta o rechaza el contenido. Un nivel sin cuota o con key inválida se salta unos minutos para no gastar tiempo en cada petición. Los niveles sin API key se omiten, así que basta con configurar los que quieras usar. El análisis guarda qué proveedor y modelo respondieron (`provider`, `model`). Orden por defecto (cámbialo con `AI_CASCADE`, sin tocar código):
 
 ```
-AI_CASCADE=gemini-free:gemini-2.5-pro,gemini-free:gemini-2.5-flash,gemini-paid:gemini-2.5-flash,gemini-paid:gemini-2.5-pro,anthropic
+AI_CASCADE=gemini-free:gemini-3.8-flash,gemini-free:gemini-3.5-flash-lite,gemini-paid:gemini-3.8-flash,gemini-paid:gemini-4-argon,anthropic
 ```
 
-- **Gratuito vs. de paga** lo define la key, no el modelo: la gratuita es de un proyecto de Google sin facturación y la de paga de uno con facturación. Los nombres de modelo de Gemini cambian y qué modelos admite el nivel gratuito también: confírmalo en Google AI Studio y ajusta `AI_CASCADE`.
+- **Gratuito vs. de paga** lo define la key, no el modelo: la gratuita es de un proyecto de Google sin facturación y la de paga de uno con facturación. Los nombres de modelo de Gemini cambian y qué modelos admite el nivel gratuito también (a oct-2026: Gemini 2.5 ya no se entrega a proyectos nuevos y los modelos Pro no están en el nivel gratuito). Confírmalo en Google AI Studio o con `models.list` y ajusta `AI_CASCADE`. `gemini-4-argon` es el más caro: su precio de introducción se duplica el 1 de diciembre de 2026.
 - **Privacidad:** los términos del nivel gratuito de Gemini permiten a Google usar lo que se envía para mejorar sus productos. El análisis IAT envía solo agregados (nunca filas ni datos personales), pero la herramienta visual envía imágenes y la SEO contenido de páginas. Si eso es un problema, deja sin `GEMINI_API_KEY_FREE` o quita los niveles `gemini-free` de `AI_CASCADE`.
 - Si todos los niveles fallan, el investigador ve el error del último nivel y cuántos proveedores se intentaron. Los detalles por nivel quedan en los logs del servidor (`[ai] …`).
 

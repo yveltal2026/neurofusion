@@ -248,17 +248,17 @@ describe("configuración de la cascada", () => {
 
   it("por defecto: gratuita potente → gratuita menos potente → paga barata → paga cara → Claude", () => {
     expect(ids(ALL)).toEqual([
-      "gemini-free:gemini-2.5-pro",
-      "gemini-free:gemini-2.5-flash",
-      "gemini-paid:gemini-2.5-flash",
-      "gemini-paid:gemini-2.5-pro",
+      "gemini-free:gemini-3.8-flash",
+      "gemini-free:gemini-3.5-flash-lite",
+      "gemini-paid:gemini-3.8-flash",
+      "gemini-paid:gemini-4-argon",
       "anthropic:default",
     ]);
   });
 
   it("omite los niveles sin API key", () => {
-    expect(ids({ GEMINI_API_KEY_FREE: "f" })).toEqual(["gemini-free:gemini-2.5-pro", "gemini-free:gemini-2.5-flash"]);
-    expect(ids({ GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" })).toEqual(["gemini-paid:gemini-2.5-flash", "gemini-paid:gemini-2.5-pro", "anthropic:default"]);
+    expect(ids({ GEMINI_API_KEY_FREE: "f" })).toEqual(["gemini-free:gemini-3.8-flash", "gemini-free:gemini-3.5-flash-lite"]);
+    expect(ids({ GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" })).toEqual(["gemini-paid:gemini-3.8-flash", "gemini-paid:gemini-4-argon", "anthropic:default"]);
   });
 
   it("GEMINI_API_KEY es alias de la gratuita", () => {
@@ -282,7 +282,7 @@ describe("configuración de la cascada", () => {
   });
 
   it("getAnalysisProvider: con claves de Gemini usa la cascada y refleja el primer nivel", () => {
-    expect(getAnalysisProvider(ALL)).toMatchObject({ name: "gemini", model: "gemini-2.5-pro" });
+    expect(getAnalysisProvider(ALL)).toMatchObject({ name: "gemini", model: "gemini-3.8-flash" });
   });
 
   it("getAnalysisProvider: sin claves de Gemini ni AI_CASCADE conserva el comportamiento anterior", () => {
