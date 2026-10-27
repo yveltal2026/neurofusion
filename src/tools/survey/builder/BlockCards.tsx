@@ -114,7 +114,6 @@ export function InstrumentCard({
   const def = getInstrument(block.instrumentId);
   const meta = INSTRUMENT_CATALOG[block.instrumentId];
   const subject = block.subject.trim() || def.defaultSubject;
-  const first = def.items[0]!;
   return (
     <div className={CARD}>
       <p className="text-sm text-muted">
@@ -134,27 +133,21 @@ export function InstrumentCard({
           maxLength={80}
         />
       </Field>
-      <p className="rounded-md bg-primary/10 px-4 py-3 text-sm">
-        <span className="block text-xs text-muted">
-          Así lo verá el participante
-        </span>
-        {renderItemText(first, subject)}
+      <div className="rounded-md bg-primary/10 px-4 py-3 text-sm">
+        <p className="text-xs text-muted">Así lo verá el participante</p>
+        {def.items.length === 1 ? (
+          <p>{renderItemText(def.items[0]!, subject)}</p>
+        ) : (
+          <ol className="mt-1 list-decimal space-y-1 pl-5">
+            {def.items.map((item) => (
+              <li key={item.n}>{renderItemText(item, subject)}</li>
+            ))}
+          </ol>
+        )}
+      </div>
+      <p className="text-xs text-muted">
+        {def.source} {def.notes}
       </p>
-      <details className="text-sm">
-        <summary className="cursor-pointer py-1 text-heading underline-offset-4 hover:underline">
-          {def.items.length === 1
-            ? "Ver el texto que verá el participante"
-            : `Ver los ${def.items.length} textos que verá el participante`}
-        </summary>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
-          {def.items.map((item) => (
-            <li key={item.n}>{renderItemText(item, subject)}</li>
-          ))}
-        </ol>
-        <p className="mt-2 text-xs text-muted">
-          {def.source} {def.notes}
-        </p>
-      </details>
       <Problems problems={problems} />
       <div className="border-t border-border pt-3">
         <Switch

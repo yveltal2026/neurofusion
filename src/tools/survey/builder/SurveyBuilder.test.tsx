@@ -244,7 +244,8 @@ describe("SurveyBuilder", () => {
     const first = screen.getAllByLabelText(/Sobre qué se pregunta/)[0]!;
     await user.type(first, "esta app");
     const block = screen.getByRole("region", { name: /Bloque 1/ });
-    await user.click(within(block).getByText(/Ver los 10 textos/));
+    // Sin desplegables: la vista previa ya lista los 10 textos.
+    expect(within(block).queryByText(/Ver los 10 textos/)).toBeNull();
     expect(
       within(block).getByText("Me pareció fácil usar esta app."),
     ).toBeTruthy();
