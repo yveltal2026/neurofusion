@@ -107,6 +107,8 @@ const FIRST_FRAME_TIMEOUT_MS = 45_000;
 
 export function createWebEyeTrackEngine(): GazeEngine {
   let webcam: { stopWebcam(): void } | null = null;
+  let videoElement: HTMLVideoElement | null = null;
+  let worker: Worker | null = null;
   let active = false;
 
   return {
@@ -117,12 +119,15 @@ export function createWebEyeTrackEngine(): GazeEngine {
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
       const { WebcamClient, WebEyeTrackProxy } = await import("webeyetrack");
       if (!video.id) video.id = "webeyetrack-video";
+      videoElement = video;
       active = true;
       const startedAt = performance.now();
 
       const client = new WebcamClient(video.id);
       webcam = client;
       const proxy = new WebEyeTrackProxy(client);
+      // v0.0.2 no expone destroy(); el worker existe en runtime aunque el tipo lo marque private.
+      worker = (proxy as unknown as { worker?: Worker }).worker ?? null;
 
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -160,9 +165,17 @@ export function createWebEyeTrackEngine(): GazeEngine {
 
     stop() {
       active = false;
-      // La librería no ofrece destruir el worker ni quitar su listener global de clics; solo apagamos la cámara.
+      // Al terminar el worker sus listeners globales no pueden seguir alterando la calibración.
+      // La librería conserva un listener de clic (sin API para quitarlo), pero postMessage a
+      // un Worker terminado es inocuo hasta que se abandona la página.
       webcam?.stopWebcam();
       webcam = null;
+      worker?.terminate();
+      worker = null;
+      // WebcamClient sólo detiene los tracks; su bucle de frames sale cuando el video se pausa.
+      videoElement?.pause();
+      if (videoElement) videoElement.srcObject = null;
+      videoElement = null;
     },
   };
 }

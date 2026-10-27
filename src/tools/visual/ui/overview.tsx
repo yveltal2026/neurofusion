@@ -1,13 +1,20 @@
 import Link from "next/link";
+import { headers } from "next/headers";
+import { CopyLink } from "@/components/copy-link";
+import { StudySettingsForm } from "@/components/study-settings-form";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import type { StudyRow } from "@/lib/db/types";
+import { publicEnv } from "@/lib/env";
+import { magicLinkUrl } from "@/lib/magic-link";
 import { createClient } from "@/lib/supabase/server";
 import { visualConfigSchema } from "../config";
 import { getPlacement } from "../engine/placements";
 import { assetUrls, loadAssets, type VisualAsset } from "../results";
 import { AssetUploader } from "./uploader";
+import { regenerateLink } from "@/app/(app)/studies/[id]/actions";
+import { Button } from "@/components/ui/button";
 
 function Thumb({ studyId, asset, url, plain = false }: { studyId: string; asset: VisualAsset; url?: string; plain?: boolean }) {
   const { row } = asset;
@@ -37,6 +44,13 @@ function PlainFrame({ className, children }: { className?: string; children: Rea
   return <div className={className}>{children}</div>;
 }
 
+async function countActiveEyeSessions(supabase: Awaited<ReturnType<typeof createClient>>, studyId: string) {
+  const { count } = await supabase.from("sessions").select("id", { count: "exact", head: true })
+    .eq("study_id", studyId).eq("status", "started")
+    .gte("started_at", new Date(Date.now() - 2 * 60 * 60_000).toISOString());
+  return count;
+}
+
 export async function VisualOverview({ study, projectName, created }: { study: StudyRow; projectName: string | null; created: boolean }) {
   const supabase = await createClient();
   const parsed = visualConfigSchema.safeParse(study.config);
@@ -53,9 +67,18 @@ export async function VisualOverview({ study, projectName, created }: { study: S
   const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "thumb");
 
   if (config.mode === "pieces") {
+    const eye = Boolean(config.eyeTracking);
+    const h = eye ? await headers() : null;
+    const host = h?.get("x-forwarded-host") ?? h?.get("host");
+    const proto = h?.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+    const link = eye && study.access_token ? magicLinkUrl(host ? `${proto}://${host}` : publicEnv().appUrl, study.access_token) : null;
+    const { count: runs } = eye
+      ? await supabase.from("eye_tracking_runs").select("session_id", { count: "exact", head: true }).eq("study_id", study.id)
+      : { count: null };
+    const active = eye ? await countActiveEyeSessions(supabase, study.id) : null;
     return (
       <div className="space-y-8">
-        <StudyHeader study={study} projectName={projectName} active="overview" variant="pieces" subtitle="Piezas gráficas" />
+        <StudyHeader study={study} projectName={projectName} active="overview" variant={eye ? "eye" : "pieces"} subtitle={eye ? "Eye tracking con webcam" : "Piezas gráficas"} />
         {created ? <Alert>Estudio creado. Sube las piezas que quieres evaluar.</Alert> : null}
         <Card className="space-y-2">
           <p className="text-sm">
@@ -69,12 +92,37 @@ export async function VisualOverview({ study, projectName, created }: { study: S
             </p>
           ) : null}
         </Card>
+        {eye ? (
+          <Card className="space-y-4">
+            <h2 className="font-medium">Participantes con webcam</h2>
+            <p className="text-sm text-muted">
+              Cada persona calibra su cámara y mira las piezas durante {config.eyeTracking?.durationSeconds} segundos cada una.
+              Se guardan coordenadas de mirada y calidad de medición; nunca video. Respuestas guardadas: {runs ?? 0}.
+            </p>
+            {assets.length === 0 ? <Alert tone="warning">Sube al menos una pieza antes de compartir la liga.</Alert> : null}
+            {link ? (
+              <>
+                <CopyLink url={link} />
+                <a href={`${link}?preview=1`} target="_blank" rel="noreferrer" className="inline-block text-sm font-medium text-heading underline underline-offset-4">
+                  Abrir vista previa sin guardar datos ↗
+                </a>
+              </>
+            ) : <Alert tone="warning">Este estudio no tiene liga de participación.</Alert>}
+            <StudySettingsForm id={study.id} status={study.status} maxResponses={study.max_responses} closesAt={study.closes_at} duplicatePolicy={study.duplicate_policy} />
+            <form action={regenerateLink}>
+              <input type="hidden" name="id" value={study.id} />
+              <Button type="submit" variant="secondary">Regenerar liga (invalida la actual)</Button>
+            </form>
+          </Card>
+        ) : null}
         <Card className="space-y-3">
           <div>
             <h2 className="font-medium">Subir piezas</h2>
-            <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. Elige el formato para revisar tamaño, proporción y peso.</p>
+            <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. {eye ? "Máximo 5 piezas; quedan fijadas tras la primera respuesta." : "Elige el formato para revisar tamaño, proporción y peso."}</p>
           </div>
-          <AssetUploader studyId={study.id} withPlacement />
+          {eye && (runs || active)
+            ? <Alert tone="info">Las piezas ya no se pueden cambiar porque hay respuestas o sesiones en curso.</Alert>
+            : <AssetUploader studyId={study.id} withPlacement={!eye} />}
         </Card>
         {assets.length === 0 ? (
           <Card className="text-sm text-muted">Aún no hay piezas.</Card>

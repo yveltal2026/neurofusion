@@ -25,8 +25,19 @@ import {
 } from "./metrics";
 import { ResultsView } from "./ResultsView";
 import { buildSession, type ExportedSession, type Lighting } from "./session";
+import { collectEyeObservation } from "@/tools/visual/eye/samples";
+import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
+import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
 
-type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "results" | "free";
+type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "results" | "free" | "stimulus" | "saving" | "done";
+
+interface EyeStudyMode {
+  token: string;
+  title: string;
+  assets: EyeStudyAsset[];
+  durationSeconds: number;
+  preview: boolean;
+}
 
 /** Tiempo para que el ojo llegue al punto antes de medir, y ventana de medición, por objetivo. */
 const SETTLE_MS = 1000;
@@ -62,7 +73,7 @@ function buildCalibrationPoints(passes: number): Point[] {
   return out;
 }
 
-export function EyeTrackingLab() {
+export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [stage, setStage] = useState<Stage>("setup");
   const [error, setError] = useState<string | null>(null);
 
@@ -87,8 +98,15 @@ export function EyeTrackingLab() {
   const [live, setLive] = useState({ fps: 0, faceOk: false });
   const [session, setSession] = useState<ExportedSession | null>(null);
   const [copied, setCopied] = useState(false);
+  const [consent, setConsent] = useState(false);
+  const [stimulusIndex, setStimulusIndex] = useState(0);
+  const [remaining, setRemaining] = useState(0);
+  const [studyBusy, setStudyBusy] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const stimulusImgRef = useRef<HTMLImageElement | null>(null);
+  const studySessionIdRef = useRef<string | null>(null);
+  const observationsRef = useRef<EyeObservation[]>([]);
   const dotRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<GazeEngine | null>(null);
   const framesRef = useRef<GazeFrame[]>([]);
@@ -130,7 +148,7 @@ export function EyeTrackingLab() {
   useEffect(() => teardown, [teardown]);
 
   // Pantalla completa de pruebas: sin scroll para que innerWidth/innerHeight no cambien a media prueba.
-  const immersive = stage === "calibration" || stage === "countdown" || stage === "validation" || stage === "free";
+  const immersive = stage === "calibration" || stage === "countdown" || stage === "validation" || stage === "free" || stage === "stimulus";
   useEffect(() => {
     if (!immersive) return;
     const prev = document.body.style.overflow;
@@ -169,13 +187,17 @@ export function EyeTrackingLab() {
   async function start() {
     setError(null);
     const geometryOk = Number(widthCm) > 0 && Number(distanceCm) > 0;
-    if (!participant.trim()) return setError("Escribe un código para la persona (por ejemplo P01). No uses nombres.");
+    if (!study && !participant.trim()) return setError("Escribe un código para la persona (por ejemplo P01). No uses nombres.");
+    if (study && !consent) return setError("Debes aceptar el uso de la cámara y el almacenamiento de coordenadas de mirada para participar.");
     if (!geometryOk) return setError("El ancho de pantalla y la distancia deben ser números positivos.");
 
     setStage("loading");
     try {
       // `?engine=fake` usa un simulador (puntero como mirada) para probar el flujo sin cámara ni modelos.
       const fake = new URLSearchParams(window.location.search).get("engine") === "fake";
+      if (study && !study.preview && fake) {
+        throw new EngineError("El simulador sólo está disponible en la vista previa del estudio.", "model-missing");
+      }
       if (!fake) {
         await requestCamera();
         await checkModelAssets();
@@ -283,6 +305,126 @@ export function EyeTrackingLab() {
     setStage("results");
   }, [participant, device, glasses, lighting, widthCm, distanceCm, passes]);
 
+  async function startStudy() {
+    if (!study || !session || studyBusy) return;
+    if (!study.preview && session.engineId !== "webeyetrack@0.0.2") {
+      setError("La vista de prueba no puede enviar lecturas a un estudio real. Abre la liga sin el simulador.");
+      return;
+    }
+    setStudyBusy(true);
+    setError(null);
+    try {
+      // No se inicia una sesión en la BD hasta que todas las imágenes estén listas.
+      await Promise.all(study.assets.map((asset) => new Promise<void>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error(`No se pudo cargar la pieza «${asset.title}». Vuelve a intentar.`));
+        image.src = asset.url;
+      })));
+      if (!study.preview) {
+        const deviceType = device === "laptop" ? "desktop" : device === "phone" ? "mobile" : "tablet";
+        const response = await fetch(`/api/s/${study.token}/eye/start`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ consent: true, device: { deviceType, screenWidth: window.screen.width, screenHeight: window.screen.height } }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.sessionId) throw new Error(result.message ?? "No se pudo iniciar la sesión.");
+        studySessionIdRef.current = result.sessionId;
+      }
+      observationsRef.current = [];
+      setStimulusIndex(0);
+      setStage("stimulus");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo iniciar el estudio.");
+    } finally {
+      setStudyBusy(false);
+    }
+  }
+
+  const saveStudy = useCallback(async () => {
+    if (!study || !session) return;
+    setStage("saving");
+    setError(null);
+    engineRef.current?.stop();
+    if (study.preview) {
+      setStage("done");
+      return;
+    }
+    if (!studySessionIdRef.current || session.engineId !== "webeyetrack@0.0.2") {
+      setError("La sesión no tiene un motor real activo. Vuelve a abrir la liga.");
+      return;
+    }
+    const quality: EyeQuality = {
+      engineId: session.engineId,
+      medianErrorDeg: session.summary.medianErrorDeg,
+      coverage: session.summary.coverage,
+      fps: session.fps,
+      validRatio: session.validation.stream.validRatio,
+      passed: session.verdict.pass,
+      calibrationClicks: session.calibration.clicks,
+      calibrationLayout: session.calibration.layout ?? "v2-corners-last",
+    };
+    try {
+      const response = await fetch(`/api/s/${study.token}/eye/complete`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: studySessionIdRef.current, quality, observations: observationsRef.current }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? "No se pudieron guardar las lecturas.");
+      setStage("done");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudieron guardar las lecturas.");
+    }
+  }, [study, session]);
+
+  useEffect(() => {
+    if (stage !== "stimulus" || !study) return;
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let ticker: ReturnType<typeof setInterval> | undefined;
+    const onInterrupted = () => {
+      if (document.hidden) {
+        setError("La prueba se interrumpió al cambiar de pestaña. Vuelve a iniciar la presentación de piezas.");
+        setStage("results");
+      }
+    };
+    const onResize = () => {
+      setError("La pantalla cambió de tamaño u orientación. Repite la presentación sin mover el dispositivo.");
+      setStage("results");
+    };
+    document.addEventListener("visibilitychange", onInterrupted);
+    window.addEventListener("resize", onResize);
+    const raf = requestAnimationFrame(() => {
+      const image = stimulusImgRef.current;
+      const rect = image?.getBoundingClientRect();
+      if (!rect || rect.width < 1 || rect.height < 1) {
+        setError("No se pudo mostrar la imagen completa. Vuelve a intentar.");
+        setStage("results");
+        return;
+      }
+      const from = performance.now();
+      const durationMs = study.durationSeconds * 1000;
+      setRemaining(study.durationSeconds);
+      ticker = setInterval(() => setRemaining(Math.max(0, Math.ceil((from + durationMs - performance.now()) / 1000))), 250);
+      timeout = setTimeout(() => {
+        if (cancelled) return;
+        observationsRef.current.push(collectEyeObservation(study.assets[stimulusIndex].id, framesRef.current, from, performance.now(), rect));
+        if (stimulusIndex + 1 < study.assets.length) setStimulusIndex((i) => i + 1);
+        else void saveStudy();
+      }, durationMs);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      clearTimeout(timeout);
+      clearInterval(ticker);
+      document.removeEventListener("visibilitychange", onInterrupted);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [stage, study, stimulusIndex, saveStudy]);
+
   // Cuenta regresiva antes de validar: el último clic de calibración ya pasó y no se pide ninguno más.
   useEffect(() => {
     if (stage !== "countdown") return;
@@ -345,18 +487,20 @@ export function EyeTrackingLab() {
       {stage === "setup" || stage === "loading" ? (
         <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted uppercase">Laboratorio · interno</p>
-            <h1 className="text-2xl font-semibold">Prueba de eye tracking con webcam</h1>
+            <p className="text-xs font-medium tracking-wide text-muted uppercase">{study ? "Estudio visual" : "Laboratorio · interno"}</p>
+            <h1 className="text-2xl font-semibold">{study ? study.title : "Prueba de eye tracking con webcam"}</h1>
             <p className="text-sm text-muted">
-              Mide qué tan preciso es WebEyeTrack en este dispositivo. Tarda unos 2 minutos: calibración de 9 puntos y
-              validación de 8.
+              {study
+                ? `Calibra la cámara y mira ${study.assets.length} ${study.assets.length === 1 ? "pieza" : "piezas"} durante ${study.durationSeconds} segundos cada una. No necesitas crear una cuenta.`
+                : "Mide qué tan preciso es WebEyeTrack en este dispositivo. Tarda unos 2 minutos: calibración de 9 puntos y validación de 8."}
             </p>
           </header>
 
           <Alert tone="info">
             <p>
-              El video se procesa en este dispositivo y no se envía a ningún servidor de NeuroFusion; el resultado solo
-              se guarda si lo descargas. Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
+              El video se procesa en este dispositivo y no se envía a NeuroFusion. {study
+                ? "Con tu consentimiento, se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración; el investigador podrá consultar las lecturas y resultados agregados."
+                : "El resultado solo se guarda si lo descargas."} Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
               <code>storage.googleapis.com</code>.
             </p>
           </Alert>
@@ -364,9 +508,11 @@ export function EyeTrackingLab() {
           {error ? <Alert tone="error">{error}</Alert> : null}
 
           <Card className="space-y-4">
-            <Field label="Código de la persona" hint="Por ejemplo P01. No pongas nombres ni correos.">
-              <Input value={participant} onChange={(e) => setParticipant(e.target.value)} maxLength={24} autoComplete="off" />
-            </Field>
+            {!study ? (
+              <Field label="Código de la persona" hint="Por ejemplo P01. No pongas nombres ni correos.">
+                <Input value={participant} onChange={(e) => setParticipant(e.target.value)} maxLength={24} autoComplete="off" />
+              </Field>
+            ) : null}
 
             <Field label="Dispositivo">
               <select
@@ -419,6 +565,13 @@ export function EyeTrackingLab() {
               <input type="checkbox" checked={glasses} onChange={(e) => setGlasses(e.target.checked)} className="size-4" />
               Usa lentes
             </label>
+
+            {study ? (
+              <label className="flex items-start gap-2 text-sm">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 size-4" />
+                Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
+              </label>
+            ) : null}
 
             <Button onClick={start} disabled={stage === "loading"} className="w-full">
               {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
@@ -522,13 +675,28 @@ export function EyeTrackingLab() {
             <p className="text-xs font-medium tracking-wide text-muted uppercase">
               {session.participant} · {session.device} · {session.engineId}
             </p>
-            <h1 className="text-2xl font-semibold">Resultados de la validación</h1>
+            <h1 className="text-2xl font-semibold">{study ? "Calibración terminada" : "Resultados de la validación"}</h1>
           </header>
 
           {error ? <Alert tone="error">{error}</Alert> : null}
-          <ResultsView session={session} />
+          {study ? (
+            <Card className="space-y-4">
+              <p className="text-sm">
+                {session.verdict.pass
+                  ? "La precisión alcanzó el criterio de esta prueba. Ya puedes mirar las piezas."
+                  : "La calibración tuvo precisión baja. Puedes repetirla para mejorar la calidad; si continúas, el investigador verá esta advertencia junto con tus datos."}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => void startStudy()} disabled={studyBusy}>{studyBusy ? "Preparando piezas…" : "Comenzar presentación"}</Button>
+                <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+              </div>
+              {study.preview ? <p className="text-xs text-muted">Vista previa: no se guardarán datos.</p> : null}
+            </Card>
+          ) : (
+            <ResultsView session={session} />
+          )}
 
-          <Card className="space-y-3">
+          {!study ? <Card className="space-y-3">
             <h2 className="text-base font-semibold">Guardar y seguir</h2>
             <div className="flex flex-wrap gap-3">
               <Button onClick={downloadJson}>Descargar JSON</Button>
@@ -553,7 +721,35 @@ export function EyeTrackingLab() {
                 value={JSON.stringify(session, null, 2)}
               />
             </details>
-          </Card>
+          </Card> : null}
+        </div>
+      ) : null}
+
+      {stage === "stimulus" && study?.assets[stimulusIndex] ? (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background px-4 py-3 text-center">
+          <p className="text-sm text-muted">Pieza {stimulusIndex + 1} de {study.assets.length} · {remaining} s</p>
+          {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage; necesitamos el rectángulo exacto mostrado */}
+          <img
+            ref={stimulusImgRef}
+            src={study.assets[stimulusIndex].url}
+            alt={study.assets[stimulusIndex].title}
+            className="max-h-[calc(100dvh-5rem)] max-w-full object-contain"
+          />
+        </div>
+      ) : null}
+
+      {stage === "saving" ? (
+        <div className="mx-auto max-w-md space-y-4 px-6 py-16 text-center">
+          <h1 className="text-xl font-semibold">Guardando tu participación</h1>
+          {error ? <Alert tone="error">{error}</Alert> : <p className="text-sm text-muted">Espera un momento…</p>}
+          {error ? <Button onClick={() => void saveStudy()}>Reintentar guardado</Button> : null}
+        </div>
+      ) : null}
+
+      {stage === "done" ? (
+        <div className="mx-auto max-w-md space-y-3 px-6 py-16 text-center">
+          <h1 className="text-2xl font-semibold">Gracias por participar</h1>
+          <p className="text-sm text-muted">{study?.preview ? "Esta vista previa no guardó datos." : "Tu sesión de mirada se guardó correctamente."}</p>
         </div>
       ) : null}
     </>

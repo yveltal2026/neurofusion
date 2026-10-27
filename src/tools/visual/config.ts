@@ -33,7 +33,12 @@ const context = {
   audience: text(400).default(""),
 };
 
-export const piecesConfigSchema = z.object({ mode: z.literal("pieces"), ...context });
+export const piecesConfigSchema = z.object({
+  mode: z.literal("pieces"),
+  ...context,
+  /** Presente sólo cuando las piezas se miden con una webcam de participantes. */
+  eyeTracking: z.object({ durationSeconds: z.number().int().min(5).max(30) }).optional(),
+});
 
 export const journeyConfigSchema = z
   .object({

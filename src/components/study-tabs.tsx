@@ -14,6 +14,7 @@ const TABS = {
   iat: [t("overview", "Resumen"), t("data", "Datos", "/data"), t("analysis", "Análisis", "/analysis")],
   seo: [t("overview", "Auditorías"), t("settings", "Ajustes", "/settings")],
   pieces: [t("overview", "Piezas"), t("compare", "Comparativa", "/compare"), t("report", "Informe", "/report"), t("settings", "Ajustes", "/settings")],
+  eye: [t("overview", "Piezas y enlace"), t("results", "Miradas", "/eye"), t("settings", "Ajustes", "/settings")],
   journey: [
     t("overview", "Capturas"),
     t("ratings", "Calificación", "/ratings"),

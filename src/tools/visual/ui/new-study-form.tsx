@@ -21,7 +21,7 @@ const select = "w-full rounded-md border border-border bg-background px-3 py-2 t
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
 
 export function NewVisualStudyForm({ projectId }: { projectId: string }) {
-  const [mode, setMode] = useState<"pieces" | "journey">("pieces");
+  const [mode, setMode] = useState<"pieces" | "journey" | "eyetracking">("pieces");
   const [name, setName] = useState("");
   const [objective, setObjective] = useState("");
   const [brand, setBrand] = useState("");
@@ -40,8 +40,8 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
     setError(null);
     const keys: string[] = [];
     const config =
-      mode === "pieces"
-        ? { mode, objective, brand, audience }
+      mode !== "journey"
+        ? { mode: "pieces", objective, brand, audience, ...(mode === "eyetracking" ? { eyeTracking: { durationSeconds: 10 } } : {}) }
         : {
             mode,
             objective,
@@ -80,6 +80,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
           {(
             [
               ["pieces", "Piezas gráficas", "Anuncios, banners, posts, empaques o capturas sueltas. Compara variantes."],
+              ["eyetracking", "Piezas con eye tracking", "Participantes miran hasta 5 imágenes con webcam. Guarda la mirada y muestra mapas de atención reales."],
               ["journey", "Journey web + IFD", "Capturas del recorrido de compra de uno o varios sitios, calificación con rúbrica e Índice de Fricción Digital."],
             ] as const
           ).map(([value, title, desc]) => (

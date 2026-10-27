@@ -92,7 +92,7 @@ export async function loadStudyByToken(token: string): Promise<LoadStudyResult> 
 }
 
 /** Código de error si el estudio no acepta participantes ahora; null si está abierto. */
-export function availabilityError(study: StudyForParticipant, now = new Date()): ApiErrorCode | null {
+export function availabilityError(study: Pick<StudyForParticipant, "status" | "closes_at">, now = new Date()): ApiErrorCode | null {
   if (study.status !== "published") return study.status === "closed" ? "closed" : "not_available";
   if (study.closes_at && new Date(study.closes_at) <= now) return "closed";
   return null;
