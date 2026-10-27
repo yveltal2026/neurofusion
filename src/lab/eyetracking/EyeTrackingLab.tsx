@@ -708,7 +708,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
             <Field label="Dispositivo">
               <select
-                className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm"
+                className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
                 value={device}
                 onChange={(e) => changeDevice(e.target.value as DeviceType)}
               >
@@ -743,7 +743,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Iluminación">
                 <select
-                  className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm"
+                  className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
                   value={lighting}
                   onChange={(e) => setLighting(e.target.value as Lighting)}
                 >
@@ -754,7 +754,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               </Field>
               <Field label="Calibración">
                 <select
-                  className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm"
+                  className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
                   value={passes}
                   onChange={(e) => setPasses(Number(e.target.value))}
                 >
@@ -931,7 +931,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <summary className="cursor-pointer text-muted">Ver JSON</summary>
               <textarea
                 readOnly
-                className="mt-2 h-48 w-full rounded-md border border-border bg-background p-2 font-mono"
+                className="mt-2 h-48 w-full rounded-md border border-control bg-background p-2 font-mono"
                 value={JSON.stringify(session, null, 2)}
               />
             </details>

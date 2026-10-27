@@ -284,14 +284,14 @@
   }
 }
 
-/* Acento de marca en controles nativos (casillas, radios, deslizadores). Teal, no menta:
-   la menta no alcanza 3:1 sobre crema. */
+/* Acento de marca en controles nativos (casillas, radios, deslizadores): el color de acción (Neuro).
+   Teal en el corredor del participante, que lo reescribe. La menta no alcanza 3:1 sobre crema. */
 @layer base {
   input[type="checkbox"],
   input[type="radio"],
   input[type="range"],
   progress {
-    accent-color: var(--heading);
+    accent-color: var(--primary);
   }
 }
 

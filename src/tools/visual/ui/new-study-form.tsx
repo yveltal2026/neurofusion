@@ -17,7 +17,7 @@ const DEFAULT_TASKS: JourneyTask[] = [
   { id: "T5", name: "Categorías", instruction: "Llega al mismo producto navegando por el menú de categorías.", kind: "categorias" },
 ];
 
-const select = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
+const select = "w-full rounded-md border border-control bg-background px-3 py-2 text-sm";
 const sum = (r: Record<string, number>) => Object.values(r).reduce((a, b) => a + b, 0);
 
 export function NewVisualStudyForm({ projectId }: { projectId: string }) {
@@ -194,7 +194,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
                           step={0.01}
                           value={(quotas[dim] as Record<string, number>)[g]}
                           onChange={(e) => setQuotas((q) => ({ ...q, [dim]: { ...q[dim], [g]: Number(e.target.value) } }))}
-                          className="w-20 rounded border border-border bg-background px-2 py-1 tabular-nums"
+                          className="w-20 rounded border border-control bg-background px-2 py-1 tabular-nums"
                         />
                       </label>
                     ))}

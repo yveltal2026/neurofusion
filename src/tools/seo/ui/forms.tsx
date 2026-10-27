@@ -16,7 +16,7 @@ import {
 import type { SeoConfig } from "../config";
 
 const initial: SeoFormState = {};
-const select = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
+const select = "w-full rounded-md border border-control bg-background px-3 py-2 text-sm";
 
 export function SeoConfigFields({ config }: { config?: SeoConfig }) {
   return (

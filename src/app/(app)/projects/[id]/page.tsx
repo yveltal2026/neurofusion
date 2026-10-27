@@ -5,12 +5,14 @@ import { Icon } from "@/components/brand/icon";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconTile } from "@/components/ui/icon-tile";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
 import { getStudyTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
 
 const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
+const STATUS_TONE = { draft: "neutral", published: "success", closed: "warning" } as const;
 
 export default async function ProjectPage({ params }: PageProps<"/projects/[id]">) {
   const { id } = await params;
@@ -87,9 +89,9 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                       <IconTile name={getStudyTool(s)?.icon ?? "layers"} size="sm" />
                       <span className="truncate font-medium">{s.name}</span>
                     </span>
-                    <span className="font-display text-xs font-semibold text-muted">
+                    <span className="flex shrink-0 items-center gap-2 font-display text-xs font-semibold text-muted">
                       {getStudyTool(s)?.shortName ?? s.tool_type}
-                      {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
+                      {s.tool_type === "iat" ? <StatusBadge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status]}</StatusBadge> : null}
                     </span>
                   </Card>
                 </Link>
@@ -115,7 +117,10 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                 <Link href={`/batteries/${b.id}`} className="block">
                   <Card className="flex items-center justify-between transition hover:border-primary">
                     <span className="font-medium">{b.name}</span>
-                    <span className="font-display text-xs font-semibold text-muted">Batería · {STATUS_LABEL[b.status]}</span>
+                    <span className="flex shrink-0 items-center gap-2 font-display text-xs font-semibold text-muted">
+                      Batería
+                      <StatusBadge tone={STATUS_TONE[b.status]}>{STATUS_LABEL[b.status]}</StatusBadge>
+                    </span>
                   </Card>
                 </Link>
               </li>

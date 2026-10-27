@@ -414,7 +414,7 @@ export function AttentionViewer({
                       value={sel.order ?? ""}
                       placeholder="—"
                       onChange={(e) => update(sel.id, { order: e.target.value ? Math.max(1, Math.min(50, Number(e.target.value))) : null })}
-                      className="w-full rounded border border-border bg-background px-2 py-1"
+                      className="w-full rounded border border-control bg-background px-2 py-1"
                     />
                   </label>
                 </div>
@@ -438,7 +438,7 @@ export function AttentionViewer({
                             if (box[2] - box[0] < 0.01 || box[3] - box[1] < 0.01) return;
                             update(sel.id, { box });
                           }}
-                          className="w-full rounded border border-border bg-background px-2 py-1"
+                          className="w-full rounded border border-control bg-background px-2 py-1"
                         />
                       </label>
                     ))}

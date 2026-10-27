@@ -33,7 +33,7 @@ export default async function ProjectsPage() {
         <ul className="grid gap-3 sm:grid-cols-2">
           {projects.map((p) => (
             <li key={p.id}>
-              <Link href={`/projects/${p.id}`} className="block">
+              <Link href={`/projects/${p.id}`} className="block h-full">
                 <Card className="flex h-full gap-4 transition hover:border-primary">
                   <IconTile name="folder" />
                   <div className="min-w-0">

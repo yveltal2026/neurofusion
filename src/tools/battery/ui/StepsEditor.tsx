@@ -173,7 +173,7 @@ export function StepsEditor({
           <label className="min-w-0 flex-1 space-y-1.5 text-sm sm:max-w-sm">
             <span className="block font-medium text-heading">Agregar paso</span>
             <select
-              className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-control bg-background px-3 text-sm"
               value={selected?.studyId ?? ""}
               onChange={(e) => setChoice(e.target.value)}
               disabled={selectable.length === 0}

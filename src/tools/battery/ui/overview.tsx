@@ -192,7 +192,7 @@ export function BatteryOverview({
                 <tbody>
                   {summary.participants.slice(0, 20).map((p) => (
                     <tr key={p.id} className="border-t border-border">
-                      <td className="py-1.5 pr-4 font-mono text-xs">
+                      <td className="whitespace-nowrap py-1.5 pr-4 font-display text-xs font-semibold tabular-nums">
                         {p.participantRef}
                         {p.excluded ? (
                           <span className="ml-2 text-muted">(excluido)</span>

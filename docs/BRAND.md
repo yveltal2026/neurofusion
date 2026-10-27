@@ -95,8 +95,9 @@ Cercana, directa, con datos; sin promesas sin cifra. Frase de marca instituciona
 
 ## Fuera de alcance (a propósito)
 
-- **Gráficas del análisis IAT** (`src/components/charts/iat-charts.tsx`): usan la paleta Okabe-Ito, apta para daltonismo. Cambiarla a
-  colores de marca requiere validar contraste y distinción entre series; se decide aparte. Sus leyendas ya van en tinta.
+- **Gráficas del análisis IAT** (`src/components/charts/iat-charts.tsx`): usan una paleta basada en Okabe-Ito, apta para daltonismo. La marca A
+  usa el morado de Neuro (`--chart-1`) y la B el naranja `#E69F00`: luminancias muy distintas, así que se separan también sin color. El resto
+  de las series sigue Okabe-Ito. Sus leyendas ya van en tinta.
 - **Gráficas de SEO y Visual** usan los tokens `--chart-1` … `--chart-6` de `globals.css` (validados con el método dataviz en claro y
   oscuro). La posición es fija: el sitio principal siempre es el 1 y el color sigue al sitio en todas las gráficas. En modo profundo
   el contraste de las series contra el teal queda por debajo de 3:1, por eso llevan valores visibles y tabla de datos.

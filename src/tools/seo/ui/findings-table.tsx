@@ -38,7 +38,7 @@ export function FindingsTable({ findings }: { findings: Finding[] }) {
           aria-label="Filtrar hallazgos por texto o URL"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="ml-auto rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+          className="ml-auto rounded-md border border-control bg-background px-3 py-1.5 text-sm"
         />
       </div>
       <div className="overflow-x-auto rounded-lg border border-border">

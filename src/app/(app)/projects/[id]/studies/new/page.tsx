@@ -28,7 +28,7 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
       <ul className="grid gap-3 sm:grid-cols-2">
         {TOOLS.map((tool) => (
           <li key={tool.type}>
-            <Link href={tool.newStudyPath(id)} className="block">
+            <Link href={tool.newStudyPath(id)} className="block h-full">
               <Card className="flex h-full gap-4 transition hover:border-primary">
                 <IconTile name={tool.icon} />
                 <div className="min-w-0">

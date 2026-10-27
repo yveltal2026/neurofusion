@@ -21,8 +21,8 @@ const pct = (x: number) => `${(x * 100).toFixed(1).replace(/\.0$/, "")} %`;
 
 function Result({ value, unit, children }: { value: number | string; unit: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-lg bg-primary/15 p-4">
-      <p className="font-display text-3xl font-bold leading-none text-heading tabular-nums">{value}</p>
+    <div className="rounded-lg bg-neuro/10 p-4">
+      <p className="font-display text-3xl font-bold leading-none text-neuro-deep tabular-nums">{value}</p>
       <p className="mt-1 text-sm font-medium text-heading">{unit}</p>
       {children ? <p className="mt-2 text-sm text-foreground">{children}</p> : null}
     </div>

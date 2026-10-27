@@ -30,7 +30,7 @@ function GazeMap({ session }: { session: ExportedSession }) {
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label="Mapa de objetivos (círculos vacíos) y lectura mediana de la mirada (puntos), unidos por una línea"
-      className="w-full rounded-md border border-border bg-background"
+      className="w-full rounded-md border border-control bg-background"
     >
       {session.validation.targets.map((t, i) => (
         <g key={i}>

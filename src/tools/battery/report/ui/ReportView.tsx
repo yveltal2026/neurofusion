@@ -419,7 +419,7 @@ export function ReportView({
                     key={r.id}
                     className={`border-t border-border align-top ${r.excluded ? "opacity-60" : ""}`}
                   >
-                    <td className="py-1.5 pr-4 font-mono text-xs">{r.ref}</td>
+                    <td className="whitespace-nowrap py-1.5 pr-4 font-display text-xs font-semibold tabular-nums">{r.ref}</td>
                     {report.iat.map((d) => (
                       <td
                         key={`${d.stepId}:${d.dimensionId}`}
@@ -465,7 +465,7 @@ export function ReportView({
                             maxLength={200}
                             placeholder="Motivo (opcional)"
                             aria-label={`Motivo para excluir a ${r.ref}`}
-                            className="h-8 w-40 rounded-md border border-border bg-background px-2 text-xs"
+                            className="h-8 w-40 rounded-md border border-control bg-background px-2 text-xs"
                           />
                         )}
                         <Button
