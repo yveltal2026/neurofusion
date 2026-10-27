@@ -29,7 +29,7 @@ Detalles metodológicos en [`docs/METODOLOGIA.md`](docs/METODOLOGIA.md) (IAT) y 
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, RLS) · Zod · Recharts · Vitest · Playwright. IA: SDK oficial de Anthropic (por defecto) u OpenAI.
+Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, RLS) · Zod · Recharts · Vitest · Playwright. IA: cascada Gemini gratuito → Gemini de paga → Claude (también OpenAI opcional).
 
 ## Puesta en marcha
 
@@ -61,10 +61,27 @@ Completa las de Supabase, `PARTICIPANT_LOCK_SECRET` (`openssl rand -hex 32`) y e
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Cliente del investigador (respeta RLS) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Sólo servidor: endpoints públicos del participante. **Nunca exponer.** |
 | `PARTICIPANT_LOCK_SECRET` | Firma de la cookie de dispositivo y HMAC de IP |
-| `AI_PROVIDER` | `anthropic` (default) u `openai` |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Modelo por defecto: `claude-opus-5-5` |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` | El modelo se exige explícitamente. Para la herramienta visual debe ser un modelo con visión |
+| `GEMINI_API_KEY_FREE` | Key de Gemini de un proyecto de Google **sin facturación** (nivel gratuito). Alias: `GEMINI_API_KEY` |
+| `GEMINI_API_KEY_PAID` | Key de Gemini de un proyecto de Google **con facturación** |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Claude: Haiku, Sonnet y, como último nivel, el modelo de `ANTHROPIC_MODEL` (por defecto `claude-opus-5-5`) |
+| `AI_CASCADE` | Opcional: orden y modelos de la cascada (ver abajo) |
+| `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL` | Modo anterior de un solo proveedor; solo aplica si no hay claves de Gemini ni `AI_CASCADE`. OpenAI exige modelo explícito |
 | `PAGESPEED_API_KEY` | Opcional. Clave de PageSpeed Insights (Google Cloud) para Core Web Vitals en la auditoría SEO; sin ella la cuota es muy baja |
+
+#### Cascada de proveedores de IA
+Toda función con IA (análisis IAT, auditoría SEO, herramienta visual, asistente del wizard) pasa por una cascada que prueba los niveles **en orden** y usa la primera respuesta:
+
+1. Gemini gratuito, el más potente → 2. Gemini gratuito, menos potente → 3. Claude Haiku (el de paga más barato) → 4. Gemini de paga, barato pero potente → 5. Claude Sonnet → 6. Gemini de paga, más caro (Argon) → 7. Claude, último recurso (Opus por defecto; se fija con `ANTHROPIC_MODEL`).
+
+Pasa al siguiente nivel si el actual agota su cuota, la key es inválida, el proveedor falla, tarda demasiado (45 s por nivel; 110 s en total, y los niveles intermedios se omiten si ya no queda tiempo para el último), corta la respuesta o rechaza el contenido. Un nivel sin cuota o con key inválida se salta unos minutos para no gastar tiempo en cada petición. Los niveles sin API key se omiten, así que basta con configurar los que quieras usar. El análisis guarda qué proveedor y modelo respondieron (`provider`, `model`). Orden por defecto (cámbialo con `AI_CASCADE`, sin tocar código):
+
+```
+AI_CASCADE=gemini-free:gemini-3.8-flash,gemini-free:gemini-3.5-flash-lite,anthropic:claude-haiku-5-5,gemini-paid:gemini-3.8-flash,anthropic:claude-sonnet-5-5,gemini-paid:gemini-4-argon,anthropic
+```
+
+- **Gratuito vs. de paga** lo define la key, no el modelo: la gratuita es de un proyecto de Google sin facturación y la de paga de uno con facturación. Los nombres de modelo de Gemini cambian y qué modelos admite el nivel gratuito también (a oct-2026: Gemini 2.5 ya no se entrega a proyectos nuevos y los modelos Pro no están en el nivel gratuito). Confírmalo en Google AI Studio o con `models.list` y ajusta `AI_CASCADE`. `gemini-4-argon` es el más caro: su precio de introducción se duplica el 1 de diciembre de 2026.
+- **Privacidad:** los términos del nivel gratuito de Gemini permiten a Google usar lo que se envía para mejorar sus productos. El análisis IAT envía solo agregados (nunca filas ni datos personales), pero la herramienta visual envía imágenes y la SEO contenido de páginas. Si eso es un problema, deja sin `GEMINI_API_KEY_FREE` o quita los niveles `gemini-free` de `AI_CASCADE`.
+- Si todos los niveles fallan, el investigador ve el error del último nivel y cuántos proveedores se intentaron. Los detalles por nivel quedan en los logs del servidor (`[ai] …`).
 
 ### 3. Correr
 ```bash

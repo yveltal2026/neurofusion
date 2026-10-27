@@ -20,19 +20,22 @@ export function toOpenAiMessages(messages: ChatMessage[]): OpenAI.ChatCompletion
 }
 
 /** No fijamos un modelo por defecto: los nombres cambian seguido. Se exige OPENAI_MODEL. */
-export function createOpenAiProvider(opts: { apiKey: string; model: string }): AnalysisProvider {
-  const client = new OpenAI({ apiKey: opts.apiKey });
+export function createOpenAiProvider(opts: { apiKey: string; model: string; maxRetries?: number }): AnalysisProvider {
+  const client = new OpenAI({ apiKey: opts.apiKey, maxRetries: opts.maxRetries });
 
   return {
     name: "openai",
     model: opts.model,
     async complete(req: CompletionRequest): Promise<CompletionResult> {
       try {
-        const res = await client.chat.completions.create({
-          model: opts.model,
-          response_format: { type: "json_object" },
-          messages: [{ role: "system", content: req.system }, ...toOpenAiMessages(req.messages)],
-        });
+        const res = await client.chat.completions.create(
+          {
+            model: opts.model,
+            response_format: { type: "json_object" },
+            messages: [{ role: "system", content: req.system }, ...toOpenAiMessages(req.messages)],
+          },
+          { signal: req.signal },
+        );
         const choice = res.choices[0];
         if (choice?.finish_reason === "length") throw new AiError("La respuesta de la IA quedó incompleta. Inténtalo de nuevo.", "truncated");
         if (choice?.finish_reason === "content_filter" || choice?.message.refusal) {

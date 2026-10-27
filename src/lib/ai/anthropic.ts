@@ -19,8 +19,8 @@ export function toAnthropicMessages(messages: ChatMessage[]): Anthropic.MessageP
   }));
 }
 
-export function createAnthropicProvider(opts: { apiKey: string; model?: string }): AnalysisProvider {
-  const client = new Anthropic({ apiKey: opts.apiKey });
+export function createAnthropicProvider(opts: { apiKey: string; model?: string; maxRetries?: number }): AnalysisProvider {
+  const client = new Anthropic({ apiKey: opts.apiKey, maxRetries: opts.maxRetries });
   const model = opts.model || DEFAULT_ANTHROPIC_MODEL;
 
   return {
@@ -30,12 +30,15 @@ export function createAnthropicProvider(opts: { apiKey: string; model?: string }
       try {
         // Sin temperature/top_p ni budget_tokens: los modelos actuales los rechazan (400).
         // El pensamiento adaptativo viene activado por defecto.
-        const res = await client.messages.create({
-          model,
-          max_tokens: 16000,
-          system: req.system,
-          messages: toAnthropicMessages(req.messages),
-        });
+        const res = await client.messages.create(
+          {
+            model,
+            max_tokens: 16000,
+            system: req.system,
+            messages: toAnthropicMessages(req.messages),
+          },
+          { signal: req.signal },
+        );
         if (res.stop_reason === "refusal") {
           throw new AiError("El modelo rechazó la solicitud. Revisa el contenido del estudio e inténtalo de nuevo.", "refusal");
         }
