@@ -81,28 +81,58 @@ export function gazePath(aois: Aoi[]): Aoi[] {
   return aois.filter((a) => a.order !== null).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
+/** Dónde cae la cabeza dentro de la caja de una persona (fracción de su alto, desde arriba). */
+export const HEAD_FRACTION = 0.2;
+
+/** Punto donde se concentra la mirada en un elemento: la cabeza si es una persona; si no, el centro de la caja. */
+export function focalPoint(a: Aoi): [number, number] {
+  const [x0, y0, x1, y1] = a.box;
+  return [(x0 + x1) / 2, a.kind === "person" ? y0 + (y1 - y0) * HEAD_FRACTION : (y0 + y1) / 2];
+}
+
+/** Cuánto se difumina el calor fuera de la caja de su elemento (fracción del ancho de la imagen). */
+const EDGE_SOFTNESS = 0.02;
+
 /**
- * Campo de atención sobre una rejilla gw×gh (valores 0–1). Una gaussiana por AOI,
- * centrada en la caja, con sigma proporcional a su tamaño y amplitud = attention.
+ * Campo de atención sobre una rejilla gw×gh (valores 0–1). Una campana gaussiana por AOI con amplitud
+ * = attention, y dos ajustes para que el calor no engañe:
+ *  - el calor queda dentro de la caja de su elemento (se difumina apenas fuera), así una caja grande
+ *    no tiñe a sus vecinos;
+ *  - en una persona se concentra en la cabeza (la mayor parte) y deja un resto menor en el cuerpo,
+ *    en lugar de centrarse en el pecho.
  */
 export function attentionField(aois: Aoi[], gw: number, gh: number, aspect = 1): Float32Array {
   const acc = new Float32Array(gw * gh);
   const maxW = Math.max(1e-6, ...aois.map((a) => a.attention));
+  const m = Math.max(1, gw * EDGE_SOFTNESS);
   for (const a of aois) {
     if (a.attention <= 0) continue;
     const [x0, y0, x1, y1] = a.box;
-    const cx = ((x0 + x1) / 2) * gw;
-    const cy = ((y0 + y1) / 2) * gh;
+    const bx0 = x0 * gw, bx1 = x1 * gw, by0 = y0 * gh, by1 = y1 * gh;
+    const w = bx1 - bx0, h = by1 - by0;
     // Sigma mínimo ~2.5 % del ancho para que cajas pequeñas sigan visibles.
-    const sx = Math.max(gw * 0.025, ((x1 - x0) * gw) / 2.6);
-    const sy = Math.max((gh * 0.025) / Math.max(aspect, 1e-6), ((y1 - y0) * gh) / 2.6);
+    const minSx = gw * 0.025;
+    const minSy = (gh * 0.025) / Math.max(aspect, 1e-6);
     const amp = a.attention / maxW;
-    const xmin = Math.max(0, Math.floor(cx - 3 * sx)), xmax = Math.min(gw - 1, Math.ceil(cx + 3 * sx));
-    const ymin = Math.max(0, Math.floor(cy - 3 * sy)), ymax = Math.min(gh - 1, Math.ceil(cy + 3 * sy));
+    const cx = (bx0 + bx1) / 2;
+    const bells =
+      a.kind === "person"
+        ? [
+            { cx, cy: by0 + h * HEAD_FRACTION, sx: Math.max(minSx, w * 0.22), sy: Math.max(minSy, h * 0.14), amp },
+            { cx, cy: (by0 + by1) / 2 + h * 0.1, sx: Math.max(minSx, w / 3.2), sy: Math.max(minSy, h / 3.2), amp: amp * 0.4 },
+          ]
+        : [{ cx, cy: (by0 + by1) / 2, sx: Math.max(minSx, w / 3.2), sy: Math.max(minSy, h / 3.2), amp }];
+    const xmin = Math.max(0, Math.floor(bx0 - 3 * m)), xmax = Math.min(gw - 1, Math.ceil(bx1 + 3 * m));
+    const ymin = Math.max(0, Math.floor(by0 - 3 * m)), ymax = Math.min(gh - 1, Math.ceil(by1 + 3 * m));
     for (let y = ymin; y <= ymax; y++) {
-      const dy = (y + 0.5 - cy) ** 2 / (2 * sy * sy);
+      const dyOut = Math.max(by0 - (y + 0.5), 0, y + 0.5 - by1);
       for (let x = xmin; x <= xmax; x++) {
-        acc[y * gw + x] += amp * Math.exp(-((x + 0.5 - cx) ** 2 / (2 * sx * sx) + dy));
+        const dxOut = Math.max(bx0 - (x + 0.5), 0, x + 0.5 - bx1);
+        const mask = Math.exp(-(dxOut * dxOut + dyOut * dyOut) / (2 * m * m));
+        if (mask < 1e-3) continue;
+        let v = 0;
+        for (const b of bells) v += b.amp * Math.exp(-((x + 0.5 - b.cx) ** 2 / (2 * b.sx * b.sx) + (y + 0.5 - b.cy) ** 2 / (2 * b.sy * b.sy)));
+        acc[y * gw + x] += v * mask;
       }
     }
   }
@@ -112,16 +142,27 @@ export function attentionField(aois: Aoi[], gw: number, gh: number, aspect = 1):
   return acc;
 }
 
+/** Paleta amarillo → naranja → rojo (sin tonos azules, que se pierden sobre fondos oscuros). */
+const HEAT_STOPS: readonly (readonly [number, number, number])[] = [
+  [255, 226, 0],
+  [255, 140, 0],
+  [220, 20, 30],
+];
+
 /**
- * Mapa de color tipo "jet". Por debajo del umbral es transparente y la opacidad crece
- * gradualmente desde ahí (sin borde duro ni velo sobre toda la imagen).
+ * Color del mapa de calor. Por debajo del umbral es transparente y la opacidad crece gradualmente
+ * desde ahí (sin borde duro ni velo sobre toda la imagen). La paleta amarillo–naranja–rojo se ve
+ * tanto sobre fondos claros como oscuros; lo frío se indica aparte con un contorno.
  */
 export function heatColor(v: number, threshold = 0.22): [number, number, number, number] {
   if (v <= threshold) return [0, 0, 0, 0];
-  const t = Math.min(1, Math.max(0, v));
-  const r = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * t - 3)));
-  const g = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * t - 2)));
-  const b = Math.min(1, Math.max(0, 1.5 - Math.abs(4 * t - 1)));
-  const alpha = 0.7 * Math.min(1, ((t - threshold) / (1 - threshold)) * 1.8);
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), Math.round(alpha * 255)];
+  const t = Math.min(1, Math.max(0, (v - threshold) / (1 - threshold)));
+  const seg = t * (HEAT_STOPS.length - 1);
+  const i = Math.min(HEAT_STOPS.length - 2, Math.floor(seg));
+  const f = seg - i;
+  const [r0, g0, b0] = HEAT_STOPS[i];
+  const [r1, g1, b1] = HEAT_STOPS[i + 1];
+  // La opacidad arranca en 0 y sube rápido: el calor suave se ve, pero no tiñe toda la imagen.
+  const alpha = 0.78 * Math.min(1, t * 2.2);
+  return [Math.round(r0 + (r1 - r0) * f), Math.round(g0 + (g1 - g0) * f), Math.round(b0 + (b1 - b0) * f), Math.round(alpha * 255)];
 }

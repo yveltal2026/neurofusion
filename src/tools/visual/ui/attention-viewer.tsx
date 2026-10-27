@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { saveAois } from "../actions";
-import { AOI_KIND_LABEL, AOI_KINDS, attentionField, coldZones, gazePath, heatColor, LOW_ATTENTION, outsidePath, type Aoi, type AoiKind, type ColdZone } from "../engine/aoi";
+import { AOI_KIND_LABEL, AOI_KINDS, attentionField, coldZones, focalPoint, gazePath, heatColor, LOW_ATTENTION, outsidePath, type Aoi, type AoiKind, type ColdZone } from "../engine/aoi";
 
 export type ViewMode = "original" | "heatmap" | "gaze" | "blind" | "boxes";
 
@@ -76,7 +76,10 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
 
   if (mode === "gaze") {
     const path = gazePath(aois);
-    const pts = path.map((a) => [((a.box[0] + a.box[2]) / 2) * W, ((a.box[1] + a.box[3]) / 2) * H, (14 + 22 * a.attention) * s] as const);
+    const pts = path.map((a) => {
+      const [fx, fy] = focalPoint(a);
+      return [fx * W, fy * H, (14 + 22 * a.attention) * s] as const;
+    });
     ctx.lineWidth = 3 * s;
     ctx.strokeStyle = "rgba(0,114,178,0.85)";
     ctx.beginPath();

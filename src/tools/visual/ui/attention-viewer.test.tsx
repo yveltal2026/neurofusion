@@ -196,4 +196,20 @@ describe("AttentionViewer · dibujo sobre el canvas", () => {
     const ys = texts.filter((t) => String(t.args[0]).includes("encimado")).map((t) => t.args[2] as number);
     expect(new Set(ys).size).toBe(2);
   });
+
+  it("el recorrido ancla los puntos de una persona en su cabeza, no en el centro de su caja", () => {
+    const rec: { calls: { fn: string; args: unknown[] }[] }[] = [];
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement) {
+      const r = recordingContext(this);
+      rec.push(r);
+      return r.ctx;
+    } as unknown as HTMLCanvasElement["getContext"];
+    const aois: Aoi[] = [{ id: "P", label: "Persona", kind: "person", box: [0.5, 0.1, 1, 0.9], attention: 1, importance: 5, order: 1 }];
+    render(<AttentionViewer imageUrl="https://x/y.png" width={800} height={800} aois={aois} initialMode="gaze" />);
+    const arcs = rec.flatMap((r) => r.calls).filter((c) => c.fn === "arc");
+    expect(arcs).toHaveLength(1);
+    // x = centro (0.75 · 800); y = cabeza (0.1 + 0.8 · 0.2 = 0.26 · 800), no el centro vertical (0.5 · 800)
+    expect(arcs[0].args[0]).toBeCloseTo(600, 5);
+    expect(arcs[0].args[1]).toBeCloseTo(208, 5);
+  });
 });

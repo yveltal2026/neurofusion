@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildReviewUserText, elementsToAois, mergeMissingElements, PIECE_SYSTEM_PROMPT, pieceAiSchema, REVIEW_SYSTEM_PROMPT, reviewSchema, type PieceElement } from "../analysis/piece";
-import { attentionField, blindZones, coldZones, gazePath, heatColor, outsidePath, type Aoi } from "./aoi";
+import { attentionField, blindZones, coldZones, focalPoint, gazePath, HEAD_FRACTION, heatColor, outsidePath, type Aoi } from "./aoi";
 import { computeMetrics, contrastRatio, estimateTextContrast, type RawImage } from "./metrics";
 import { checkPlacement, getPlacement } from "./placements";
 import { planTiles, tileBoxToImage } from "./tiles";
@@ -236,5 +236,57 @@ describe("cobertura de la lectura de la IA", () => {
     const first = result([el("E1", [100, 100, 300, 500])]);
     const merged = mergeMissingElements(first, [el("E90", [100, 100, 300, 500], { tile: 1 })]);
     expect(merged.elements).toHaveLength(2);
+  });
+});
+
+
+describe("mapa de calor: contención, cabeza y paleta", () => {
+  const el = (id: string, kind: Aoi["kind"], box: Aoi["box"], attention: number): Aoi => ({ id, label: id, kind, box, attention, importance: 4, order: null });
+  const gw = 200, gh = 200;
+  const cell = (f: Float32Array, x: number, y: number) => f[Math.min(gh - 1, Math.floor(y * gh)) * gw + Math.min(gw - 1, Math.floor(x * gw))];
+
+  it("focalPoint: la cabeza en una persona, el centro en cualquier otro elemento", () => {
+    const box: Aoi["box"] = [0.5, 0.1, 1, 0.9];
+    expect(focalPoint(el("p", "person", box, 1))).toEqual([0.75, 0.1 + 0.8 * HEAD_FRACTION]);
+    expect(focalPoint(el("t", "text", box, 1))).toEqual([0.75, 0.5]);
+  });
+
+  it("en una persona el calor se concentra en la cabeza y no en el pecho", () => {
+    const f = attentionField([el("p", "person", [0.5, 0.1, 1, 0.9], 1)], gw, gh);
+    const head = cell(f, 0.75, 0.1 + 0.8 * HEAD_FRACTION);
+    const chest = cell(f, 0.75, 0.6);
+    expect(head).toBeGreaterThan(0.95);
+    expect(chest).toBeLessThan(head);
+    // sigue habiendo algo de calor en el cuerpo (no es sólo un punto)
+    expect(chest).toBeGreaterThan(0.25);
+    // el máximo del campo cae en el tercio alto de la caja
+    let best = 0, by = 0;
+    f.forEach((v, i) => {
+      if (v > best) { best = v; by = Math.floor(i / gw) / gh; }
+    });
+    expect(by).toBeLessThan(0.1 + 0.8 / 3);
+  });
+
+  it("una caja grande no tiñe a sus vecinos: fuera de la caja el calor cae casi a cero", () => {
+    const grande = el("grande", "image", [0.5, 0.1, 1, 0.8], 1);
+    const vecino = el("vecino", "text", [0.05, 0.4, 0.3, 0.6], 0.3);
+    const f = attentionField([grande, vecino], gw, gh);
+    expect(cell(f, 0.4, 0.5)).toBeLessThan(0.1); // 0.1 a la izquierda del borde de la caja grande
+    expect(cell(f, 0.175, 0.5)).toBeGreaterThan(0.2); // el vecino conserva su propio calor
+    expect(cell(f, 0.75, 0.45)).toBeGreaterThan(0.9); // dentro de la caja grande, calor pleno
+  });
+
+  it("la paleta no usa azules (se pierden sobre fondos oscuros) y la opacidad crece gradualmente", () => {
+    for (let v = 0.25; v <= 1; v += 0.05) {
+      const [, , b] = heatColor(v);
+      expect(b).toBeLessThan(80);
+    }
+    const alphas = [0.23, 0.3, 0.4, 0.6, 0.9].map((v) => heatColor(v)[3]);
+    expect([...alphas].sort((a, b) => a - b)).toEqual(alphas);
+    expect(alphas[0]).toBeLessThan(40); // apenas sobre el umbral casi no tiñe
+    expect(heatColor(1)[3]).toBeGreaterThan(180);
+    // rojo en lo más atractivo, amarillo en lo suave
+    expect(heatColor(1).slice(0, 3)).toEqual([220, 20, 30]);
+    expect(heatColor(0.3)[0]).toBe(255);
   });
 });
