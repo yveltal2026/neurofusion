@@ -10,7 +10,7 @@ Una fijación se considera saturada si al menos el 20 % de sus lecturas alcanza 
 
 ### Deriva durante el uso
 
-El botón «Comprobar deriva» del laboratorio mide tres fijaciones sin modificar el ajuste. Los estudios ejecutan ese control antes de presentar imágenes, cada dos piezas y al final. Se exige cobertura de los tres objetivos, al menos 15 lecturas/s, proporción válida ≥80 %, error mediano ≤4° en laptop o ≤6° en teléfono/tableta y error máximo ≤1.5 veces ese límite. Un fallo invalida las lecturas parciales y exige recalibrar; la nueva presentación reutiliza la sesión iniciada para no consumir otra plaza.
+El botón «Comprobar deriva» del laboratorio mide tres fijaciones sin modificar el ajuste. Los estudios ejecutan ese control antes de presentar imágenes, cada dos piezas y al final. Se exige cobertura de los tres objetivos, al menos 15 lecturas/s, proporción válida ≥80 %, error mediano ≤4° en laptop o ≤6° en teléfono/tableta y error máximo ≤1.5 veces ese límite. Un fallo pausa la presentación y descarta sólo el bloque aún no validado. La recuperación permite recolocarse y comprobar tres puntos; si hace falta recalibrar, conserva los bloques validados y reutiliza la misma sesión. El laboratorio mantiene su veredicto estricto ante un control fallido.
 
 Los controles nunca entrenan el modelo ni cambian los coeficientes. El JSON del laboratorio incluye objetivos y lecturas medianas; el servidor del estudio guarda los resúmenes y recalcula su aceptación. Las sesiones creadas por el protocolo nuevo (`eye-v2`) requieren todos los controles en orden antes de completar. Las sesiones anteriores `eye-v1` y filas antiguas siguen siendo legibles. No hace falta cambiar el esquema SQL porque los datos adicionales se guardan en el JSON de calidad existente.
 
@@ -121,3 +121,21 @@ Salen de leer su bundle y de ejecutarlo; algunos contradicen lo que asumía la d
 | Mantenimiento: 0.0.2, sin releases etiquetadas, 62★ | Se mantiene el riesgo y la interfaz `GazeEngine` como salvaguarda |
 
 Estas limitaciones (CDN fijo, clic global, sin destrucción) hacen más probable que el módulo final necesite un **fork parcheado** de WebEyeTrack o pasar al plan B; el spike sirve también para decidir eso con datos.
+
+## Recuperación del participante durante un estudio
+
+- Un control fallido abre una pausa con vista de cámara. El participante puede recolocarse y comprobar tres objetivos (unos seis segundos) antes de reanudar. Los umbrales de precisión no cambian.
+- Sólo se conservan las imágenes cuyo bloque pasó un control posterior. Se descarta y repite el bloque sin validar, de hasta dos imágenes. Si falla el control final de un estudio de cuatro imágenes, se conservan las dos primeras y se repiten la tercera y cuarta.
+- Una recalibración completa conserva los bloques validados y el identificador de sesión. Cambiar de pestaña pausa; cambiar el viewport exige recalibrar con su tamaño nuevo, conservando el avance validado.
+- El historial fallido se almacena separado de los controles de los bloques aceptados. Para completar se exige un control de recuperación válido, todos los controles ordinarios y una observación por imagen, sin duplicados.
+- El resumen usa el peor error y la menor cobertura/frecuencia de las calibraciones utilizadas. Miradas y CSV identifican pausas, recalibraciones e imágenes repetidas; la exposición repetida puede afectar la familiaridad con el estímulo y debe considerarse al analizar o excluir una sesión.
+- Este avance sólo se conserva en memoria durante la sesión abierta; recargar o cerrar la página no lo restaura. No se añade una migración: la auditoría se almacena en el JSON existente de calidad.
+
+## Controles de fijación y fallos persistentes (eye-v3)
+
+- La frecuencia y la proporción de lecturas válidas se calculan sólo en las tres ventanas de fijación. Se excluye el segundo de transición de cada objetivo. Esto evita tratar la pérdida de detección mientras se mueve la mirada como un fallo sostenido durante la medición.
+- Cada objetivo con pocas lecturas o detección inferior al 80 % dispone de una única recaptura de 1.5 s, manteniendo el mismo objetivo. No se repite para reducir un error angular grande y no se entrena con estos controles.
+- Se muestran causas distintas: cobertura, frecuencia, detección durante la fijación, error mediano y error máximo. Los límites angulares 4°/6° y el máximo 1.5 veces el límite no cambian.
+- Tras dos pausas con controles fallidos se puede continuar con precisión limitada. Se siguen registrando los controles restantes y todas las imágenes; un control no medido se informa con cobertura cero y errores nulos. La sesión queda siempre con `passed=false`, identificada en Miradas y CSV y excluida de los mapas válidos.
+- El backend sólo permite ese cierre para sesiones `eye-v3` con fallos reales en su historial y todos los puntos de control informados. `eye-v2` conserva sus requisitos anteriores. No se añade SQL: se usa el JSON de calidad existente.
+- `?diagnostic=1` habilita «Descargar diagnóstico» en la pausa; el JSON contiene calibración/validación, el último control con sus objetivos y el historial de recuperación. No incluye token de participación ni video. Este archivo permitirá identificar la causa en el dispositivo real; los casos simulados no acreditan una mejora de precisión del motor.

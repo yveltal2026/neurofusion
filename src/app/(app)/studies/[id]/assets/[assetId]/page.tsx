@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EyeAoiEditor } from "@/tools/eyetracking/ui/aoi-editor";
 import { notFound } from "next/navigation";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
@@ -34,8 +35,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">← Volver a las imágenes del estudio</Link>
         <h2 className="text-lg font-medium">{row.title}</h2>
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element -- URL firmada de Storage
-          <img src={url} alt={row.title} className="mx-auto max-h-[70vh] max-w-full rounded border border-border object-contain" />
+          <EyeAoiEditor studyId={id} assetId={assetId} imageUrl={url} width={row.width} height={row.height} initial={asset.aois} />
         ) : <Alert tone="error">No se pudo obtener la imagen del almacenamiento.</Alert>}
         <Link href={`/studies/${id}/eye`} className="inline-block text-sm font-medium text-heading underline underline-offset-4">Consultar miradas y mapas de atención</Link>
         <Card className="max-w-xl space-y-3">

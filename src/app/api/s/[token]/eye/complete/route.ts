@@ -4,7 +4,7 @@ import { clientIp } from "@/lib/participant-lock";
 import { rateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
-import { eyeRunSchema, observationsMatchStudy, qualityPasses, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
+import { completionAllowed, eyeRunSchema, observationsMatchStudy, qualityPasses } from "@/tools/visual/eye/schema";
 import { driftPasses } from "@/lab/eyetracking/drift";
 
 const MAX_BODY_BYTES = 300_000;
@@ -36,14 +36,15 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   if (!observationsMatchStudy(input.observations, study.assets.map((a) => a.id), study.config.eyeTracking.durationSeconds)) {
     return apiError("invalid_data");
   }
+  if (input.quality.recovery?.repeatedAssetIds.some((id) => !study.assets.some((a) => a.id === id))) return apiError("invalid_data");
 
   const admin = createAdminClient();
   const { data: session, error } = await admin.from("sessions").select("id, study_id, status, consent_version, device_type").eq("id", input.sessionId).maybeSingle();
   if (error) return apiError("server_error");
-  if (!session || session.study_id !== study.id || !["eye-v1", "eye-v2"].includes(session.consent_version ?? "")) return apiError("not_found");
+  if (!session || session.study_id !== study.id || !["eye-v1", "eye-v2", "eye-v3"].includes(session.consent_version ?? "")) return apiError("not_found");
   if (session.status === "completed") return NextResponse.json({ ok: true }, { headers: noStore });
   if (session.status !== "started") return apiError("not_found");
-  if (!requiredDriftChecksPass(input.quality, session.device_type, input.observations.length, session.consent_version === "eye-v2")) return apiError("incomplete");
+  if (!completionAllowed(input.quality, session.device_type, input.observations.length, session.consent_version ?? "")) return apiError("incomplete");
   const device = session.device_type === "mobile" ? "phone" : session.device_type === "tablet" ? "tablet" : "laptop";
 
   const { error: insertError } = await admin.from("eye_tracking_runs").upsert({
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
     study_id: study.id,
     validation: { ...input.quality,
       driftChecks: input.quality.driftChecks?.map((check) => ({ ...check, passed: driftPasses(check, device) })),
+      ...(input.quality.recovery ? { recovery: { ...input.quality.recovery,
+        checks: input.quality.recovery.checks.map((check) => ({ ...check, passed: driftPasses(check, device) })),
+      } } : {}),
       passed: qualityPasses(input.quality, session.device_type, input.observations.length) },
     observations: input.observations,
   }, { onConflict: "session_id", ignoreDuplicates: true });

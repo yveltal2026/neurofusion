@@ -25,8 +25,19 @@ export const eyeObservationSchema = z.object({
   }
 });
 
+const driftCheckSchema = z.object({
+  afterAssetCount: z.number().int().min(0).max(5),
+  medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
+  maxErrorDeg: z.number().finite().min(0).max(90).nullable(),
+  coverage: z.number().finite().min(0).max(1),
+  fps: z.number().finite().min(0).max(120),
+  validRatio: z.number().finite().min(0).max(1),
+  passed: z.boolean(),
+});
+
 export const eyeQualitySchema = z.object({
   engineId: z.literal("webeyetrack@0.0.2"),
+  measurementStatus: z.enum(["validated", "limited"]).optional(),
   medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
   coverage: z.number().finite().min(0).max(1),
   fps: z.number().finite().min(0).max(120),
@@ -34,15 +45,14 @@ export const eyeQualitySchema = z.object({
   passed: z.boolean(),
   calibrationClicks: z.number().int().min(9).max(18),
   calibrationLayout: z.string().max(40),
-  driftChecks: z.array(z.object({
-    afterAssetCount: z.number().int().min(0).max(5),
-    medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
-    maxErrorDeg: z.number().finite().min(0).max(90).nullable(),
-    coverage: z.number().finite().min(0).max(1),
-    fps: z.number().finite().min(0).max(120),
-    validRatio: z.number().finite().min(0).max(1),
-    passed: z.boolean(),
-  })).max(8).optional(),
+  driftChecks: z.array(driftCheckSchema).max(8).optional(),
+  recovery: z.object({
+    interruptions: z.number().int().min(1).max(100),
+    recalibrations: z.number().int().min(0).max(100),
+    repeatedAssetIds: z.array(z.string().uuid()).max(5),
+    /** Historial separado: una medición fallida descarta el bloque, no invalida los bloques repetidos y validados. */
+    checks: z.array(driftCheckSchema).min(1).max(24),
+  }).optional(),
 });
 
 export const eyeRunSchema = z.object({
@@ -68,11 +78,28 @@ export function requiredDriftChecksPass(q: EyeQuality, deviceType: string, asset
   if (!assetCount) return false;
   const expected = driftCheckpoints(assetCount);
   const device = deviceType === "mobile" ? "phone" : deviceType === "tablet" ? "tablet" : "laptop";
+  if (q.recovery) {
+    const last = q.recovery.checks.at(-1);
+    if (!last || !driftPasses(last, device) || q.recovery.checks.some((c) => !expected.includes(c.afterAssetCount))) return false;
+  }
   return q.driftChecks?.length === expected.length && q.driftChecks.every((check, i) =>
     check.afterAssetCount === expected[i] && driftPasses(check, device));
 }
 
+/** Sólo eye-v3 permite completar una participación limitada; todas sus mediciones quedan excluidas. */
+export function completionAllowed(q: EyeQuality, deviceType: string, assetCount: number, protocol: string): boolean {
+  if (q.measurementStatus !== "limited") return requiredDriftChecksPass(q, deviceType, assetCount, protocol !== "eye-v1");
+  if (protocol !== "eye-v3" || !q.calibrationLayout.startsWith("v5-") || !q.recovery || q.recovery.interruptions < 2) return false;
+  const expected = driftCheckpoints(assetCount);
+  const device = deviceType === "mobile" ? "phone" : deviceType === "tablet" ? "tablet" : "laptop";
+  return q.driftChecks?.length === expected.length
+    && q.driftChecks.every((check, i) => check.afterAssetCount === expected[i])
+    && q.recovery.checks.every((check) => expected.includes(check.afterAssetCount))
+    && q.recovery.checks.some((check) => !driftPasses(check, device));
+}
+
 export function qualityPasses(q: EyeQuality, deviceType: string, assetCount?: number): boolean {
+  if (q.measurementStatus === "limited") return false;
   const limit = deviceType === "mobile" || deviceType === "tablet"
     ? THRESHOLDS.maxMedianErrorDeg.phone
     : THRESHOLDS.maxMedianErrorDeg.laptop;
