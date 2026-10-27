@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCalibration, fitCalibration, fixationMedian, refineCalibration, refinementGrid, stableFixation, type CalibrationFit } from "./calibration";
+import { applyCalibration, assessFixation, fitCalibration, fixationMedian, fixationWeight, moveSaturatedTarget, refineCalibration, refinementGrid, stableFixation, weakCalibrationPoints, type CalibrationFit, type FixationQuality } from "./calibration";
 import { calibrationGrid, validationTargets } from "./metrics";
 import { screenWidthCm } from "./screen";
 
@@ -21,6 +21,51 @@ describe("calibración controlada", () => {
   it("usa medianas y exige suficientes lecturas", () => {
     expect(fixationMedian([{ x: 1, y: 2 }])).toBeNull();
     expect(fixationMedian([{ x: 1, y: 2 }, { x: 1, y: 2 }, { x: 1, y: 2 }, { x: 1, y: 2 }, { x: 99, y: 99 }])).toEqual({ x: 1, y: 2 });
+  });
+});
+
+describe("ponderación y revisión selectiva", () => {
+  const noisy: FixationQuality = { samples: 20, durationMs: 800, validRatio: 0.8,
+    dispersion: { x: 0.04, y: 0.04 }, drift: { x: 0.025, y: 0.025 } };
+
+  it("reduce la influencia de un punto ruidoso sobre objetivos independientes", () => {
+    const pairs = calibrationGrid(1, 1).map((target, i) => ({ target,
+      gaze: i === 4 ? { x: target.x + 0.2, y: target.y + 0.1 } : target,
+      quality: i === 4 ? noisy : undefined }));
+    const weighted = fitCalibration(pairs);
+    const uniform = fitCalibration(pairs.map((p) => ({ ...p, quality: undefined })));
+    const error = (fit: CalibrationFit) => validationTargets(1, 1).reduce((n, t) => {
+      const p = applyCalibration(fit, t);
+      return n + Math.hypot(p.x - t.x, p.y - t.y);
+    }, 0);
+    expect(error(weighted)).toBeLessThan(error(uniform) * 0.5);
+    expect(fixationWeight(pairs[4])).toBeGreaterThanOrEqual(0.1);
+    expect(weakCalibrationPoints(pairs)).toEqual([4]);
+    expect(weakCalibrationPoints(pairs.map((p) => ({ ...p, quality: noisy })))).toEqual([]);
+  });
+
+  it("acota la revisión y pondera también el ajuste fino", () => {
+    const base: CalibrationFit = { center: { x: 0, y: 0 }, scale: { x: 1, y: 1 }, x: [1, 0, 0], y: [0, 1, 0] };
+    const pairs = refinementGrid(1, 1).map((target, i) => ({ target,
+      gaze: i === 0 ? { x: target.x + 0.2, y: target.y + 0.1 } : target,
+      quality: i === 0 ? noisy : undefined }));
+    const weighted = refineCalibration(base, pairs);
+    const uniform = refineCalibration(base, pairs.map((p) => ({ ...p, quality: undefined })));
+    expect(Math.abs(applyCalibration(weighted, { x: 0.7, y: 0.3 }).x - 0.7))
+      .toBeLessThan(Math.abs(applyCalibration(uniform, { x: 0.7, y: 0.3 }).x - 0.7));
+    const weak = pairs.map((p, i) => ({ ...p, quality: i < 3 ? noisy : undefined }));
+    expect(weakCalibrationPoints(weak)).toHaveLength(2);
+  });
+
+  it("detecta saturación incluso con dispersión cero y acerca sólo el eje afectado", () => {
+    const frames = Array.from({ length: 33 }, (_, i) => ({ t: i * 25, x: 500, y: 600, inferenceMs: 10 }));
+    const result = assessFixation(frames, 0, 800, { width: 1000, height: 600 });
+    expect(result).toEqual({ ok: false, reason: "saturated", saturation: { x: 0, y: 1 } });
+    expect(stableFixation(frames, 0, 800, { width: 1000, height: 600 })).toBeNull();
+    expect(moveSaturatedTarget({ x: 0.1, y: 0.9 }, { x: 0, y: 1 })).toEqual({ x: 0.1, y: 0.76 });
+    expect(moveSaturatedTarget({ x: 0.5, y: 0.5 }, { x: 1, y: 1 })).toBeNull();
+    expect(() => fitCalibration(calibrationGrid(1, 1).map((target) => ({ target, gaze: target,
+      quality: { ...noisy, saturation: { x: 0, y: 1 } } })))).toThrow("saturadas");
   });
 });
 

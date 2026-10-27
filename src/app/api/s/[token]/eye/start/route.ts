@@ -11,6 +11,7 @@ import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
 
 const bodySchema = z.object({
   consent: z.literal(true),
+  protocol: z.literal("eye-v2").optional(),
   device: z.object({
     deviceType: z.enum(["desktop", "mobile", "tablet", "unknown"]),
     screenWidth: z.number().int().min(1).max(20_000),
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   if (unavailable) return apiError(unavailable);
   const body = await readJson(request, bodySchema);
   if (!body) return apiError("invalid_data");
+  if (body.protocol !== "eye-v2") return apiError("not_available", { message: "La prueba se actualizó. Recarga la página para continuar con los controles de mirada." });
 
   const secret = serverEnv().PARTICIPANT_LOCK_SECRET;
   const cookieName = deviceCookieName(study.id);
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
     p_user_agent: request.headers.get("user-agent"),
     p_demographics: {},
     p_explicit: null,
-    p_consent_version: "eye-v1",
+    p_consent_version: "eye-v2",
     p_counterbalance: [],
     p_input_mode: body.device.deviceType === "desktop" ? "keyboard" : "touch",
     p_device_type: body.device.deviceType,

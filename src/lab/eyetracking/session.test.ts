@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildSession, parseExportedSession, type SessionInput } from "./session";
+import { buildSession, parseExportedSession, recordDriftChecks, type SessionInput } from "./session";
 import type { TargetResult } from "./metrics";
 
 const target = (errorPx: number | null): TargetResult => ({
@@ -33,6 +33,15 @@ function input(overrides: Partial<SessionInput> = {}): SessionInput {
 }
 
 describe("buildSession", () => {
+  it("marca una sesión como no aceptable si falla un control posterior, conservando las métricas iniciales", () => {
+    const initial = buildSession(input());
+    const checked = recordDriftChecks(initial, [{ afterAssetCount: 2, targets: [], medianErrorDeg: 10,
+      maxErrorDeg: 12, coverage: 1, fps: 30, validRatio: 1, passed: false }]);
+    expect(initial.verdict.pass).toBe(true);
+    expect(checked.verdict.pass).toBe(false);
+    expect(checked.summary).toEqual(initial.summary);
+    expect(parseExportedSession(checked)?.verdict.pass).toBe(false);
+  });
   it("calcula resumen y veredicto, normaliza el código y redondea readyMs", () => {
     const s = buildSession(input());
     expect(s.version).toBe(1);
@@ -46,7 +55,7 @@ describe("buildSession", () => {
     expect(s.summary.medianErrorDeg).toBeGreaterThan(1);
     expect(s.summary.medianErrorDeg).toBeLessThan(1.5);
     expect(s.verdict.pass).toBe(true);
-    expect(s.calibration.layout).toBe("v4-stable-base");
+    expect(s.calibration.layout).toBe("v5-weighted-base");
   });
 
   it("diagnóstico: ganancia por eje, error normalizado y área de prueba", () => {

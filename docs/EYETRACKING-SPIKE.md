@@ -2,7 +2,23 @@
 
 Rama: `spike/eyetracking` · Ruta: `/lab/eyetracking` · Decisión de origen: [`EYETRACKING-DECISION.md`](EYETRACKING-DECISION.md)
 
-## Calibración actual: v4-interior-refinement
+## Calibración actual: v5-weighted-refinement
+
+V5 conserva las dos etapas y la validación independiente de v4. Pondera cada fijación con un peso entre 0.1 y 1 calculado a partir de muestras, proporción válida, dispersión y deriva. Los ajustes base y fino usan esos pesos; las fijaciones sin metadatos mantienen peso 1 para compatibilidad. Tras completar los puntos se revisan como máximo dos con peso inferior al 75 % de la mediana y menor de 0.35, una sola ronda. El JSON distingue los puntos aceptados (`clicks`, 9 o 18) del total de intentos, e incluye los índices revisados y reubicados (base cero).
+
+Una fijación se considera saturada si al menos el 20 % de sus lecturas alcanza el límite 0 o 1 en algún eje. No entra en el ajuste: ese objetivo se mueve un 35 % hacia el centro en el eje afectado y se vuelve a capturar, con un máximo de dos desplazamientos por punto. Si persiste el problema se pide ajustar la cámara. La pantalla ofrece «Ajustar posición» para salir de una captura difícil. Los umbrales y pesos son decisiones operativas iniciales que requieren evaluación real.
+
+### Deriva durante el uso
+
+El botón «Comprobar deriva» del laboratorio mide tres fijaciones sin modificar el ajuste. Los estudios ejecutan ese control antes de presentar imágenes, cada dos piezas y al final. Se exige cobertura de los tres objetivos, al menos 15 lecturas/s, proporción válida ≥80 %, error mediano ≤4° en laptop o ≤6° en teléfono/tableta y error máximo ≤1.5 veces ese límite. Un fallo invalida las lecturas parciales y exige recalibrar; la nueva presentación reutiliza la sesión iniciada para no consumir otra plaza.
+
+Los controles nunca entrenan el modelo ni cambian los coeficientes. El JSON del laboratorio incluye objetivos y lecturas medianas; el servidor del estudio guarda los resúmenes y recalcula su aceptación. Las sesiones creadas por el protocolo nuevo (`eye-v2`) requieren todos los controles en orden antes de completar. Las sesiones anteriores `eye-v1` y filas antiguas siguen siendo legibles. No hace falta cambiar el esquema SQL porque los datos adicionales se guardan en el JSON de calidad existente.
+
+### Referencia de precisión
+
+La sesión real `121` de v4 obtuvo 63.4 px y 2.14° de error mediano, frente a 126.8 px y 4.50° de la sesión `434`. En `121` se seleccionó 16:9 en lugar de 21:9: con el formato ultrawide anterior el cálculo angular sería aproximadamente 2.25°, manteniendo los mismos 63.4 px. Los ajustes globales adicionales probados retrospectivamente no redujeron la mediana. La prioridad de v5 es controlar fijaciones poco fiables y detectar pérdida de precisión durante los estudios. Los resultados de pruebas simuladas de v5 verifican la matemática y el flujo; su mejora real aún debe medirse.
+
+## Antecedentes: v4-interior-refinement
 
 La opción recomendada ejecuta dos etapas: nueve puntos para el ajuste afín base y nueve puntos interiores para aprender una corrección de escala y desplazamiento por eje. Los parámetros son propios de la persona y la sesión, sin valores fijados a partir de los JSON de prueba. Los ocho objetivos de validación final son distintos de los puntos de ajuste fino y no se usan para entrenar. La opción básica conserva sólo la primera etapa (`v4-stable-base`).
 
@@ -33,7 +49,7 @@ Objetivo: medir, con personas y dispositivos reales, si WebEyeTrack cumple los c
 3. «Iniciar cámara y cargar modelos» → acomoda la cara (el indicador debe decir «Cara detectada: sí») → «Comenzar calibración».
 4. Calibración recomendada: 18 puntos en dos etapas. Mirar el punto y tocarlo cuando se ponga verde, sin dejar de mirarlo hasta que cambie. Si no hay fijación estable, se pide repetir ese punto. Cabeza quieta, dispositivo apoyado y sin girarlo.
 5. Validación (automática, ~20 s): 8 puntos distintos a los de calibración. Solo mirar; **no tocar la pantalla**.
-6. «Descargar JSON». «Repetir validación» y «Recalibrar» sirven para ver si mejora con una segunda pasada.
+6. «Comprobar deriva» mide tres objetivos adicionales. «Descargar JSON» incluye los controles ejecutados. «Repetir validación» mide de nuevo sin entrenar; «Recalibrar» inicia un ajuste nuevo.
 
 Cobertura sugerida: 5–10 personas repartidas en laptop, Android, iPhone/Safari y tableta; con y sin lentes; luz buena y mala. Anota el contexto en el código o en el nombre del archivo si hace falta (la iluminación y los lentes ya quedan en el JSON).
 

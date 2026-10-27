@@ -13,9 +13,10 @@ import {
   type ViewportSpan,
 } from "./metrics";
 import type { CalibrationFit, CalibrationPair } from "./calibration";
+import type { DriftCheck } from "./drift";
 
 /** Disposición de calibración usada: permite comparar sesiones hechas antes y después de cambiarla. */
-export const CALIBRATION_LAYOUT = "v4-stable-base";
+export const CALIBRATION_LAYOUT = "v5-weighted-base";
 
 export type Lighting = "buena" | "media" | "mala";
 
@@ -37,7 +38,7 @@ export interface SessionInput {
   engineId: string;
   /** Tiempo desde «iniciar» hasta la primera lectura (descarga de modelos + cámara), en ms. */
   readyMs: number;
-  calibration: { passes: number; clicks: number; durationMs: number; layout?: string; pairs?: CalibrationPair[]; fit?: CalibrationFit };
+  calibration: { passes: number; clicks: number; durationMs: number; layout?: string; pairs?: CalibrationPair[]; fit?: CalibrationFit; attempts?: number; reviewedPoints?: number[]; relocatedPoints?: number[] };
   validation: { results: TargetResult[]; stream: FrameStats; durationMs: number };
   createdAt: Date;
 }
@@ -64,12 +65,22 @@ export interface ExportedSession extends SessionRecord {
   engineId: string;
   readyMs: number;
   calibration: SessionInput["calibration"];
+  driftChecks?: DriftCheck[];
   diagnostics: Diagnostics;
   validation: {
     durationMs: number;
     targets: TargetResult[];
     stream: FrameStats;
   };
+}
+
+/** Una validación inicial correcta no compensa un control de deriva fallido posterior. */
+export function recordDriftChecks(session: ExportedSession, checks: DriftCheck[]): ExportedSession {
+  const failed = checks.some((check) => !check.passed);
+  const reason = "Un control de deriva perdió precisión; se requiere recalibración.";
+  return { ...session, driftChecks: checks, verdict: failed
+    ? { pass: false, reasons: [...session.verdict.reasons.filter((r) => r !== reason), reason] }
+    : session.verdict };
 }
 
 /** Ensambla la sesión exportable y le aplica los criterios de salida. */

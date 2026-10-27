@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildEyeHeatmap } from "./heatmap";
 import { collectEyeObservation } from "./samples";
-import { eyeRunSchema, observationsMatchStudy, qualityPasses, type EyeObservation, type EyeQuality } from "./schema";
+import { eyeRunSchema, observationsMatchStudy, qualityPasses, requiredDriftChecksPass, type EyeObservation, type EyeQuality } from "./schema";
 
 const assetId = "40000000-0000-4000-8000-000000000001";
 const sessionId = "30000000-0000-4000-8000-000000000001";
@@ -12,6 +12,16 @@ const observation: EyeObservation = {
 const quality: EyeQuality = { engineId: "webeyetrack@0.0.2", medianErrorDeg: 2.5, coverage: 1, fps: 25, validRatio: 0.9, passed: true, calibrationClicks: 9, calibrationLayout: "v2-corners-last" };
 
 describe("captura para un estudio visual", () => {
+  it("exige todos los controles en orden y recalcula su veredicto para las nuevas sesiones", () => {
+    const check = { afterAssetCount: 0, medianErrorDeg: 2, maxErrorDeg: 3, coverage: 1, fps: 30, validRatio: 1, passed: false };
+    const q: EyeQuality = { ...quality, calibrationLayout: "v5-weighted-refinement", driftChecks: [check, { ...check, afterAssetCount: 2 }, { ...check, afterAssetCount: 3 }] };
+    expect(qualityPasses(q, "desktop", 3)).toBe(true);
+    expect(qualityPasses({ ...q, driftChecks: [] }, "desktop", 3)).toBe(false);
+    expect(qualityPasses({ ...q, driftChecks: [check, check, check] }, "desktop", 3)).toBe(false);
+    expect(qualityPasses({ ...q, driftChecks: q.driftChecks!.map((c) => ({ ...c, medianErrorDeg: 10, passed: true })) }, "desktop", 3)).toBe(false);
+    expect(requiredDriftChecksPass(quality, "desktop", 3, true)).toBe(false);
+    expect(requiredDriftChecksPass(quality, "desktop", 3)).toBe(true);
+  });
   it("convierte coordenadas del viewport a la imagen y excluye miradas fuera de ella", () => {
     const result = collectEyeObservation(assetId, [
       { t: 1100, x: 200, y: 150, inferenceMs: 10 },

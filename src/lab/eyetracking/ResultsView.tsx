@@ -54,6 +54,14 @@ export function ResultsView({ session }: { session: ExportedSession }) {
   const { summary, verdict, validation } = session;
   return (
     <div className="space-y-6">
+      {session.driftChecks?.length ? (
+        <Card className="space-y-2">
+          <h2 className="font-medium">Controles de deriva</h2>
+          {session.driftChecks.map((check, i) => (
+            <p key={i} className="text-sm">Control {i + 1}: {check.passed ? "aceptable" : "requiere recalibración"} · error mediano {fmt(check.medianErrorDeg)}° · máximo {fmt(check.maxErrorDeg)}°</p>
+          ))}
+        </Card>
+      ) : null}
       {verdict.pass ? (
         <Alert tone="info">
           <p className="font-medium text-heading">Cumple los criterios del spike para «{session.device}».</p>
