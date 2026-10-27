@@ -26,6 +26,8 @@ export interface ChatMessage {
 export interface CompletionRequest {
   system: string;
   messages: ChatMessage[];
+  /** Cancela la llamada (tiempo de espera por nivel de la cascada). */
+  signal?: AbortSignal;
 }
 
 export interface CompletionResult {
@@ -35,7 +37,7 @@ export interface CompletionResult {
 }
 
 export interface AnalysisProvider {
-  readonly name: "anthropic" | "openai";
+  readonly name: "anthropic" | "openai" | "gemini";
   readonly model: string;
   complete(request: CompletionRequest): Promise<CompletionResult>;
 }
