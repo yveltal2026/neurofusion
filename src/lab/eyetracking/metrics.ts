@@ -25,6 +25,8 @@ export interface GazeFrame {
 export type DeviceType = "laptop" | "phone" | "tablet";
 
 export interface Geometry {
+  diagonalInches?: number;
+  screenFormat?: string;
   /** Ancho de `window.screen` en píxeles CSS. */
   screenWidthPx: number;
   /** Ancho físico de la pantalla en cm (lo declara el evaluador). */

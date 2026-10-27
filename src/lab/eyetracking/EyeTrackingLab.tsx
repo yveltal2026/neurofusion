@@ -28,6 +28,8 @@ import { buildSession, type ExportedSession, type Lighting } from "./session";
 import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
+import { applyCalibration, fitCalibration, fixationMedian, type CalibrationFit, type CalibrationPair } from "./calibration";
+import { screenWidthCm, type ScreenFormat } from "./screen";
 
 type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "results" | "free" | "stimulus" | "saving" | "done";
 
@@ -42,16 +44,16 @@ interface EyeStudyMode {
 /** Tiempo para que el ojo llegue al punto antes de medir, y ventana de medición, por objetivo. */
 const SETTLE_MS = 1000;
 const MEASURE_MS = 1500;
-/** La librería ignora clics a menos de 1 s del anterior; el siguiente punto se activa pasado ese plazo. */
+/** Da tiempo a fijar la mirada antes de activar cada objetivo. */
 const CALIB_ACTIVATE_MS = 1200;
 const COUNTDOWN_S = 3;
 /** Evita que el arreglo de lecturas crezca sin límite en el modo libre (≈ 10 min a 30 lecturas/s). */
 const MAX_FRAMES = 20_000;
 
-const PRESETS: Record<DeviceType, { widthCm: string; distanceCm: string; label: string }> = {
-  laptop: { widthCm: "31", distanceCm: "50", label: "Laptop / escritorio" },
-  phone: { widthCm: "6.5", distanceCm: "30", label: "Celular" },
-  tablet: { widthCm: "17", distanceCm: "40", label: "Tableta" },
+const PRESETS: Record<DeviceType, { inches: string; distanceCm: string; label: string }> = {
+  laptop: { inches: "14", distanceCm: "50", label: "Laptop / escritorio" },
+  phone: { inches: "6.1", distanceCm: "30", label: "Celular" },
+  tablet: { inches: "11", distanceCm: "40", label: "Tableta" },
 };
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -63,8 +65,7 @@ function guessDevice(): DeviceType {
 }
 
 /**
- * Todas las pasadas usan el mismo orden: la librería solo conserva las últimas muestras, y ese orden
- * termina con las esquinas y el centro (ver calibrationGrid).
+ * Todas las pasadas usan la cuadrícula completa. El ajuste conserva todas las fijaciones.
  */
 function buildCalibrationPoints(passes: number): Point[] {
   const grid = calibrationGrid(window.innerWidth, window.innerHeight);
@@ -81,7 +82,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [participant, setParticipant] = useState("");
   // Este componente solo se monta en el cliente (EyeTrackingLabClient), así que puede leer `window` al inicializar.
   const [device, setDevice] = useState<DeviceType>(guessDevice);
-  const [widthCm, setWidthCm] = useState(() => PRESETS[guessDevice()].widthCm);
+  const [inches, setInches] = useState("");
+  const [screenFormat, setScreenFormat] = useState<ScreenFormat>("auto");
   const [distanceCm, setDistanceCm] = useState(() => PRESETS[guessDevice()].distanceCm);
   const [glasses, setGlasses] = useState(false);
   const [lighting, setLighting] = useState<Lighting>("buena");
@@ -110,6 +112,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const dotRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<GazeEngine | null>(null);
   const framesRef = useRef<GazeFrame[]>([]);
+  const rawFramesRef = useRef<GazeFrame[]>([]);
+  const calibrationFitRef = useRef<CalibrationFit | null>(null);
+  const calibrationPairsRef = useRef<CalibrationPair[]>([]);
+  const calibrationViewportRef = useRef({ width: 0, height: 0 });
   const readyMsRef = useRef(0);
   const calibStartRef = useRef(0);
   const calibClicksRef = useRef(0);
@@ -117,23 +123,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const lastClickRef = useRef(0);
   const runIdRef = useRef(0);
 
-  // WebEyeTrack toma como muestra de calibración CADA clic de la ventana (escucha en `window`).
-  // Este filtro impide que le lleguen los clics que no sean sobre el punto activo (botones, taps
-  // accidentales). Se decide en la fase de CAPTURA, antes de que React procese el clic: en la de burbujeo
-  // el clic sobre el punto ya habría cambiado el estado y quitado su marca, y se bloquearía el bueno.
-  // React escucha en su raíz (más abajo que `document`), así que sus manejadores no se ven afectados.
+  // Evita el ajuste incremental de WebEyeTrack por clics globales. Usamos todas las fijaciones
+  // en un ajuste propio; React recibe los clics antes de que alcancen document/window.
   useEffect(() => {
-    const allowed = new WeakSet<Event>();
-    const mark = (e: MouseEvent) => {
-      if (e.target instanceof Element && e.target.closest("[data-calib-dot]")) allowed.add(e);
-    };
-    const block = (e: MouseEvent) => {
-      if (!allowed.has(e)) e.stopPropagation();
-    };
-    document.addEventListener("click", mark, true);
+    const block = (e: MouseEvent) => e.stopPropagation();
     document.addEventListener("click", block);
     return () => {
-      document.removeEventListener("click", mark, true);
       document.removeEventListener("click", block);
     };
   }, []);
@@ -158,6 +153,23 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     };
   }, [immersive]);
 
+  useEffect(() => {
+    if (!["calibration", "countdown", "validation"].includes(stage)) return;
+    const interrupt = () => {
+      runIdRef.current++;
+      calibrationFitRef.current = null;
+      setError("La prueba se interrumpió o cambió la ventana. Repite la calibración sin cambiar de pestaña ni tamaño.");
+      setStage("position");
+    };
+    const visibility = () => { if (document.hidden) interrupt(); };
+    window.addEventListener("resize", interrupt);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("resize", interrupt);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [stage]);
+
   // Indicadores en vivo (sin re-renderizar a la frecuencia de la cámara).
   useEffect(() => {
     if (stage !== "position") return;
@@ -170,6 +182,13 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }, [stage]);
 
   const onFrame = useCallback((f: GazeFrame) => {
+    rawFramesRef.current.push(f);
+    if (rawFramesRef.current.length > MAX_FRAMES) rawFramesRef.current.splice(0, MAX_FRAMES / 2);
+    const fit = calibrationFitRef.current;
+    if (fit && f.x !== null && f.y !== null) {
+      const point = applyCalibration(fit, { x: f.x / window.innerWidth, y: f.y / window.innerHeight });
+      f = { ...f, x: point.x * window.innerWidth, y: point.y * window.innerHeight };
+    }
     const frames = framesRef.current;
     frames.push(f);
     if (frames.length > MAX_FRAMES) frames.splice(0, MAX_FRAMES / 2);
@@ -186,10 +205,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   async function start() {
     setError(null);
-    const geometryOk = Number(widthCm) > 0 && Number(distanceCm) > 0;
+    const geometryOk = Number.isFinite(screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height))
+      && Number.isFinite(Number(distanceCm)) && Number(distanceCm) >= 10 && Number(distanceCm) <= 200;
     if (!study && !participant.trim()) return setError("Escribe un código para la persona (por ejemplo P01). No uses nombres.");
     if (study && !consent) return setError("Debes aceptar el uso de la cámara y el almacenamiento de coordenadas de mirada para participar.");
-    if (!geometryOk) return setError("El ancho de pantalla y la distancia deben ser números positivos.");
+    if (!geometryOk) return setError("Indica una diagonal entre 3 y 100 pulgadas y una distancia entre 10 y 200 cm.");
 
     setStage("loading");
     try {
@@ -206,6 +226,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       const engine = fake ? (await import("./engine.fake")).createFakeEngine() : createWebEyeTrackEngine();
       engineRef.current = engine;
       framesRef.current = [];
+      rawFramesRef.current = [];
+      calibrationFitRef.current = null;
       const video = videoRef.current;
       if (!video) throw new EngineError("No se encontró el elemento de video.", "camera-error");
       const { readyMs } = await engine.start(video, onFrame);
@@ -220,6 +242,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }
 
   function startCalibration() {
+    runIdRef.current++;
+    calibrationFitRef.current = null;
+    calibrationPairsRef.current = [];
+    setSession(null);
+    calibrationViewportRef.current = { width: window.innerWidth, height: window.innerHeight };
     setError(null);
     const points = buildCalibrationPoints(passes);
     setCalibPoints(points);
@@ -239,12 +266,39 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }, [stage, calibIndex]);
   const dotActive = stage === "calibration" && armedIndex === calibIndex;
 
-  function onCalibrationDot() {
+  async function onCalibrationDot() {
+    setError(null);
     const now = performance.now();
     if (now - lastClickRef.current < 1000) return;
     lastClickRef.current = now;
+    setArmedIndex(-1);
+    const runId = runIdRef.current;
+    await sleep(800);
+    if (runId !== runIdRef.current) return;
+    const viewport = calibrationViewportRef.current;
+    if (window.innerWidth !== viewport.width || window.innerHeight !== viewport.height) {
+      setError("La ventana cambió de tamaño. Repite la calibración con la ventana estable.");
+      setStage("position");
+      return;
+    }
+    const gaze = fixationMedian(rawFramesRef.current.filter((f) => f.t >= now + 200 && f.t <= now + 800
+      && f.x !== null && f.y !== null && Number.isFinite(f.x) && Number.isFinite(f.y))
+      .map((f) => ({ x: f.x! / viewport.width, y: f.y! / viewport.height })));
+    if (!gaze) {
+      setError("No se detectaron suficientes lecturas. Mira el punto y vuelve a pulsarlo.");
+      setArmedIndex(calibIndex);
+      return;
+    }
+    calibrationPairsRef.current.push({ gaze, target: { x: calibPoints[calibIndex].x / viewport.width, y: calibPoints[calibIndex].y / viewport.height } });
     calibClicksRef.current++;
     if (calibIndex + 1 >= calibPoints.length) {
+      try {
+        calibrationFitRef.current = fitCalibration(calibrationPairsRef.current);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "No se pudo calibrar la mirada.");
+        setStage("position");
+        return;
+      }
       calibDurationRef.current = now - calibStartRef.current;
       setCountdown(COUNTDOWN_S);
       setStage("countdown");
@@ -254,6 +308,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }
 
   const runValidation = useCallback(async () => {
+    if (window.innerWidth !== calibrationViewportRef.current.width || window.innerHeight !== calibrationViewportRef.current.height) {
+      setError("La ventana cambió desde la calibración. Repite la calibración con el tamaño actual.");
+      setStage("position");
+      return;
+    }
     const runId = ++runIdRef.current;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -286,7 +345,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         device,
         glasses,
         lighting,
-        geometry: { screenWidthPx: window.screen.width, screenWidthCm: Number(widthCm), distanceCm: Number(distanceCm) },
+        geometry: { screenWidthPx: window.screen.width, screenWidthCm: screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height), distanceCm: Number(distanceCm), diagonalInches: Number(inches), screenFormat },
         viewport: { width: vw, height: vh },
         environment: {
           userAgent: navigator.userAgent,
@@ -297,16 +356,20 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         },
         engineId: engineRef.current?.id ?? "desconocido",
         readyMs: readyMsRef.current,
-        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current) },
+        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current), layout: "v3-affine-fixations", pairs: calibrationPairsRef.current },
         validation: { results, stream: frameStats(framesRef.current, startedAt, endedAt), durationMs: Math.round(endedAt - startedAt) },
         createdAt: new Date(),
       }),
     );
     setStage("results");
-  }, [participant, device, glasses, lighting, widthCm, distanceCm, passes]);
+  }, [participant, device, glasses, lighting, inches, screenFormat, distanceCm, passes]);
 
   async function startStudy() {
     if (!study || !session || studyBusy) return;
+    if (!session.verdict.pass) return setError("Recalibra antes de iniciar: la medición no alcanzó la calidad necesaria.");
+    if (window.innerWidth !== session.viewport.width || window.innerHeight !== session.viewport.height) {
+      return setError("La ventana cambió desde la calibración. Recalibra antes de iniciar.");
+    }
     if (!study.preview && session.engineId !== "webeyetrack@0.0.2") {
       setError("La vista de prueba no puede enviar lecturas a un estudio real. Abre la liga sin el simulador.");
       return;
@@ -438,7 +501,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   function changeDevice(next: DeviceType) {
     setDevice(next);
-    setWidthCm(PRESETS[next].widthCm);
+    setInches("");
+    setScreenFormat("auto");
     setDistanceCm(PRESETS[next].distanceCm);
   }
 
@@ -529,13 +593,24 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Ancho de la pantalla (cm)" hint="Físico, en la orientación actual. Mídelo con regla.">
-                <Input type="number" inputMode="decimal" step="0.1" min="1" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} />
+              <Field label="Tamaño de pantalla (pulgadas)" hint="Diagonal del monitor que estás usando, por ejemplo 27 o 34. No el tamaño de la ventana.">
+                <Input type="number" inputMode="decimal" step="0.1" min="3" max="100" placeholder={PRESETS[device].inches} value={inches} onChange={(e) => setInches(e.target.value)} />
               </Field>
               <Field label="Distancia a los ojos (cm)" hint="Aproximada, con la postura de uso normal.">
                 <Input type="number" inputMode="decimal" step="1" min="10" value={distanceCm} onChange={(e) => setDistanceCm(e.target.value)} />
               </Field>
             </div>
+
+            <Field label="Formato de pantalla" hint="Selecciona ultrawide si corresponde. El modo automático usa la proporción de la pantalla completa.">
+              <select className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
+                <option value="auto">No ultrawide · detectar formato</option>
+                <option value="16:9">Estándar 16:9</option>
+                <option value="16:10">Estándar 16:10</option>
+                <option value="4:3">Estándar 4:3</option>
+                <option value="21:9">Ultrawide 21:9</option>
+                <option value="32:9">Super ultrawide 32:9</option>
+              </select>
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Iluminación">
@@ -609,8 +684,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         <div className="fixed inset-0 z-50 touch-manipulation bg-background select-none">
           <p className="absolute top-4 right-0 left-0 px-4 text-center text-sm text-muted" role="status">
             Punto {calibIndex + 1} de {calibPoints.length}. Mira el punto y, cuando se ponga verde, tócalo o haz clic sin
-            dejar de mirarlo.
+            dejar de mirarlo. Mantén la mirada hasta que cambie de posición.
           </p>
+          {error ? <p role="alert" className="absolute right-4 bottom-4 left-4 text-center text-sm text-danger">{error}</p> : null}
           <button
             type="button"
             aria-label={`Punto de calibración ${calibIndex + 1}`}
@@ -684,10 +760,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <p className="text-sm">
                 {session.verdict.pass
                   ? "La precisión alcanzó el criterio de esta prueba. Ya puedes mirar las piezas."
-                  : "La calibración tuvo precisión baja. Puedes repetirla para mejorar la calidad; si continúas, el investigador verá esta advertencia junto con tus datos."}
+                  : "La calibración tuvo precisión baja. Repite la calibración antes de mirar las piezas."}
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button onClick={() => void startStudy()} disabled={studyBusy}>{studyBusy ? "Preparando piezas…" : "Comenzar presentación"}</Button>
+                <Button onClick={() => void startStudy()} disabled={studyBusy || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : "Comenzar presentación"}</Button>
                 <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
               </div>
               {study.preview ? <p className="text-xs text-muted">Vista previa: no se guardarán datos.</p> : null}

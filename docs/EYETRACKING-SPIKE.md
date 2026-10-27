@@ -2,6 +2,16 @@
 
 Rama: `spike/eyetracking` · Ruta: `/lab/eyetracking` · Decisión de origen: [`EYETRACKING-DECISION.md`](EYETRACKING-DECISION.md)
 
+## Calibración actual: v3-affine-fixations
+
+El archivo de una prueba real del 27 de octubre mostró ocho objetivos con mirada constante en la esquina superior derecha: error mediano 36.5°, 36 lecturas/s y dispersión cero. Esto confirma saturación de la salida, aunque el JSON por sí solo no identifica qué paso interno de la librería la produjo.
+
+La versión actual bloquea todos los clics dirigidos al ajuste automático de WebEyeTrack y conserva el modelo base. Después de pulsar cada punto, mantiene el objetivo 800 ms y toma la mediana de las lecturas de los últimos 600 ms. Ajusta una transformación afín regularizada usando las 9 o 18 fijaciones completas, detecta entradas constantes o sin independencia entre ejes y valida en los ocho puntos independientes. La transformación no recorta resultados a los bordes. El JSON incluye las parejas crudas de calibración para diagnosticar futuras pruebas. No se permiten piezas de estudio si la validación falla.
+
+Se pide diagonal en pulgadas y formato de la pantalla completa, con opciones ultrawide 21:9 y 32:9. El ancho físico se calcula con esa diagonal y la proporción seleccionada (o detectada con `screen.width/screen.height`), respetando orientación vertical. El tamaño físico sólo interviene en las métricas angulares; no arregla una predicción fija.
+
+Las observaciones posteriores sobre `v2-corners-last` y los últimos seis clics describen el comportamiento histórico de la librería. Se necesita repetir la prueba real para medir el resultado de v3; las pruebas con simulador sólo verifican el flujo y la matemática.
+
 Objetivo: medir, con personas y dispositivos reales, si WebEyeTrack cumple los criterios de salida (error mediano ≤ ~4° en laptop y ≤ ~6° en celular/tableta tras calibrar, ≥ 15 lecturas/s, funciona en Safari iOS) antes de construir el módulo. La página no guarda nada en servidor: cada sesión se descarga como JSON.
 
 ## Cómo probar

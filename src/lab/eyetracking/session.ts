@@ -12,9 +12,10 @@ import {
   type TargetResult,
   type ViewportSpan,
 } from "./metrics";
+import type { CalibrationPair } from "./calibration";
 
 /** Disposición de calibración usada: permite comparar sesiones hechas antes y después de cambiarla. */
-export const CALIBRATION_LAYOUT = "v2-corners-last";
+export const CALIBRATION_LAYOUT = "v3-affine-fixations";
 
 export type Lighting = "buena" | "media" | "mala";
 
@@ -36,7 +37,7 @@ export interface SessionInput {
   engineId: string;
   /** Tiempo desde «iniciar» hasta la primera lectura (descarga de modelos + cámara), en ms. */
   readyMs: number;
-  calibration: { passes: number; clicks: number; durationMs: number; layout?: string };
+  calibration: { passes: number; clicks: number; durationMs: number; layout?: string; pairs?: CalibrationPair[] };
   validation: { results: TargetResult[]; stream: FrameStats; durationMs: number };
   createdAt: Date;
 }
@@ -75,6 +76,17 @@ export interface ExportedSession extends SessionRecord {
 export function buildSession(input: SessionInput): ExportedSession {
   const summary = summarize(input.validation.results, input.geometry);
   const measured = input.validation.results.filter((r) => r.gaze !== null);
+  const quality = verdict(summary, input.validation.stream.fps, input.device);
+  for (const axis of ["x", "y"] as const) {
+    const targets = measured.map((r) => r.target[axis]);
+    const gazes = measured.map((r) => r.gaze![axis]);
+    const span = axis === "x" ? input.viewport.width : input.viewport.height;
+    if (measured.length >= 3 && Math.max(...targets) - Math.min(...targets) > span * 0.3
+      && Math.max(...gazes) - Math.min(...gazes) < span * 0.02) {
+      quality.pass = false;
+      quality.reasons.push(`La mirada quedó fija en el eje ${axis === "x" ? "horizontal" : "vertical"}. Repite la calibración.`);
+    }
+  }
   const absErr = (axis: "x" | "y", size: number) =>
     measured.length ? median(measured.map((r) => Math.abs(r.gaze![axis] - r.target[axis]))) / size : null;
   return {
@@ -99,7 +111,7 @@ export function buildSession(input: SessionInput): ExportedSession {
     },
     summary,
     fps: input.validation.stream.fps,
-    verdict: verdict(summary, input.validation.stream.fps, input.device),
+    verdict: quality,
     validation: {
       durationMs: input.validation.durationMs,
       targets: input.validation.results,

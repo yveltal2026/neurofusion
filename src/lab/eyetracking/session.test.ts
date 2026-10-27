@@ -46,7 +46,7 @@ describe("buildSession", () => {
     expect(s.summary.medianErrorDeg).toBeGreaterThan(1);
     expect(s.summary.medianErrorDeg).toBeLessThan(1.5);
     expect(s.verdict.pass).toBe(true);
-    expect(s.calibration.layout).toBe("v2-corners-last");
+    expect(s.calibration.layout).toBe("v3-affine-fixations");
   });
 
   it("diagnóstico: ganancia por eje, error normalizado y área de prueba", () => {
@@ -67,6 +67,8 @@ describe("buildSession", () => {
     expect(s.diagnostics.x.gain).toBeCloseTo(1);
     expect(s.diagnostics.x.biasPx).toBeCloseTo(20);
     expect(s.diagnostics.y.gain).toBeCloseTo(0);
+    expect(s.verdict.pass).toBe(false);
+    expect(s.verdict.reasons.join(" ")).toContain("quedó fija");
     expect(s.diagnostics.normalizedErrorX).toBeCloseTo(20 / 1440);
     expect(s.diagnostics.span.halfAngleXDeg).toBeGreaterThan(10);
   });

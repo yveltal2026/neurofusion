@@ -25,6 +25,8 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 3. El video se procesa en el dispositivo. El servidor guarda coordenadas normalizadas dentro de cada imagen, tiempos y calidad de calibración en `eye_tracking_runs`; no recibe ni guarda video. El investigador ve mapas agregados de sesiones con calibración aceptable, puede excluir sesiones y descargar las lecturas en CSV desde **Miradas**.
 4. El motor WebEyeTrack descarga recursos de `cdn.jsdelivr.net` y `storage.googleapis.com`; ambos dominios deben estar disponibles en los dispositivos participantes. Aplica también `20261027000000_visual_eyetracking.sql` antes de usar el flujo. La precisión y compatibilidad con Safari/iOS deben medirse en dispositivos reales siguiendo [`docs/EYETRACKING-SPIKE.md`](docs/EYETRACKING-SPIKE.md); el simulador `?engine=fake` comprueba la interfaz, no la precisión.
 
+La configuración pide la diagonal física en pulgadas y el formato del monitor (incluye ultrawide 21:9 y 32:9); calcula el ancho para estimar el error angular. La calibración `v3-affine-fixations` conserva todas las fijaciones, usa un ajuste afín regularizado y evita la adaptación automática por clics de WebEyeTrack. Mantén la mirada sobre cada punto hasta que cambie. Una salida fija, una interrupción o una validación insuficiente exige repetir la calibración antes de iniciar las piezas. La precisión de esta versión debe confirmarse con una nueva sesión real.
+
 ## Principios de diseño
 
 - **Matemática determinista y testeada.** Bloques, contrabalanceo, D-score, validez y estadísticos viven en `src/tools/iat/engine` (código puro, sin I/O). La IA **sólo redacta** sobre agregados ya calculados y **nunca recibe filas crudas ni datos personales**.
