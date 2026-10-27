@@ -13,21 +13,21 @@ import {
   orderWarnings,
   removeStep,
   suggestOrder,
+  TOOL_LABEL,
   toggleStep,
   type BatteryStep,
   type BatteryToolType,
 } from "../engine";
 
-export const TOOL_LABEL: Record<BatteryToolType, string> = {
-  iat: "IAT",
-  survey: "Encuesta",
-};
+export { TOOL_LABEL };
 
 /** Estudio del proyecto que se puede agregar como paso. */
 export interface AvailableStudy {
   studyId: string;
   toolType: BatteryToolType;
   name: string;
+  /** Sólo en los estudios de imagen: cuántas imágenes verá el participante. */
+  pieces?: number;
 }
 
 function IconButton({
@@ -78,7 +78,9 @@ export function StepsEditor({
   const free = available.filter(
     (a) => !steps.some((s) => s.studyId === a.studyId),
   );
-  const selected = free.find((a) => a.studyId === choice) ?? free[0];
+  const selectable = free.filter((a) => a.pieces !== 0);
+  const selected =
+    selectable.find((a) => a.studyId === choice) ?? selectable[0];
 
   function add() {
     if (!selected) return;
@@ -174,14 +176,27 @@ export function StepsEditor({
               className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               value={selected?.studyId ?? ""}
               onChange={(e) => setChoice(e.target.value)}
-              disabled={free.length === 0}
+              disabled={selectable.length === 0}
             >
-              {free.length === 0 ? (
-                <option value="">No hay más estudios en este proyecto</option>
+              {selectable.length === 0 ? (
+                <option value="">
+                  {free.length === 0
+                    ? "No hay más estudios en este proyecto"
+                    : "Los estudios de imagen necesitan imágenes primero"}
+                </option>
               ) : null}
               {free.map((a) => (
-                <option key={a.studyId} value={a.studyId}>
+                <option
+                  key={a.studyId}
+                  value={a.studyId}
+                  disabled={a.pieces === 0}
+                >
                   {TOOL_LABEL[a.toolType]} · {a.name}
+                  {a.pieces === undefined
+                    ? ""
+                    : a.pieces === 0
+                      ? " (sin imágenes: súbelas primero)"
+                      : ` (${a.pieces} ${a.pieces === 1 ? "imagen" : "imágenes"})`}
                 </option>
               ))}
             </select>
@@ -211,9 +226,9 @@ export function StepsEditor({
 
       {!readOnly && steps.length > 1 ? (
         <p className="text-xs text-muted">
-          Orden sugerido: medidas de exposición → implícitas (IAT) → explícitas
-          (encuestas). Puedes cambiarlo u omitir pasos según el objetivo del
-          estudio.
+          Orden sugerido: exposición (imágenes) → medidas implícitas (IAT y
+          variantes) → explícitas (encuestas). Puedes cambiarlo u omitir pasos
+          según el objetivo del estudio.
         </p>
       ) : null}
     </div>

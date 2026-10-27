@@ -4,6 +4,12 @@ import type { ApiErrorCode } from "@/lib/participant-api";
 import { iatConfigSchema, type IatConfig } from "@/tools/iat/config";
 import { surveyConfigSchema, type SurveyConfig } from "@/tools/survey/engine";
 import {
+  variantConfigSchema,
+  type VariantConfig,
+} from "@/tools/variants/config";
+import { visualConfigSchema } from "@/tools/visual/config";
+import { assetUrls } from "@/tools/visual/results";
+import {
   isBatteryComplete,
   stepProgress,
   type BatteryConfig,
@@ -77,13 +83,30 @@ export async function startBatterySession(
   }
 }
 
+/** Una imagen de un paso de exposición: URL firmada de corta vida (la imagen es privada). */
+export interface ExposurePiece {
+  id: string;
+  title: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
 /**
- * Un paso listo para correr: qué herramienta es, con qué liga se abre y su configuración (la misma
- * que el participante ve al abrir esa liga por separado).
+ * Un paso listo para correr: qué herramienta es y lo que necesita para abrirse. IAT, variantes y
+ * encuesta traen su liga y su configuración (las mismas que el participante ve al abrir esa liga por
+ * separado). El análisis de imagen es un paso de exposición: no tiene liga propia, trae las piezas.
  */
 export type StepLink =
   | { studyId: string; tool: "iat"; token: string; config: IatConfig }
-  | { studyId: string; tool: "survey"; token: string; config: SurveyConfig };
+  | { studyId: string; tool: "survey"; token: string; config: SurveyConfig }
+  | {
+      studyId: string;
+      tool: "iat_variant";
+      token: string;
+      config: VariantConfig;
+    }
+  | { studyId: string; tool: "visual"; pieces: ExposurePiece[] };
 
 export interface BatteryProgress {
   /** Estado de la sesión de batería. */
@@ -103,6 +126,45 @@ type StepLinksResult =
 const isStringArray = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
 
+/** Piezas de un estudio de imagen, en su orden, con URL firmada de la versión ligera. */
+async function loadExposurePieces(
+  admin: SupabaseClient,
+  studyId: string,
+): Promise<ExposurePiece[] | null> {
+  const { data, error } = await admin
+    .from("visual_assets")
+    .select("id, title, width, height, storage_path")
+    .eq("study_id", studyId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) return null;
+  const rows = (data ?? []) as {
+    id: string;
+    title: string;
+    width: number;
+    height: number;
+    storage_path: string;
+  }[];
+  const urls = await assetUrls(
+    admin,
+    rows.map((r) => r.storage_path),
+    "view",
+  );
+  return rows.flatMap((r) =>
+    urls[r.storage_path]
+      ? [
+          {
+            id: r.id,
+            title: r.title,
+            url: urls[r.storage_path]!,
+            width: r.width,
+            height: r.height,
+          },
+        ]
+      : [],
+  );
+}
+
 /** Pasos (en el orden dado) con su liga y su configuración validada. */
 export async function loadStepLinks(
   admin: SupabaseClient,
@@ -119,7 +181,18 @@ export async function loadStepLinks(
   const steps: StepLink[] = [];
   for (const studyId of order) {
     const s = byId.get(studyId);
-    if (!s || typeof s.access_token !== "string")
+    if (!s) return { ok: false, code: "server_error" };
+    // El análisis de imagen no tiene liga propia: su paso se abre por la batería.
+    if (s.tool_type === "visual") {
+      const config = visualConfigSchema.safeParse(s.config);
+      if (!config.success || config.data.mode !== "pieces")
+        return { ok: false, code: "server_error" };
+      const pieces = await loadExposurePieces(admin, studyId);
+      if (!pieces) return { ok: false, code: "server_error" };
+      steps.push({ studyId, tool: "visual", pieces });
+      continue;
+    }
+    if (typeof s.access_token !== "string")
       return { ok: false, code: "server_error" };
     if (s.tool_type === "iat") {
       const config = iatConfigSchema.safeParse(s.config);
@@ -127,6 +200,15 @@ export async function loadStepLinks(
       steps.push({
         studyId,
         tool: "iat",
+        token: s.access_token,
+        config: config.data,
+      });
+    } else if (s.tool_type === "iat_variant") {
+      const config = variantConfigSchema.safeParse(s.config);
+      if (!config.success) return { ok: false, code: "server_error" };
+      steps.push({
+        studyId,
+        tool: "iat_variant",
         token: s.access_token,
         config: config.data,
       });
@@ -241,4 +323,101 @@ export async function completeBatterySession(
     default:
       return { ok: false, code: "server_error" };
   }
+}
+
+// ----------------------------------------------------------------- pasos de exposición
+
+export type ExposureResult<T = object> =
+  ({ ok: true } & T) | { ok: false; code: ApiErrorCode };
+
+/** Traduce el resultado de las funciones de exposición de la base a un código público. */
+function exposureOutcomeToCode(
+  outcome: string | null | undefined,
+): ApiErrorCode | null {
+  switch (outcome) {
+    case "ok":
+      return null;
+    case "out_of_order":
+      return "out_of_order";
+    case "battery_session_closed":
+      return "closed";
+    case "study_not_in_battery":
+    case "not_exposure":
+      return "invalid_data";
+    case "session_not_found":
+    case "not_found":
+      return "not_found";
+    default:
+      return "server_error";
+  }
+}
+
+/** La sesión de batería debe existir y pertenecer a ESTA batería (el token). */
+async function batterySessionBelongs(
+  admin: SupabaseClient,
+  batteryId: string,
+  batterySessionId: string,
+): Promise<ApiErrorCode | null> {
+  const { data, error } = await admin
+    .from("battery_sessions")
+    .select("id, battery_id")
+    .eq("id", batterySessionId)
+    .maybeSingle();
+  if (error) return "server_error";
+  return !data || data.battery_id !== batteryId ? "not_found" : null;
+}
+
+/**
+ * Abre (o retoma) la sesión de un paso de exposición. La base de datos valida que el estudio sea un
+ * paso de esa sesión y que se respete el orden; recargar la página devuelve la misma sesión.
+ */
+export async function startExposureStep(
+  admin: SupabaseClient,
+  batteryId: string,
+  batterySessionId: string,
+  studyId: string,
+): Promise<ExposureResult<{ sessionId: string }>> {
+  const belongs = await batterySessionBelongs(
+    admin,
+    batteryId,
+    batterySessionId,
+  );
+  if (belongs) return { ok: false, code: belongs };
+
+  const { data, error } = await admin.rpc("start_battery_exposure", {
+    p_battery_session: batterySessionId,
+    p_study: studyId,
+  });
+  if (error) return { ok: false, code: "server_error" };
+  const row = (
+    data as { outcome: string; new_session_id: string | null }[] | null
+  )?.[0];
+  const code = exposureOutcomeToCode(row?.outcome);
+  if (code) return { ok: false, code };
+  return row?.new_session_id
+    ? { ok: true, sessionId: row.new_session_id }
+    : { ok: false, code: "server_error" };
+}
+
+/** Cierra la sesión de un paso de exposición (idempotente). */
+export async function completeExposureStep(
+  admin: SupabaseClient,
+  batteryId: string,
+  batterySessionId: string,
+  exposureSessionId: string,
+): Promise<ExposureResult> {
+  const belongs = await batterySessionBelongs(
+    admin,
+    batteryId,
+    batterySessionId,
+  );
+  if (belongs) return { ok: false, code: belongs };
+
+  const { data, error } = await admin.rpc("complete_battery_exposure", {
+    p_battery_session: batterySessionId,
+    p_session: exposureSessionId,
+  });
+  if (error) return { ok: false, code: "server_error" };
+  const code = exposureOutcomeToCode(typeof data === "string" ? data : null);
+  return code ? { ok: false, code } : { ok: true };
 }

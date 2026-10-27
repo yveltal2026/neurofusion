@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -35,6 +36,12 @@ vi.mock("@/tools/iat/runner/api", async (importOriginal) => {
       })) as typeof actual.withRetry,
   };
 });
+
+// Sin cuenta regresiva en las pruebas: el tiempo mínimo de la exposición se prueba en ExposureRunner.test.tsx.
+vi.mock("../engine", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../engine")>()),
+  EXPOSURE_SECONDS: 0,
+}));
 
 const TOKEN = "b".repeat(43);
 const BATTERY_SESSION = "22222222-2222-4222-8222-222222222222";
@@ -85,6 +92,20 @@ const stepB: StepLink = {
   config: surveyOf("Encuesta B", "Pregunta del paso dos"),
 };
 
+const exposureStep: StepLink = {
+  studyId: "study-x",
+  tool: "visual",
+  pieces: [
+    {
+      id: "p1",
+      title: "Nombre interno",
+      url: "https://signed.test/p1.webp",
+      width: 800,
+      height: 600,
+    },
+  ],
+};
+
 type ChildSession = {
   id: string;
   studyId: string;
@@ -109,6 +130,7 @@ function createFakeServer(
     answers: {} as Record<string, unknown>,
     progressFailures: opts.progressFailures ?? 0,
     linkedStarts: 0,
+    exposureStarts: 0,
   };
   for (const studyId of opts.completed ?? [])
     state.sessions.push({
@@ -165,6 +187,41 @@ function createFakeServer(
       }
       return json(200, { ok: true, ...progress() });
     }
+    if (path === `/api/b/${TOKEN}/exposure/start`) {
+      const index = steps.findIndex((s) => s.studyId === body.studyId);
+      if (index < 0 || body.sessionId !== BATTERY_SESSION)
+        return fail("invalid_data", 422);
+      const previousDone = steps
+        .slice(0, index)
+        .every((s) =>
+          state.sessions.some(
+            (c) => c.studyId === s.studyId && c.status === "completed",
+          ),
+        );
+      if (!previousDone) return fail("out_of_order");
+      let session = state.sessions.find(
+        (c) => c.studyId === body.studyId && c.battery === BATTERY_SESSION,
+      );
+      if (!session) {
+        session = {
+          id: `exp-${state.sessions.length + 1}`,
+          studyId: body.studyId,
+          status: "started",
+          battery: BATTERY_SESSION,
+        };
+        state.sessions.push(session);
+      }
+      state.exposureStarts++;
+      return json(200, { ok: true, sessionId: session.id });
+    }
+    if (path === `/api/b/${TOKEN}/exposure/complete`) {
+      const session = state.sessions.find(
+        (c) => c.id === body.exposureSessionId && c.battery === body.sessionId,
+      );
+      if (!session) return fail("not_found", 404);
+      session.status = "completed";
+      return json(200, { ok: true });
+    }
     if (path === `/api/b/${TOKEN}/complete`) {
       if (!progress().complete) return fail("incomplete");
       state.batteryCompleted = true;
@@ -173,8 +230,8 @@ function createFakeServer(
 
     const child = path.match(/^\/api\/s\/([^/]+)\/survey\/(start|submit)$/);
     if (child) {
-      const step = steps.find((s) => s.token === child[1]);
-      if (!step) return fail("invalid_link", 404);
+      const step = steps.find((s) => "token" in s && s.token === child[1]);
+      if (!step || step.tool !== "survey") return fail("invalid_link", 404);
       if (child[2] === "start") {
         if (body.batterySessionId !== BATTERY_SESSION)
           return fail("invalid_data", 422);
@@ -197,9 +254,7 @@ function createFakeServer(
         state.linkedStarts++;
         return json(200, { ok: true, sessionId: id });
       }
-      const parsed = buildAnswerSchema(step.config as SurveyConfig).safeParse(
-        body.answers,
-      );
+      const parsed = buildAnswerSchema(step.config).safeParse(body.answers);
       if (!parsed.success) return fail("invalid_data", 422);
       const session = state.sessions.find((c) => c.id === body.sessionId);
       if (!session) return fail("not_found", 404);
@@ -304,6 +359,66 @@ describe("BatteryRunner · flujo completo", () => {
     await consentAndStart(user);
     await screen.findByRole("group", { name: /Pregunta del paso uno/ });
     expect(screen.queryByLabelText(/Paso \d de \d/)).toBeNull();
+  });
+});
+
+describe("BatteryRunner · paso de exposición (imagen con IA)", () => {
+  it("muestra las imágenes, registra la exposición y sigue con la siguiente prueba", async () => {
+    const { server, user } = setup(
+      createFakeServer({ steps: [exposureStep, stepA] }),
+    );
+    await consentAndStart(user);
+
+    const img = await screen.findByRole("img");
+    expect(img.getAttribute("src")).toBe("https://signed.test/p1.webp");
+    expect(screen.getByLabelText("Paso 1 de 2")).toBeTruthy();
+    // El participante no ve el nombre interno de la pieza.
+    expect(document.body.textContent).not.toContain("Nombre interno");
+    fireEvent.load(img);
+    await user.click(await screen.findByRole("button", { name: "Continuar" }));
+
+    // Siguiente paso: la encuesta, que sólo se abre porque la exposición ya quedó completada.
+    await answerStep(user, /Pregunta del paso uno/, true);
+    await screen.findByTestId("thanks");
+    expect(server.state.exposureStarts).toBe(1);
+    expect(
+      server.state.sessions.map((s) => [s.studyId, s.status, s.battery]),
+    ).toEqual([
+      ["study-x", "completed", BATTERY_SESSION],
+      ["study-a", "completed", BATTERY_SESSION],
+    ]);
+    expect(server.state.batteryCompleted).toBe(true);
+  });
+
+  it("si recarga con la exposición hecha, retoma en el paso siguiente sin repetirla", async () => {
+    const { server, user } = setup(
+      createFakeServer({
+        steps: [exposureStep, stepA],
+        completed: ["study-x"],
+      }),
+    );
+    await consentAndStart(user);
+    expect(
+      await screen.findByRole("group", { name: /Pregunta del paso uno/ }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(server.state.exposureStarts).toBe(0);
+  });
+
+  it("vista previa: recorre la exposición sin guardar nada", async () => {
+    const { fetchSpy, user } = setup(
+      createFakeServer({ steps: [exposureStep, stepA] }),
+      true,
+      [exposureStep, stepA],
+    );
+    await consentAndStart(user);
+    const img = await screen.findByRole("img");
+    fireEvent.load(img);
+    await user.click(await screen.findByRole("button", { name: "Continuar" }));
+    expect(
+      await screen.findByRole("group", { name: /Pregunta del paso uno/ }),
+    ).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

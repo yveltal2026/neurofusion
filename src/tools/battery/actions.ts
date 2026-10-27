@@ -7,6 +7,7 @@ import type { SettingsState } from "@/app/(app)/studies/[id]/actions";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
 import { batteryConfigSchema, MAX_STEPS, validateComposition } from "./engine";
+import { exposureStepsWithoutPieces } from "./load";
 
 const idSchema = z.string().uuid();
 
@@ -27,6 +28,9 @@ function dbMessage(
 const toRpcSteps = (steps: readonly StepInput[]) =>
   steps.map((s) => ({ study_id: s.studyId, enabled: s.enabled }));
 
+const noPiecesMessage = (names: string[]) =>
+  `«${names.join("», «")}» no tiene imágenes que mostrar. Súbelas en ese estudio antes de usarlo como paso.`;
+
 export interface BatteryActionResult {
   error?: string;
   saved?: boolean;
@@ -44,7 +48,7 @@ const createSchema = z.object({
 /**
  * Crea la batería y la publica con su liga mágica. La validación del servidor es autoritativa: el
  * estado, el token y la herramienta los fija el servidor, y la base de datos valida que cada paso sea
- * un IAT o una encuesta del mismo proyecto.
+ * un estudio con participantes (IAT, variante, encuesta) o de imagen con IA del mismo proyecto.
  */
 export async function createBattery(
   raw: unknown,
@@ -62,6 +66,8 @@ export async function createBattery(
   if (problems.length) return { error: problems[0] };
 
   const { supabase } = await requireUser();
+  const empty = await exposureStepsWithoutPieces(supabase, steps);
+  if (empty.length) return { error: noPiecesMessage(empty) };
   const { data, error } = await supabase
     .from("batteries")
     .insert({
@@ -113,6 +119,8 @@ export async function saveBatterySteps(
   if (problems.length) return { error: problems[0] };
 
   const { supabase } = await requireUser();
+  const empty = await exposureStepsWithoutPieces(supabase, steps);
+  if (empty.length) return { error: noPiecesMessage(empty) };
   const { error } = await supabase.rpc("save_battery_steps", {
     p_battery: batteryId,
     p_steps: toRpcSteps(steps),

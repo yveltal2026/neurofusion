@@ -18,6 +18,7 @@ function createFakeServer(config: VariantConfig, opts: { checkError?: string; st
     result: null as Record<string, unknown> | null,
     calls: [] as string[],
     device: null as unknown,
+    batterySessionId: undefined as unknown,
     lastError: null as unknown,
   };
   const admin = {
@@ -53,6 +54,7 @@ function createFakeServer(config: VariantConfig, opts: { checkError?: string; st
       if (opts.startError) return err(opts.startError, 409);
       if (body.consent !== true) return err("invalid_data", 422);
       state.device = body.device;
+      state.batterySessionId = body.batterySessionId;
       state.status = "started";
       return json({ ok: true, sessionId: SID });
     }
@@ -256,6 +258,63 @@ describe("VariantRunner · SC-IAT", () => {
     act(() => void fireEvent.pointerDown(screen.getByTestId(`touch-${first.correctSide}`), { isPrimary: true }));
     await tick(ITI + 20);
     expect(screen.getByTestId("stimulus").textContent).toBe(plan.blocks[0].trials[1].text);
+  });
+});
+
+describe("VariantRunner · como paso de una batería", () => {
+  it("arranca sola sin consentimiento, enlaza la sesión a la batería y avisa una sola vez al terminar", async () => {
+    const config = smallSc();
+    const server = createFakeServer(config);
+    vi.stubGlobal("fetch", vi.fn(server.fetchImpl));
+    const onComplete = vi.fn();
+    render(
+      <VariantRunner
+        token={TOKEN}
+        config={config}
+        preview={false}
+        embedded={{ batterySessionId: "bat-1", onComplete }}
+      />,
+    );
+    await tick(0);
+    // Sin bienvenida ni casilla de consentimiento: la batería ya lo pidió. No hay pre-chequeo propio.
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(server.state.calls).toEqual(["/start"]);
+    expect(server.state.batterySessionId).toBe("bat-1");
+
+    await click("Entendido, continuar");
+    const plan = buildPlan(config, SID) as Extract<VariantPlan, { variant: "sc_iat" }>;
+    for (const block of plan.blocks as ScBlock[]) {
+      await click("Comenzar");
+      for (let i = 0; i < block.trials.length; i++) {
+        await tick(i === 0 ? ITI_FIRST : ITI);
+        await tick(20);
+        await tick(700);
+        pressSide(block.trials[i].correctSide);
+      }
+    }
+    await tick(0);
+    expect(server.state.status).toBe("completed");
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    // En lugar de su pantalla de gracias muestra «Continuando…».
+    expect(screen.queryByTestId("thanks")).toBeNull();
+    expect(screen.getByText("Continuando…")).toBeTruthy();
+  });
+
+  it("un error al abrir la sesión muestra el mensaje y permite reintentar", async () => {
+    const config = smallSc();
+    const server = createFakeServer(config, { startError: "out_of_order" });
+    vi.stubGlobal("fetch", vi.fn(server.fetchImpl));
+    render(
+      <VariantRunner
+        token={TOKEN}
+        config={config}
+        preview={false}
+        embedded={{ batterySessionId: "bat-1", onComplete: vi.fn() }}
+      />,
+    );
+    await tick(0);
+    expect(screen.getByText("msg:out_of_order")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeTruthy();
   });
 });
 

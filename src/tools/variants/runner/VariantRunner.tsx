@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/icon-tile";
+import type { EmbeddedStep } from "@/lib/embedded-step";
 import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice, type DeviceInfo } from "@/tools/iat/runner/device";
 import { readableOn } from "@/tools/iat/runner/labels";
@@ -41,7 +42,18 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
 
 const newPreviewId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : "00000000-0000-4000-8000-000000000000");
 
-export function VariantRunner({ token, config, preview }: { token: string; config: VariantConfig; preview: boolean }) {
+export function VariantRunner({
+  token,
+  config,
+  preview,
+  embedded,
+}: {
+  token: string;
+  config: VariantConfig;
+  preview: boolean;
+  /** Si la variante corre como paso de una batería (sin consentimiento ni bienvenida propios). */
+  embedded?: EmbeddedStep;
+}) {
   const [stage, setStage] = useState<Stage>({ kind: "welcome" });
   const [consent, setConsent] = useState(false);
   const [device, setDevice] = useState<DeviceInfo | null>(null);
@@ -52,13 +64,15 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
   const [saveError, setSaveError] = useState<string | null>(null);
   const [doneTrials, setDoneTrials] = useState(0);
   const responsesRef = useRef<TrialResponse[]>([]);
+  const autoStartedRef = useRef(false);
+  const completedRef = useRef(false);
 
   const total = useMemo(() => (plan ? totalTrials(plan) : 0), [plan]);
   const minutes = useMemo(() => estimateVariantMinutes(config), [config]);
 
   // Pre-chequeo: avisa de inmediato si ya participó o el estudio cerró.
   useEffect(() => {
-    if (preview) return;
+    if (preview || embedded) return;
     let cancelled = false;
     variantApi.check(token).then((res) => {
       if (!cancelled && !res.ok && BLOCKING.includes(res.code)) setStage({ kind: "blocked", message: res.message });
@@ -66,7 +80,7 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
     return () => {
       cancelled = true;
     };
-  }, [token, preview]);
+  }, [token, preview, embedded]);
 
   // Bloquea el scroll mientras se responde.
   const running = stage.kind === "block";
@@ -102,7 +116,7 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
     setStartError(null);
     let id = newPreviewId();
     if (!preview) {
-      const res = await withRetry(() => variantApi.start(token, info), { retries: 2 });
+      const res = await withRetry(() => variantApi.start(token, info, embedded?.batterySessionId), { retries: 2 });
       if (!res.ok) {
         setStarting(false);
         if (BLOCKING.includes(res.code)) setStage({ kind: "blocked", message: res.message });
@@ -115,7 +129,21 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
     setPlan(buildPlan(config, id));
     setStarting(false);
     setStage(info.inputMode === "touch" ? { kind: "device-notice" } : { kind: "intro" });
-  }, [preview, token, config]);
+  }, [preview, token, config, embedded]);
+
+  // Como paso de una batería no hay bienvenida ni consentimiento propios: empieza sola.
+  useEffect(() => {
+    if (!embedded || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void start();
+  }, [embedded, start]);
+
+  // Como paso de una batería, avisa una sola vez al terminar (las respuestas ya se guardaron).
+  useEffect(() => {
+    if (stage.kind !== "thanks" || !embedded || completedRef.current) return;
+    completedRef.current = true;
+    embedded.onComplete();
+  }, [stage.kind, embedded]);
 
   const submit = useCallback(async () => {
     if (!plan || !sessionId) return;
@@ -152,7 +180,24 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
 
   let body: ReactNode = null;
 
-  if (stage.kind === "welcome") {
+  if (stage.kind === "welcome" && embedded) {
+    body = (
+      <Screen>
+        <div className="space-y-4 text-center">
+          {startError ? (
+            <>
+              <Alert tone="error">{startError}</Alert>
+              <Button onClick={() => void start()}>Reintentar</Button>
+            </>
+          ) : (
+            <p className="text-sm text-muted" role="status">
+              Preparando…
+            </p>
+          )}
+        </div>
+      </Screen>
+    );
+  } else if (stage.kind === "welcome") {
     body = (
       <Screen>
         <div className="space-y-6">
@@ -249,6 +294,14 @@ export function VariantRunner({ token, config, preview }: { token: string; confi
             </p>
           )}
         </div>
+      </Screen>
+    );
+  } else if (stage.kind === "thanks" && embedded) {
+    body = (
+      <Screen>
+        <p className="text-center text-sm text-muted" role="status">
+          Continuando…
+        </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {

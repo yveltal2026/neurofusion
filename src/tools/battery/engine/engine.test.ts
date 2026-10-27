@@ -6,6 +6,7 @@ import {
   DEFAULT_BATTERY_THANK_YOU,
   isBatteryComplete,
   isBatteryTool,
+  familyOf,
   isSuggestedOrder,
   moveStep,
   nextStep,
@@ -14,6 +15,7 @@ import {
   runOrder,
   stepProgress,
   suggestOrder,
+  TOOL_LABEL,
   toggleStep,
   validateComposition,
   MAX_STEPS,
@@ -30,6 +32,18 @@ const survey = (id: string, enabled = true): BatteryStep => ({
   studyId: id,
   toolType: "survey",
   name: `Encuesta ${id}`,
+  enabled,
+});
+const variant = (id: string, enabled = true): BatteryStep => ({
+  studyId: id,
+  toolType: "iat_variant",
+  name: `Variante ${id}`,
+  enabled,
+});
+const visual = (id: string, enabled = true): BatteryStep => ({
+  studyId: id,
+  toolType: "visual",
+  name: `Imagen ${id}`,
   enabled,
 });
 const ids = (steps: readonly BatteryStep[]) => steps.map((s) => s.studyId);
@@ -163,12 +177,62 @@ describe("validación de la composición (sí bloquea)", () => {
     expect(validateComposition(many).join(" ")).toContain(`${MAX_STEPS}`);
   });
 
-  it("sólo el IAT y la encuesta pueden ser pasos", () => {
-    expect(isBatteryTool("iat")).toBe(true);
-    expect(isBatteryTool("survey")).toBe(true);
+  it("pueden ser pasos el IAT, sus variantes, la encuesta y la imagen con IA; el SEO no", () => {
+    for (const tool of ["iat", "iat_variant", "survey", "visual"])
+      expect(isBatteryTool(tool)).toBe(true);
     expect(isBatteryTool("seo")).toBe(false);
-    expect(isBatteryTool("visual")).toBe(false);
     expect(isBatteryTool("")).toBe(false);
+  });
+});
+
+describe("los cuatro tipos de paso", () => {
+  it("cada tipo tiene familia: exposición → implícita → explícita", () => {
+    expect(familyOf(iat("a"))).toBe("implicit");
+    expect(familyOf(variant("a"))).toBe("implicit");
+    expect(familyOf(survey("a"))).toBe("explicit");
+    expect(familyOf(visual("a"))).toBe("exposure");
+  });
+
+  it("el orden sugerido pone la imagen primero, luego IAT y variantes, y al final la encuesta", () => {
+    expect(
+      ids(suggestOrder([survey("s"), variant("v"), iat("i"), visual("x")])),
+    ).toEqual(["x", "v", "i", "s"]);
+  });
+
+  it("avisa si una medida va antes de la exposición, sin impedir guardar", () => {
+    const steps = [iat("i"), visual("x")];
+    const w = orderWarnings(steps).find(
+      (x) => x.code === "exposure_after_measure",
+    );
+    expect(w?.studyIds).toEqual(["i", "x"]);
+    expect(w?.message).toContain("conviene mostrarlas primero");
+    expect(validateComposition(steps)).toEqual([]);
+    expect(
+      orderWarnings([visual("x"), iat("i")]).map((x) => x.code),
+    ).not.toContain("exposure_after_measure");
+  });
+
+  it("una variante cuenta como medida implícita para el aviso de explícita antes de implícita", () => {
+    expect(
+      orderWarnings([survey("s"), variant("v")]).map((w) => w.code),
+    ).toContain("explicit_before_implicit");
+  });
+
+  it("los pasos omitidos no disparan avisos", () => {
+    expect(
+      orderWarnings([iat("i"), visual("x", false), survey("s")]).map(
+        (w) => w.code,
+      ),
+    ).not.toContain("exposure_after_measure");
+  });
+
+  it("las etiquetas nombran los cuatro tipos", () => {
+    expect(TOOL_LABEL).toEqual({
+      iat: "IAT",
+      iat_variant: "Variante del IAT",
+      survey: "Encuesta",
+      visual: "Imagen con IA",
+    });
   });
 });
 

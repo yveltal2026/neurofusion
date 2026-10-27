@@ -11,6 +11,8 @@ const report = {
       dimensionName: "Calidad",
     },
   ],
+  variants: [],
+  exposures: [],
   metrics: [{ key: "s:nps", label: "NPS", stepId: "s" }],
   rows: [
     {
@@ -18,6 +20,7 @@ const report = {
       ref: "abc",
       excluded: false,
       d: { "i:c": 0.123456789 },
+      exposed: {},
       metrics: { "s:nps": 9 },
     },
     {
@@ -25,6 +28,7 @@ const report = {
       ref: "=cmd",
       excluded: true,
       d: { "i:c": null },
+      exposed: {},
       metrics: { "s:nps": null },
     },
   ],
@@ -47,5 +51,31 @@ describe("CSV del informe integrado", () => {
   });
   it("no incluye datos de dispositivo ni IP", () => {
     expect(lines[0]).not.toMatch(/\bip\b|device|user_agent/i);
+  });
+
+  it("incluye una columna por variante del IAT y por paso de exposición", () => {
+    const full = {
+      ...report,
+      variants: [{ stepId: "v", stepName: "SC café", measure: "D (SC-IAT)" }],
+      exposures: [{ stepId: "x", stepName: "Anuncio" }],
+      rows: [
+        {
+          ...report.rows[0]!,
+          d: { "i:c": 0.1, "v:primary": 0.456789 },
+          exposed: { x: true },
+        },
+        {
+          ...report.rows[1]!,
+          d: { "i:c": null, "v:primary": null },
+          exposed: { x: false },
+        },
+      ],
+    } as unknown as BatteryReport;
+    const out = batteryReportCsv(full).replace("﻿", "").trim().split("\r\n");
+    expect(out[0]).toBe(
+      "participant_ref,excluded,iat_IAT café_Calidad_d,variante_SC café_D (SC-IAT),exposicion_Anuncio_vio_piezas,encuesta_NPS",
+    );
+    expect(out[1]).toBe("abc,false,0.1,0.4568,true,9");
+    expect(out[2]).toBe("'=cmd,true,,,false,");
   });
 });

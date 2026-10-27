@@ -27,8 +27,8 @@ export default async function NewBatteryPage({
       {available.length === 0 ? (
         <Card className="space-y-2">
           <p className="text-sm">
-            Una batería une estudios que ya existen en el proyecto (IAT y
-            encuestas), pero «{project.name}» todavía no tiene ninguno.
+            Una batería une estudios que ya existen en el proyecto (IAT, variantes del
+            IAT, encuestas o imágenes con IA), pero «{project.name}» todavía no tiene ninguno.
           </p>
           <Link
             href={`/projects/${project.id}/studies/new`}

@@ -34,7 +34,7 @@ export default async function BatteryReportPage({
             Informe integrado
           </h1>
           <p className="mt-1 text-xs text-muted">
-            Batería · lo medido (IAT y encuesta) y lo estimado (cruces)
+            Batería · lo medido (IAT, variantes y encuestas), la exposición a las imágenes y lo estimado (cruces y lectura de la IA)
           </p>
         </div>
         <Link

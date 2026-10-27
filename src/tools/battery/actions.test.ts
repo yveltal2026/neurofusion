@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   },
   selectOne: null as unknown,
   selectMany: [] as unknown[],
+  /** Filas por tabla (tienen prioridad sobre `selectMany`): permite simular estudios de imagen y sus piezas. */
+  tableRows: {} as Record<string, unknown[]>,
   count: 1 as number | null,
   updateResult: {
     data: [{ id: "bat-1" }] as unknown[] | null,
@@ -67,6 +69,10 @@ vi.mock("@/lib/auth/session", () => ({
           call.filters.push([c, v]),
           chain
         );
+        chain.in = (c: string, v: unknown) => (
+          call.filters.push([`${c} in`, v]),
+          chain
+        );
         chain.order = () => chain;
         chain.single = async () =>
           call.op === "insert"
@@ -81,7 +87,11 @@ vi.mock("@/lib/auth/session", () => ({
             call.op === "update"
               ? mocks.updateResult
               : call.op === "select"
-                ? { data: mocks.selectMany, count: mocks.count, error: null }
+                ? {
+                    data: mocks.tableRows[table] ?? mocks.selectMany,
+                    count: mocks.count,
+                    error: null,
+                  }
                 : { data: null, error: null },
           ).then(res);
         return chain;
@@ -130,6 +140,7 @@ beforeEach(() => {
   mocks.insertResult = { data: { id: "bat-1" }, error: null };
   mocks.selectOne = null;
   mocks.selectMany = [];
+  mocks.tableRows = {};
   mocks.count = 1;
   mocks.updateResult = { data: [{ id: "bat-1" }], error: null };
   mocks.redirected = null;
@@ -567,5 +578,66 @@ describe("setParticipantExcluded", () => {
       }),
     );
     expect(mocks.calls).toEqual([]);
+  });
+});
+
+describe("pasos de imagen con IA sin imágenes", () => {
+  const VISUAL = "44444444-1111-4111-8111-111111111111";
+
+  it("createBattery no crea la batería si un paso activo de imagen no tiene piezas", async () => {
+    mocks.tableRows = {
+      studies: [{ id: VISUAL, name: "Anuncio vacío" }],
+      visual_assets: [],
+    };
+    const res = await createBattery({
+      projectId: PROJECT,
+      name: "Estudio",
+      config,
+      steps: [{ studyId: VISUAL, enabled: true }],
+    });
+    expect(res).toEqual({
+      error:
+        "«Anuncio vacío» no tiene imágenes que mostrar. Súbelas en ese estudio antes de usarlo como paso.",
+    });
+    expect(mocks.calls.some((c) => c.table === "batteries")).toBe(false);
+    expect(mocks.redirected).toBeNull();
+  });
+
+  it("saveBatterySteps tampoco guarda y no llama a la base", async () => {
+    mocks.tableRows = {
+      studies: [{ id: VISUAL, name: "Anuncio vacío" }],
+      visual_assets: [],
+    };
+    const res = await saveBatterySteps({
+      batteryId: BAT,
+      steps: [{ studyId: VISUAL, enabled: true }],
+    });
+    expect(res.error).toContain("«Anuncio vacío» no tiene imágenes");
+    expect(mocks.rpcCalls).toEqual([]);
+  });
+
+  it("un paso de imagen omitido no se valida, y uno con piezas sí se guarda", async () => {
+    mocks.tableRows = {
+      studies: [{ id: VISUAL, name: "Anuncio" }],
+      visual_assets: [{ study_id: VISUAL }],
+    };
+    const res = await saveBatterySteps({
+      batteryId: BAT,
+      steps: [{ studyId: VISUAL, enabled: true }],
+    });
+    expect(res).toEqual({ saved: true });
+    expect(mocks.rpcCalls).toHaveLength(1);
+
+    mocks.rpcCalls = [];
+    // La base sólo devuelve estudios visuales entre los pasos ACTIVOS: aquí no hay ninguno.
+    mocks.tableRows = { studies: [], visual_assets: [] };
+    const skipped = await saveBatterySteps({
+      batteryId: BAT,
+      steps: [
+        { studyId: S1, enabled: true },
+        { studyId: VISUAL, enabled: false },
+      ],
+    });
+    expect(skipped).toEqual({ saved: true });
   });
 });

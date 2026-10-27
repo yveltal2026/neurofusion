@@ -314,3 +314,121 @@ describe("informe integrado de la batería", () => {
     expect(r.nParticipants).toBe(0);
   });
 });
+
+describe("variantes del IAT y exposición en el informe", () => {
+  const vSteps: ReportStep[] = [
+    ...steps,
+    { kind: "variant", studyId: "var1", name: "SC café", variant: "sc_iat" },
+    {
+      kind: "exposure",
+      studyId: "exp1",
+      name: "Anuncio",
+      pieces: [
+        {
+          title: "Pieza A",
+          criteria: [
+            { label: "Claridad del mensaje", score: 4 },
+            { label: "Jerarquía visual", score: 3 },
+          ],
+        },
+        { title: "Pieza B", criteria: null },
+      ],
+    },
+  ];
+
+  function withExtras(
+    i: number,
+    value: number | null,
+    viewed: boolean,
+    nps: number,
+  ): ReportParticipant {
+    return {
+      ...person(i, 0.2 + (i % 7) * 0.05, nps),
+      variant: { var1: value === null ? null : { value, valid: true } },
+      exposure: { exp1: viewed },
+    };
+  }
+
+  it("resume la medida principal de la variante con su significado del cero", () => {
+    const people = Array.from({ length: 12 }, (_, i) =>
+      withExtras(i, 0.3 + (i % 5) * 0.1, true, i % 11),
+    );
+    const r = buildBatteryReport(vSteps, people);
+    expect(r.variants).toHaveLength(1);
+    const v = r.variants[0]!;
+    expect(v).toMatchObject({
+      evidence: "medido",
+      stepName: "SC café",
+      measure: "D (SC-IAT)",
+      unit: "D",
+      zeroMeans: "sin asociación",
+      n: 12,
+      nInvalid: 0,
+    });
+    expect(v.mean).toBeCloseTo(0.475, 5);
+    expect(v.ci95).not.toBeNull();
+    expect(v.p).toBeLessThan(0.001);
+  });
+
+  it("los inválidos o sin resultado no entran al promedio y se cuentan aparte", () => {
+    const people = [
+      withExtras(0, 0.4, true, 5),
+      withExtras(1, null, true, 5),
+      {
+        ...withExtras(2, 0.9, true, 5),
+        variant: { var1: { value: 0.9, valid: false } },
+      },
+      { ...withExtras(3, 0.6, true, 5), excluded: true },
+    ];
+    const v = buildBatteryReport(vSteps, people).variants[0]!;
+    expect(v.n).toBe(1);
+    expect(v.nInvalid).toBe(2); // los excluidos no cuentan en nada
+    expect(v.mean).toBeCloseTo(0.4, 5);
+  });
+
+  it("la variante entra a los cruces con las métricas de encuesta", () => {
+    const people = Array.from({ length: 14 }, (_, i) =>
+      withExtras(i, 0.1 * i, true, i % 11),
+    );
+    const r = buildBatteryReport(vSteps, people);
+    const c = r.correlations.find((x) => x.implicit.stepId === "var1");
+    expect(c).toBeDefined();
+    expect(c!.implicit.dimensionId).toBe("primary");
+    expect(c!.implicit.label).toBe("SC café · D (SC-IAT)");
+    expect(c!.evidence).toBe("estimado");
+    expect(r.rows[0]!.d["var1:primary"]).toBe(0);
+  });
+
+  it("la exposición cuenta quién vio las piezas y conserva la lectura de la IA como estimada", () => {
+    const people = [
+      withExtras(0, 0.4, true, 5),
+      withExtras(1, 0.4, true, 5),
+      withExtras(2, 0.4, false, 5),
+      { ...withExtras(3, 0.4, true, 5), excluded: true },
+    ];
+    const r = buildBatteryReport(vSteps, people);
+    expect(r.exposures).toHaveLength(1);
+    expect(r.exposures[0]).toMatchObject({
+      stepName: "Anuncio",
+      nViewed: 2,
+      nIncluded: 3,
+    });
+    expect(r.exposures[0]!.pieces[0]!.criteria![0]).toEqual({
+      label: "Claridad del mensaje",
+      score: 4,
+    });
+    expect(r.exposures[0]!.pieces[1]!.criteria).toBeNull();
+    expect(r.rows.map((x) => x.exposed.exp1)).toEqual([
+      true,
+      true,
+      false,
+      true,
+    ]);
+  });
+
+  it("sin variantes ni exposición el informe de siempre queda igual", () => {
+    const r = buildBatteryReport(steps, [person(0, 0.2, 7)]);
+    expect(r.variants).toEqual([]);
+    expect(r.exposures).toEqual([]);
+  });
+});

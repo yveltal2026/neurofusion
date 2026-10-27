@@ -127,6 +127,8 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | Rastreo contra sitios reales, subida a Storage, visión con Anthropic/OpenAI, PageSpeed real | **Tipado y compilado, sin ejecutar contra servicios reales** (requieren credenciales y red abierta) |
 | Encuesta: motor (instrumentos, validación, puntuación, agregados, alfa de Cronbach), lógica de servidor del participante, runner, constructor, resultados y CSV | Pruebas unitarias y de componente (cliente de Supabase falso en memoria) |
 | Encuesta: tabla `survey_answers`, RLS, `claim_session` con encuestas | Pruebas SQL (`supabase/tests/survey.sql`) |
+| Baterías con IAT, variantes, encuesta e imagen con IA: orden y avisos, runner incrustado, paso de exposición, informe integrado y CSV | Pruebas unitarias y de componente (clientes de Supabase falsos) |
+| Baterías: guarda de pasos (variantes y piezas visuales), `start_battery_exposure` / `complete_battery_exposure`, orden y privilegios | Pruebas SQL (`supabase/tests/battery_tools.sql`) |
 | Rutas `/api/s/*`, páginas del investigador, auth (email/Google; el restablecimiento de contraseña sólo se probó contra un Supabase Auth simulado, sin correo real), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica
