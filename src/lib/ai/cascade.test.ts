@@ -8,7 +8,7 @@ import { createGeminiProvider, toGeminiContents } from "./gemini";
 import { getAnalysisProvider, isAiConfigured } from "./index";
 import { generateStructured } from "./structured";
 import { resolveTiers } from "./tiers";
-import { AiError, type AnalysisProvider, type CompletionRequest } from "./types";
+import { AiError, safeDetail, type AnalysisProvider, type CompletionRequest } from "./types";
 
 const REQ: CompletionRequest = { system: "s", messages: [{ role: "user", content: "hola" }] };
 
@@ -324,5 +324,36 @@ describe("configuración de la cascada", () => {
   it("isAiConfigured", () => {
     expect(isAiConfigured({ GEMINI_API_KEY_FREE: "f" })).toBe(true);
     expect(isAiConfigured({})).toBe(false);
+  });
+});
+
+
+describe("diagnóstico en logs", () => {
+  it("el log del nivel fallido incluye el código HTTP y el mensaje del proveedor", async () => {
+    const logs: string[] = [];
+    const p = createCascadeProvider([tier("a", new AiError("Error del proveedor de IA", "provider", "HTTP 404 NOT_FOUND: models/gemini-x is not found")), tier("b", "ok")], { cooldowns: new Map(), log: (m) => logs.push(m) });
+    await p.complete(REQ);
+    expect(logs[0]).toContain("falló (provider: HTTP 404 NOT_FOUND: models/gemini-x is not found)");
+  });
+
+  it("Gemini guarda el estado HTTP y el mensaje de Google en `detail`, sin mostrarlo en el mensaje", async () => {
+    const f = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ error: { code: 404, status: "NOT_FOUND", message: "models/gemini-x is not found for API version v1beta" } }), { status: 404 }));
+    const err = await createGeminiProvider({ apiKey: "KEY", model: "gemini-x", tier: "free", fetchImpl: f }).complete(REQ).catch((e) => e);
+    expect(err.kind).toBe("provider");
+    expect(err.detail).toBe("HTTP 404 NOT_FOUND: models/gemini-x is not found for API version v1beta");
+    expect(err.message).not.toContain("not found");
+  });
+
+  it("safeDetail recorta, une líneas y oculta cualquier cosa que parezca una API key", () => {
+    expect(safeDetail("falló con AIzaSyA1234567890abcdefghijklmnop y sk-ant-abcdefghijklmnopqrst\nsegunda línea")).toBe("falló con [clave] y [clave] segunda línea");
+    expect(safeDetail("x".repeat(500))).toHaveLength(240);
+  });
+
+  it("los fallos de red de Gemini dejan el tipo de error en `detail`", async () => {
+    const f = vi.fn<typeof fetch>(async () => {
+      throw new TypeError("fetch failed");
+    });
+    const err = await createGeminiProvider({ apiKey: "KEY", model: "m", tier: "paid", fetchImpl: f }).complete(REQ).catch((e) => e);
+    expect(err.detail).toBe("TypeError: fetch failed");
   });
 });

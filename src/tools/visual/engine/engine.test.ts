@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { elementsToAois, pieceAiSchema } from "../analysis/piece";
-import { attentionField, blindZones, gazePath, heatColor, type Aoi } from "./aoi";
+import { buildReviewUserText, elementsToAois, mergeMissingElements, PIECE_SYSTEM_PROMPT, pieceAiSchema, REVIEW_SYSTEM_PROMPT, reviewSchema, type PieceElement } from "../analysis/piece";
+import { attentionField, blindZones, coldZones, gazePath, heatColor, outsidePath, type Aoi } from "./aoi";
 import { computeMetrics, contrastRatio, estimateTextContrast, type RawImage } from "./metrics";
 import { checkPlacement, getPlacement } from "./placements";
 import { planTiles, tileBoxToImage } from "./tiles";
@@ -155,5 +155,85 @@ describe("franjas para la IA", () => {
       expect(both[0].box).toEqual([0.2, 0.1, 0.4, 0.3]);
       expect(() => parse([el({})])).toThrow(/box2d/);
     });
+  });
+});
+
+
+describe("zonas frías y recorrido", () => {
+  const a = (id: string, attention: number, importance: number, order: number | null): Aoi => ({ id, label: id, kind: "other", box: [0.1, 0.1, 0.3, 0.3], attention, importance, order });
+
+  it("coldZones: ciega (importancia 4–5) y baja atención (3), las más importantes primero; descarta lo decorativo", () => {
+    const list = [a("deco", 0.2, 1, null), a("media", 0.2, 3, 2), a("clave", 0.2, 5, null), a("visto", 0.8, 5, 1), a("limite", 0.4, 4, 3), a("sobre", 0.45, 5, 4)];
+    expect(coldZones(list).map((z) => [z.aoi.id, z.level])).toEqual([
+      ["clave", "blind"],
+      ["limite", "blind"],
+      ["media", "low"],
+    ]);
+    // blindZones conserva su definición (sólo importancia 4–5)
+    expect(blindZones(list).map((x) => x.id)).toEqual(["clave", "limite"]);
+  });
+
+  it("outsidePath: importantes sin lugar en el recorrido", () => {
+    const list = [a("deco", 0.2, 1, null), a("media", 0.2, 3, null), a("clave", 0.5, 5, null), a("en-ruta", 0.9, 5, 1)];
+    expect(outsidePath(list).map((x) => x.id)).toEqual(["clave", "media"]);
+  });
+});
+
+describe("cobertura de la lectura de la IA", () => {
+  const base = { summary: "s", message: "m", firstSeconds: "f", criteria: Object.fromEntries(["clarity", "hierarchy", "cta", "legibility", "brand", "load"].map((k) => [k, { score: 3, evidence: "e" }])), issues: [], strengths: [], limitations: [] };
+  const el = (id: string, box2d: [number, number, number, number], extra: Partial<PieceElement> = {}): PieceElement => ({ id, label: id, kind: "text", tile: 0, box2d, attention: 2, importance: 4, order: null, ...extra });
+  const result = (elements: PieceElement[]) => pieceAiSchema.parse({ ...base, elements });
+
+  it("el prompt exige cobertura, atención por saliencia y orden para todo lo visible", () => {
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/COBERTURA/);
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/CADA medio de contacto/);
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/NO qué tan importante es/);
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/usa null sólo para elementos decorativos/);
+    expect(PIECE_SYSTEM_PROMPT).toMatch(/\[ymin, xmin, ymax, xmax\]/);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/FALTAN/);
+  });
+
+  it("el mensaje de revisión lista lo ya identificado con su caja [ymin, xmin, ymax, xmax]", () => {
+    const text = buildReviewUserText([el("E1", [100, 200, 300, 400], { label: "Logo", kind: "logo" })], { objective: "Generar solicitudes", brand: "Respalda Más", tiles: 1 });
+    expect(text).toContain("Generar solicitudes");
+    expect(text).toContain("E1 | Logo | logo | tile 0 | box2d [100, 200, 300, 400]");
+    expect(text).toContain("Devuelve únicamente los elementos que faltan");
+  });
+
+  it("reviewSchema acepta una lista vacía y rechaza elementos sin caja", () => {
+    expect(reviewSchema.parse({ missing: [] }).missing).toEqual([]);
+    expect(() => reviewSchema.parse({ missing: [{ id: "E90", label: "x", kind: "text", attention: 1, importance: 3, order: null }] })).toThrow();
+  });
+
+  it("mergeMissingElements: agrega lo que falta con ids nuevos y lo manda al final del recorrido", () => {
+    const first = result([el("E1", [0, 0, 200, 1000], { order: 1 }), el("E2", [500, 0, 700, 500], { order: 2 })]);
+    const merged = mergeMissingElements(first, [
+      el("E90", [900, 600, 960, 950], { label: "Correo", kind: "cta", order: 1 }),
+      el("E91", [820, 50, 880, 400], { label: "Seguro y confiable", kind: "badge", order: null }),
+    ]);
+    expect(merged.elements.map((e) => [e.id, e.label, e.order])).toEqual([
+      ["E1", "E1", 1],
+      ["E2", "E2", 2],
+      ["E3", "Correo", 3],
+      ["E4", "Seguro y confiable", null],
+    ]);
+    // El resultado sigue siendo válido y se convierte en AOIs de la imagen completa.
+    expect(pieceAiSchema.safeParse(merged).success).toBe(true);
+    const aois = elementsToAois(merged, planTiles(1000, 1000));
+    expect(aois.find((x) => x.label === "Correo")?.box).toEqual([0.6, 0.9, 0.95, 0.96]);
+  });
+
+  it("mergeMissingElements: descarta los que ya existen (traslape) y respeta el máximo", () => {
+    const first = result([el("E1", [100, 100, 300, 500])]);
+    const dup = mergeMissingElements(first, [el("E90", [110, 110, 300, 500], { label: "Duplicado" })]);
+    expect(dup).toBe(first);
+    const many = result(Array.from({ length: 25 }, (_, i) => el(`E${i + 1}`, [i * 30, 0, i * 30 + 20, 100])));
+    expect(mergeMissingElements(many, [el("E90", [900, 800, 990, 990])]).elements).toHaveLength(25);
+  });
+
+  it("mergeMissingElements: elementos de otra franja no se consideran duplicados", () => {
+    const first = result([el("E1", [100, 100, 300, 500])]);
+    const merged = mergeMissingElements(first, [el("E90", [100, 100, 300, 500], { tile: 1 })]);
+    expect(merged.elements).toHaveLength(2);
   });
 });

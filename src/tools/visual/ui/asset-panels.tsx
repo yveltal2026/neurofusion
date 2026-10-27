@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CRITERIA_LABEL, type PieceAiResult } from "../analysis/piece";
-import { AOI_KIND_LABEL, blindZones, type Aoi } from "../engine/aoi";
+import { AOI_KIND_LABEL, coldZones, LOW_ATTENTION, type Aoi } from "../engine/aoi";
 import { describeMetrics } from "../engine/metrics";
 import { checkPlacement, getPlacement } from "../engine/placements";
 import type { StoredMetrics } from "../results";
@@ -20,7 +20,7 @@ export function ScoreDots({ score }: { score: number }) {
 }
 
 export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[] }) {
-  const blind = blindZones(aois);
+  const cold = coldZones(aois);
   return (
     <div className="space-y-4">
       <Card className="space-y-2">
@@ -60,17 +60,23 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
           </ul>
         </Card>
       ) : null}
-      {blind.length ? (
+      {aois.length ? (
         <Card className="space-y-1">
           <h3 className="font-medium">Zonas ciegas</h3>
-          <p className="text-xs text-muted">Elementos importantes (4–5) con atracción estimada baja (≤ 40 %).</p>
-          <ul className="list-disc pl-5 text-sm">
-            {blind.map((a) => (
-              <li key={a.id}>
-                {a.label} ({AOI_KIND_LABEL[a.kind]})
-              </li>
-            ))}
-          </ul>
+          <p className="text-xs text-muted">
+            Elementos con atracción estimada baja (≤ {Math.round(LOW_ATTENTION * 100)} %): «zona ciega» si son importantes (4–5) y «baja atención» si su importancia es media (3).
+          </p>
+          {cold.length ? (
+            <ul className="list-disc pl-5 text-sm">
+              {cold.map(({ aoi: a, level }) => (
+                <li key={a.id}>
+                  {a.label} ({AOI_KIND_LABEL[a.kind]}) · {level === "blind" ? "zona ciega" : "baja atención"}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">No se detectaron: ningún elemento importante tiene atención baja.</p>
+          )}
         </Card>
       ) : null}
       {result.strengths.length ? (

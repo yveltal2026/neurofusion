@@ -45,9 +45,35 @@ export const aoiSchema = z
 export type Aoi = z.infer<typeof aoiSchema>;
 export const aoiListSchema = z.array(aoiSchema).max(30);
 
+/** Atracción máxima para considerar que un elemento pasa desapercibido. */
+export const LOW_ATTENTION = 0.4;
+
 /** Zonas ciegas: elementos importantes (≥ 4) con atracción baja (≤ 0.4). */
 export function blindZones(aois: Aoi[]): Aoi[] {
-  return aois.filter((a) => a.importance >= 4 && a.attention <= 0.4);
+  return aois.filter((a) => a.importance >= 4 && a.attention <= LOW_ATTENTION);
+}
+
+export type ColdLevel = "blind" | "low";
+export interface ColdZone {
+  aoi: Aoi;
+  /** «blind» = importante (4–5) y poco visto; «low» = importancia media (3) y poco visto. */
+  level: ColdLevel;
+}
+
+/**
+ * Elementos "fríos": atracción baja (≤ 0.4) y que importan (≥ 3). Los de importancia 4–5 son zonas
+ * ciegas; los de importancia 3 se muestran aparte como «baja atención». Primero los más importantes.
+ */
+export function coldZones(aois: Aoi[]): ColdZone[] {
+  return aois
+    .filter((a) => a.importance >= 3 && a.attention <= LOW_ATTENTION)
+    .map((aoi): ColdZone => ({ aoi, level: aoi.importance >= 4 ? "blind" : "low" }))
+    .sort((a, b) => b.aoi.importance - a.aoi.importance || a.aoi.attention - b.aoi.attention);
+}
+
+/** Elementos que importan (≥ 3) pero a los que la IA no prevé que se mire (sin lugar en el recorrido). */
+export function outsidePath(aois: Aoi[]): Aoi[] {
+  return aois.filter((a) => a.order === null && a.importance >= 3).sort((a, b) => b.importance - a.importance);
 }
 
 /** Recorrido visual estimado: AOI con orden, de menor a mayor. */

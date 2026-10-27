@@ -1,4 +1,4 @@
-import { AiError, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
+import { AiError, safeDetail, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -44,13 +44,14 @@ const BLOCKED_FINISH = new Set(["SAFETY", "RECITATION", "PROHIBITED_CONTENT", "B
 function toHttpError(status: number, body: GeminiErrorBody | null, label: string): AiError {
   const apiStatus = body?.error?.status ?? "";
   const message = body?.error?.message ?? "";
+  const detail = safeDetail(`HTTP ${status}${apiStatus ? ` ${apiStatus}` : ""}${message ? `: ${message}` : ""}`);
   if (status === 429 || apiStatus === "RESOURCE_EXHAUSTED") {
-    return new AiError(`${label} agotó su cuota o limitó las solicitudes.`, "rate_limit");
+    return new AiError(`${label} agotó su cuota o limitó las solicitudes.`, "rate_limit", detail);
   }
   if (status === 401 || status === 403 || apiStatus === "UNAUTHENTICATED" || apiStatus === "PERMISSION_DENIED" || /api key not valid/i.test(message)) {
-    return new AiError(`La API key de ${label} no es válida o no tiene acceso al modelo.`, "auth");
+    return new AiError(`La API key de ${label} no es válida o no tiene acceso al modelo.`, "auth", detail);
   }
-  return new AiError(`Error del proveedor de IA (${label}, ${status}).`, "provider");
+  return new AiError(`Error del proveedor de IA (${label}, ${status}).`, "provider", detail);
 }
 
 /**
@@ -85,7 +86,8 @@ export function createGeminiProvider(opts: {
         });
       } catch (e) {
         const timedOut = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
-        throw new AiError(timedOut ? `${label} tardó demasiado en responder.` : `No se pudo conectar con ${label}.`, "provider");
+        const name = e instanceof Error ? e.name : "Error";
+        throw new AiError(timedOut ? `${label} tardó demasiado en responder.` : `No se pudo conectar con ${label}.`, "provider", safeDetail(`${name}: ${e instanceof Error ? e.message : String(e)}`));
       }
 
       if (!res.ok) {
@@ -94,7 +96,7 @@ export function createGeminiProvider(opts: {
       }
 
       const json = (await res.json().catch(() => null)) as GeminiResponse | null;
-      if (!json) throw new AiError(`${label} devolvió una respuesta ilegible.`, "provider");
+      if (!json) throw new AiError(`${label} devolvió una respuesta ilegible.`, "provider", "HTTP 200 con cuerpo que no es JSON");
       if (json.promptFeedback?.blockReason) {
         throw new AiError("El modelo rechazó la solicitud. Revisa el contenido del estudio e inténtalo de nuevo.", "refusal");
       }
@@ -107,7 +109,7 @@ export function createGeminiProvider(opts: {
       }
       // Los modelos con razonamiento pueden devolver partes "thought": no son parte de la respuesta.
       const text = (candidate?.content?.parts ?? []).flatMap((p) => (p.text && !p.thought ? [p.text] : [])).join("");
-      if (!text) throw new AiError(`${label} devolvió una respuesta vacía.`, "provider");
+      if (!text) throw new AiError(`${label} devolvió una respuesta vacía.`, "provider", `sin texto; finishReason=${candidate?.finishReason ?? "ninguno"}`);
       return { text, model: json.modelVersion ?? model };
     },
   };
