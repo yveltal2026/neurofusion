@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { buildDriftCheck, driftCheckpoints, driftPasses, driftSummary, driftTargets } from "./drift";
+import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftPasses, driftSummary, driftTargets } from "./drift";
 import type { TargetResult } from "./metrics";
 
 describe("controles de deriva", () => {
   const summary = { afterAssetCount: 0, medianErrorDeg: 3, maxErrorDeg: 5, coverage: 1, fps: 25, validRatio: 0.9 };
+
+  it("excluye las transiciones del cálculo de detección y frecuencia, sin ocultar pérdidas durante la fijación", () => {
+    const frames = Array.from({ length: 240 }, (_, i) => ({ t: i * 25, x: i % 80 < 40 ? null : 500, y: i % 80 < 40 ? null : 300, inferenceMs: 10 }));
+    const windows = [0, 2000, 4000].map((t) => ({ from: t + 1000, to: t + 2000 }));
+    expect(driftFrameStats(frames, windows)).toMatchObject({ fps: 40, validRatio: 1, frames: 120 });
+    expect(driftFrameStats(frames, [{ from: 0, to: 1000 }]).validRatio).toBe(0);
+    expect(driftFrameStats([], windows)).toMatchObject({ fps: 0, validRatio: 0 });
+    expect(driftFailures({ ...summary, fps: 10 }, "laptop").join(" ")).toContain("pocas lecturas");
+    expect(driftPasses({ ...summary, fps: NaN }, "laptop")).toBe(false);
+  });
 
   it("comprueba inicio, cada dos piezas y final sin duplicar el último control", () => {
     expect(driftCheckpoints(1)).toEqual([0, 1]);

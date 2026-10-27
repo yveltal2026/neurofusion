@@ -40,7 +40,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
       ? [{ id: row.session_id, quality: quality.data, observations: observations.data, session }]
       : [];
   });
-  const good = runs.filter((r) => r.quality.passed && !r.session.excluded);
+  const good = runs.filter((r) => r.quality.passed && r.quality.measurementStatus !== "limited" && !r.session.excluded);
 
   return (
     <div className="space-y-8">
@@ -93,7 +93,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                       ? `${Math.max(...run.quality.driftChecks.map((c) => c.maxErrorDeg ?? 0)).toFixed(1)}° · ${run.quality.driftChecks.length} controles`
                       : "—"}</td>
                     <td className="pr-4">
-                      {run.session.excluded ? "Excluida" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
+                      {run.session.excluded ? "Excluida" : run.quality.measurementStatus === "limited" ? "Precisión limitada · fuera de mapas" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
                       {run.quality.recovery ? <p className="text-xs text-muted">
                         {run.quality.recovery.interruptions} pausas · {run.quality.recovery.recalibrations} recalibraciones · {run.quality.recovery.repeatedAssetIds.length} imágenes repetidas
                       </p> : null}

@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/studies
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      controller.enqueue(encoder.encode("session,asset_id,time_ms,x_norm,y_norm,calibration_pass,error_deg,excluded,recovery_interruptions,recalibrations,repeated_exposure\n"));
+      controller.enqueue(encoder.encode("session,asset_id,time_ms,x_norm,y_norm,calibration_pass,error_deg,excluded,recovery_interruptions,recalibrations,repeated_exposure,measurement_status\n"));
       let offset = 0;
       try {
         while (true) {
@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/studies
             if (!session || !quality.success || !observations.success) continue;
             for (const observation of observations.data) {
               const lines = observation.samples.map((point) =>
-                `${session.participant_ref},${observation.assetId},${point.t},${point.x},${point.y},${quality.data.passed},${quality.data.medianErrorDeg ?? ""},${session.excluded},${quality.data.recovery?.interruptions ?? 0},${quality.data.recovery?.recalibrations ?? 0},${quality.data.recovery?.repeatedAssetIds.includes(observation.assetId) ?? false}\n`,
+                `${session.participant_ref},${observation.assetId},${point.t},${point.x},${point.y},${quality.data.passed},${quality.data.medianErrorDeg ?? ""},${session.excluded},${quality.data.recovery?.interruptions ?? 0},${quality.data.recovery?.recalibrations ?? 0},${quality.data.recovery?.repeatedAssetIds.includes(observation.assetId) ?? false},${quality.data.measurementStatus ?? (quality.data.passed ? "validated" : "unvalidated")}\n`,
               );
               controller.enqueue(encoder.encode(lines.join("")));
             }

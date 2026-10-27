@@ -29,7 +29,7 @@ import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
 import { applyCalibration, assessFixation, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
-import { buildDriftCheck, driftCheckpoints, driftSummary, driftTargets, type DriftCheck, type DriftSummary } from "./drift";
+import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftSummary, driftTargets, unmeasuredDriftCheck, type DriftCheck, type DriftSummary } from "./drift";
 import { screenWidthCm, type ScreenFormat } from "./screen";
 
 type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "drift" | "recovery" | "preparing" | "results" | "free" | "stimulus" | "saving" | "done";
@@ -107,6 +107,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [studyBusy, setStudyBusy] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
   const [resumeCount, setResumeCount] = useState<number | null>(null);
+  const [limitedReady, setLimitedReady] = useState(false);
+  const [measurementLimited, setMeasurementLimited] = useState(false);
+  const [lastDriftCheck, setLastDriftCheck] = useState<DriftCheck | null>(null);
+  const [diagnosticsEnabled] = useState(() => Boolean(study?.preview) || new URLSearchParams(window.location.search).get("diagnostic") === "1");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const stimulusImgRef = useRef<HTMLImageElement | null>(null);
@@ -124,6 +128,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const relocatedPointsRef = useRef<number[]>([]);
   const reviewedPointsRef = useRef<number[]>([]);
   const driftChecksRef = useRef<DriftCheck[]>([]);
+  const measurementLimitedRef = useRef(false);
   const confirmedCountRef = useRef(0);
   const recoveringRef = useRef(false);
   const recoveryCountRef = useRef(0);
@@ -146,6 +151,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     runIdRef.current++;
     recoveringRef.current = true;
     recoveryCountRef.current = Math.min(100, recoveryCountRef.current + 1);
+    setLimitedReady(recoveryCountRef.current >= 2 && recoveryChecksRef.current.some((check) => !check.passed));
     const confirmed = confirmedCountRef.current;
     setResumeCount(confirmed);
     for (const asset of study.assets.slice(confirmed)) {
@@ -288,10 +294,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   function startCalibration() {
     calibrationEpochRef.current++;
+    setLastDriftCheck(null);
     if (study && recoveringRef.current) {
       recalibrationCountRef.current = Math.min(100, recalibrationCountRef.current + 1);
     } else {
       setResumeCount(null);
+      setLimitedReady(false);
+      measurementLimitedRef.current = false;
+      setMeasurementLimited(false);
       confirmedCountRef.current = 0;
       recoveryCountRef.current = 0;
       recalibrationCountRef.current = 0;
@@ -474,7 +484,13 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }, [participant, device, glasses, lighting, inches, screenFormat, distanceCm, passes]);
 
   const runDriftCheck = useCallback(async (afterAssetCount: number): Promise<boolean | null> => {
-    if (!session || !calibrationFitRef.current) return false;
+    if (!session) return false;
+    if (measurementLimitedRef.current && (!calibrationFitRef.current || window.innerWidth !== session.viewport.width || window.innerHeight !== session.viewport.height)) {
+      const check = unmeasuredDriftCheck(afterAssetCount);
+      driftChecksRef.current = [...driftChecksRef.current.filter((c) => c.afterAssetCount !== afterAssetCount), check].sort((a, b) => a.afterAssetCount - b.afterAssetCount);
+      return true;
+    }
+    if (!calibrationFitRef.current) return false;
     const runId = ++runIdRef.current;
     const { width, height } = session.viewport;
     if (window.innerWidth !== width || window.innerHeight !== height) {
@@ -493,21 +509,37 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     setValIndex(0);
     setError(null);
     setStage("drift");
-    const startedAt = performance.now();
+    const windows: { from: number; to: number }[] = [];
     const results: TargetResult[] = [];
     for (let i = 0; i < targets.length; i++) {
       setValIndex(i);
       const from = performance.now();
       await sleep(SETTLE_MS + 1000);
       if (runIdRef.current !== runId) return null;
-      results.push(evaluateTarget(targets[i], framesRef.current, from + SETTLE_MS, from + SETTLE_MS + 1000));
+      let window = { from: from + SETTLE_MS, to: from + SETTLE_MS + 1000 };
+      let result = evaluateTarget(targets[i], framesRef.current, window.from, window.to);
+      // Una sola recaptura del mismo punto por pérdida de lecturas; nunca se reajusta para reducir el error angular.
+      if (study && (result.gaze === null || driftFrameStats(framesRef.current, [window]).validRatio < 0.8)) {
+        const retryFrom = performance.now();
+        await sleep(1500);
+        if (runIdRef.current !== runId) return null;
+        window = { from: retryFrom, to: retryFrom + 1500 };
+        result = evaluateTarget(targets[i], framesRef.current, window.from, window.to);
+      }
+      windows.push(window);
+      results.push(result);
     }
     const check = buildDriftCheck(afterAssetCount, results,
-      frameStats(framesRef.current, startedAt, performance.now()), session.geometry, device);
+      driftFrameStats(framesRef.current, windows), session.geometry, device);
+    setLastDriftCheck(check);
     if (study) {
+      if (measurementLimitedRef.current) {
+        driftChecksRef.current = [...driftChecksRef.current.filter((c) => c.afterAssetCount !== afterAssetCount), check].sort((a, b) => a.afterAssetCount - b.afterAssetCount);
+        return true;
+      }
       if (recoveringRef.current || !check.passed) recoveryChecksRef.current = [...recoveryChecksRef.current, driftSummary(check)].slice(-24);
       if (!check.passed) {
-        recoverStudy("El control de mirada necesita un ajuste. Recolócate frente a la cámara y vuelve a mirar los puntos.");
+        recoverStudy(driftFailures(check, device).join(" "));
         return false;
       }
       // Un control para reanudar no sustituye el control que ya validó el bloque conservado.
@@ -526,10 +558,15 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     return check.passed;
   }, [session, device, study, recoverStudy]);
 
-  async function startStudy() {
+  async function startStudy(allowLimited = false) {
     if (!study || !session || studyBusy) return;
-    if (needsCalibration || !calibrationFitRef.current || !session.verdict.pass) return setError("Recalibra antes de iniciar: la medición no alcanzó la calidad necesaria.");
-    if (window.innerWidth !== session.viewport.width || window.innerHeight !== session.viewport.height) {
+    if (allowLimited) {
+      if (recoveryCountRef.current < 2 || !recoveryChecksRef.current.some((check) => !check.passed)) return;
+      measurementLimitedRef.current = true;
+      setMeasurementLimited(true);
+    }
+    if (!measurementLimitedRef.current && (needsCalibration || !calibrationFitRef.current || !session.verdict.pass)) return setError("Recalibra antes de iniciar: la medición no alcanzó la calidad necesaria.");
+    if (!measurementLimitedRef.current && (window.innerWidth !== session.viewport.width || window.innerHeight !== session.viewport.height)) {
       return setError("La ventana cambió desde la calibración. Recalibra antes de iniciar.");
     }
     if (!study.preview && session.engineId !== "webeyetrack@0.0.2") {
@@ -542,7 +579,13 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     try {
       if (!recoveringRef.current) driftChecksRef.current = [];
       const resumeIndex = recoveringRef.current ? confirmedCountRef.current : 0;
-      if (!await runDriftCheck(resumeIndex)) return;
+      if (measurementLimitedRef.current) {
+        if (!driftChecksRef.current.some((c) => c.afterAssetCount === resumeIndex)) {
+          const last = recoveryChecksRef.current.filter((c) => c.afterAssetCount === resumeIndex).at(-1);
+          driftChecksRef.current.push(last ? { ...last, targets: [] } : unmeasuredDriftCheck(resumeIndex));
+          driftChecksRef.current.sort((a, b) => a.afterAssetCount - b.afterAssetCount);
+        }
+      } else if (!await runDriftCheck(resumeIndex)) return;
       const runId = runIdRef.current;
       operationId = runId;
       setStage("preparing");
@@ -559,7 +602,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         const response = await fetch(`/api/s/${study.token}/eye/start`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ consent: true, protocol: "eye-v2", device: { deviceType, screenWidth: window.screen.width, screenHeight: window.screen.height } }),
+          body: JSON.stringify({ consent: true, protocol: "eye-v3", device: { deviceType, screenWidth: window.screen.width, screenHeight: window.screen.height } }),
         });
         const result = await response.json();
         if (!response.ok || !result.sessionId) throw new Error(result.message ?? "No se pudo iniciar la sesión.");
@@ -598,11 +641,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     if (!validations.length) validations.push(session);
     const quality: EyeQuality = {
       engineId: session.engineId,
+      measurementStatus: measurementLimitedRef.current ? "limited" : "validated",
       medianErrorDeg: validations.some((s) => s.summary.medianErrorDeg === null) ? null : Math.max(...validations.map((s) => s.summary.medianErrorDeg!)),
       coverage: Math.min(...validations.map((s) => s.summary.coverage)),
       fps: Math.min(...validations.map((s) => s.fps)),
       validRatio: Math.min(...validations.map((s) => s.validation.stream.validRatio)),
-      passed: validations.every((s) => s.verdict.pass),
+      passed: !measurementLimitedRef.current && validations.every((s) => s.verdict.pass),
       calibrationClicks: session.calibration.clicks,
       calibrationLayout: session.calibration.layout ?? "v2-corners-last",
       driftChecks: driftChecksRef.current.map(driftSummary),
@@ -694,6 +738,20 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       clearTimeout(go);
     };
   }, [stage, runValidation]);
+
+  function downloadRecoveryDiagnostic() {
+    if (!session) return;
+    const report = { version: "eye-v3-measured-fixations", session, lastDriftCheck,
+      recovery: { interruptions: recoveryCountRef.current, recalibrations: recalibrationCountRef.current,
+        confirmedImages: confirmedCountRef.current, checks: recoveryChecksRef.current },
+      measurementStatus: measurementLimitedRef.current ? "limited" : "validated" };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `eyetracking-diagnostic-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   function changeDevice(next: DeviceType) {
     setDevice(next);
@@ -885,14 +943,22 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             Continuarás desde la imagen {(resumeCount ?? 0) + 1}.
           </p>
           <p className="text-sm text-muted">
-            Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control, unos 6 segundos.
+            Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control; tarda entre 6 y 11 segundos.
             Repetiremos sólo las imágenes del bloque que quedó sin validar.
           </p>
+          {lastDriftCheck ? <p className="text-xs text-muted">
+            Error mediano: {lastDriftCheck.medianErrorDeg !== null ? `${lastDriftCheck.medianErrorDeg.toFixed(1)}°` : "sin medición"} · Lecturas/s: {lastDriftCheck.fps.toFixed(0)} · Detección durante fijación: {Math.round(lastDriftCheck.validRatio * 100)} %
+          </p> : null}
           {needsCalibration ? <p className="text-sm">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
           <div className="flex flex-wrap justify-center gap-3">
             <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
             <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
           </div>
+          {limitedReady ? <Card className="space-y-3 text-left">
+            <p className="text-sm">Si el ajuste sigue fallando, puedes terminar. Tu participación quedará marcada con precisión limitada y sus miradas no se incluirán en los mapas válidos.</p>
+            <Button variant="secondary" onClick={() => void startStudy(true)} disabled={studyBusy}>Continuar con precisión limitada</Button>
+          </Card> : null}
+          {diagnosticsEnabled ? <Button variant="ghost" onClick={downloadRecoveryDiagnostic}>Descargar diagnóstico</Button> : null}
           <p className="text-xs text-muted">El avance se conserva mientras mantengas abierta esta sesión.</p>
         </div>
       ) : null}
@@ -1032,6 +1098,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "stimulus" && study?.assets[stimulusIndex] ? (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background px-4 py-3 text-center">
           <p className="text-sm text-muted">Pieza {stimulusIndex + 1} de {study.assets.length} · {remaining} s</p>
+          {measurementLimited ? <p className="text-xs text-muted">Continuando con precisión limitada.</p> : null}
           {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage; necesitamos el rectángulo exacto mostrado */}
           <img
             ref={stimulusImgRef}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildEyeHeatmap } from "./heatmap";
 import { collectEyeObservation } from "./samples";
-import { eyeRunSchema, observationsMatchStudy, qualityPasses, requiredDriftChecksPass, type EyeObservation, type EyeQuality } from "./schema";
+import { completionAllowed, eyeRunSchema, observationsMatchStudy, qualityPasses, requiredDriftChecksPass, type EyeObservation, type EyeQuality } from "./schema";
 
 const assetId = "40000000-0000-4000-8000-000000000001";
 const sessionId = "30000000-0000-4000-8000-000000000001";
@@ -12,6 +12,21 @@ const observation: EyeObservation = {
 const quality: EyeQuality = { engineId: "webeyetrack@0.0.2", medianErrorDeg: 2.5, coverage: 1, fps: 25, validRatio: 0.9, passed: true, calibrationClicks: 9, calibrationLayout: "v2-corners-last" };
 
 describe("captura para un estudio visual", () => {
+  it("sólo eye-v3 puede finalizar una sesión limitada, con todos los controles informados y sin aprobarla", () => {
+    const good = { afterAssetCount: 0, medianErrorDeg: 2, maxErrorDeg: 3, coverage: 1, fps: 30, validRatio: 1, passed: true };
+    const bad = { ...good, afterAssetCount: 2, medianErrorDeg: 10, maxErrorDeg: 15 };
+    const q: EyeQuality = { ...quality, measurementStatus: "limited", calibrationLayout: "v5-weighted-base",
+      driftChecks: [good, bad, { ...bad, afterAssetCount: 3 }],
+      recovery: { interruptions: 2, recalibrations: 1, repeatedAssetIds: [assetId], checks: [bad, bad] } };
+    expect(completionAllowed(q, "desktop", 3, "eye-v3")).toBe(true);
+    expect(qualityPasses(q, "desktop", 3)).toBe(false);
+    expect(completionAllowed(q, "desktop", 3, "eye-v2")).toBe(false);
+    expect(completionAllowed(q, "desktop", 3, "eye-v1")).toBe(false);
+    expect(completionAllowed({ ...q, recovery: { ...q.recovery!, interruptions: 1 } }, "desktop", 3, "eye-v3")).toBe(false);
+    expect(completionAllowed({ ...q, recovery: { ...q.recovery!, checks: [good] } }, "desktop", 3, "eye-v3")).toBe(false);
+    q.driftChecks!.pop();
+    expect(completionAllowed(q, "desktop", 3, "eye-v3")).toBe(false);
+  });
   it("la recuperación conserva el historial fallido pero exige un último control válido", () => {
     const check = { afterAssetCount: 0, medianErrorDeg: 2, maxErrorDeg: 3, coverage: 1, fps: 30, validRatio: 1, passed: true };
     const q: EyeQuality = { ...quality, calibrationLayout: "v5-weighted-refinement",

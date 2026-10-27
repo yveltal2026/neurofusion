@@ -130,3 +130,12 @@ Estas limitaciones (CDN fijo, clic global, sin destrucción) hacen más probable
 - El historial fallido se almacena separado de los controles de los bloques aceptados. Para completar se exige un control de recuperación válido, todos los controles ordinarios y una observación por imagen, sin duplicados.
 - El resumen usa el peor error y la menor cobertura/frecuencia de las calibraciones utilizadas. Miradas y CSV identifican pausas, recalibraciones e imágenes repetidas; la exposición repetida puede afectar la familiaridad con el estímulo y debe considerarse al analizar o excluir una sesión.
 - Este avance sólo se conserva en memoria durante la sesión abierta; recargar o cerrar la página no lo restaura. No se añade una migración: la auditoría se almacena en el JSON existente de calidad.
+
+## Controles de fijación y fallos persistentes (eye-v3)
+
+- La frecuencia y la proporción de lecturas válidas se calculan sólo en las tres ventanas de fijación. Se excluye el segundo de transición de cada objetivo. Esto evita tratar la pérdida de detección mientras se mueve la mirada como un fallo sostenido durante la medición.
+- Cada objetivo con pocas lecturas o detección inferior al 80 % dispone de una única recaptura de 1.5 s, manteniendo el mismo objetivo. No se repite para reducir un error angular grande y no se entrena con estos controles.
+- Se muestran causas distintas: cobertura, frecuencia, detección durante la fijación, error mediano y error máximo. Los límites angulares 4°/6° y el máximo 1.5 veces el límite no cambian.
+- Tras dos pausas con controles fallidos se puede continuar con precisión limitada. Se siguen registrando los controles restantes y todas las imágenes; un control no medido se informa con cobertura cero y errores nulos. La sesión queda siempre con `passed=false`, identificada en Miradas y CSV y excluida de los mapas válidos.
+- El backend sólo permite ese cierre para sesiones `eye-v3` con fallos reales en su historial y todos los puntos de control informados. `eye-v2` conserva sus requisitos anteriores. No se añade SQL: se usa el JSON de calidad existente.
+- `?diagnostic=1` habilita «Descargar diagnóstico» en la pausa; el JSON contiene calibración/validación, el último control con sus objetivos y el historial de recuperación. No incluye token de participación ni video. Este archivo permitirá identificar la causa en el dispositivo real; los casos simulados no acreditan una mejora de precisión del motor.

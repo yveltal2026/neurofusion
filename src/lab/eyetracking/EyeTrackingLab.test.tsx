@@ -2,17 +2,20 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EyeTrackingLab } from "./EyeTrackingLab";
-import { eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
+import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0 }));
+const control = vi.hoisted(() => ({ failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
   return { ...actual, requestCamera: vi.fn(), checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
     createWebEyeTrackEngine: () => {
       let timer: ReturnType<typeof setInterval>;
       let count = 0;
+      let driftKey: string | null = null;
+      let driftSince = 0;
+      let firstDriftAt: number | null = null;
       return { id: "webeyetrack@0.0.2", calibration: "global-click",
-        start: async (_video: unknown, onFrame: (f: { t: number; x: number; y: number; inferenceMs: number }) => void) => {
+        start: async (_video: unknown, onFrame: (f: { t: number; x: number | null; y: number | null; inferenceMs: number }) => void) => {
           timer = setInterval(() => {
             const dot = document.querySelector<HTMLElement>('button[aria-label^="Punto de calibración"], [data-testid="validation-target"], [data-testid="drift-target"]');
             let x = dot ? Number.parseFloat(dot.style.left) : window.innerWidth / 2;
@@ -25,7 +28,12 @@ vi.mock("./engine", async (original) => {
             if (control.saturateLower && y > window.innerHeight * 0.85) y = window.innerHeight;
             if (control.failDrift && dot?.dataset.testid === "drift-target") { x = 0; y = 0; }
             if (dot?.dataset.testid === "validation-target") x += control.validationBiasPx;
-            onFrame({ t: performance.now(), x, y, inferenceMs: 10 });
+            const key = dot?.dataset.testid === "drift-target" ? `${dot.style.left}:${dot.style.top}` : null;
+            if (key !== driftKey) { driftKey = key; driftSince = performance.now(); }
+            if (key && firstDriftAt === null) firstDriftAt = performance.now();
+            const lost = key && ((control.loseDuringSettle && performance.now() - driftSince < 950)
+              || (control.dropFirstDriftMeasurement && firstDriftAt !== null && performance.now() - firstDriftAt >= 975 && performance.now() - firstDriftAt < 1975));
+            onFrame({ t: performance.now(), x: lost ? null : x, y: lost ? null : y, inferenceMs: 10 });
           }, 25);
           return { readyMs: 1 };
         }, stop: () => clearInterval(timer) };
@@ -84,7 +92,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
   control.startError = false;
-  control.validationBiasPx = 0;
+  control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
   starts = 0; completed = null; activeAssets = assets;
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
@@ -98,13 +106,14 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
     if (url.endsWith("/start")) {
       starts++;
-      expect(JSON.parse(String(init.body)).protocol).toBe("eye-v2");
+      expect(JSON.parse(String(init.body)).protocol).toBe("eye-v3");
       return control.startError ? Response.json({ message: "No se pudo iniciar la sesión" }, { status: 503 })
         : Response.json({ sessionId: "30000000-0000-4000-8000-000000000001" });
     }
     if (url.endsWith("/complete")) {
       const run = eyeRunSchema.parse(JSON.parse(String(init.body)));
-      expect(requiredDriftChecksPass(run.quality, "desktop", activeAssets.length, true)).toBe(true);
+      expect(completionAllowed(run.quality, "desktop", activeAssets.length, "eye-v3")).toBe(true);
+      if (run.quality.measurementStatus !== "limited") expect(requiredDriftChecksPass(run.quality, "desktop", activeAssets.length, true)).toBe(true);
       completed = run;
       return Response.json({ ok: true });
     }
@@ -114,6 +123,44 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("estudios con control de calidad", () => {
+  it("no rechaza el control por perder lecturas mientras los ojos cambian de objetivo", async () => {
+    control.loseDuringSettle = true;
+    await setup();
+    click("Comenzar presentación"); await drift();
+    expect(starts).toBe(1);
+    expect(screen.getByAltText("Pieza 1")).toBeTruthy();
+    expect(screen.queryByText(/Hagamos un ajuste rápido/)).toBeNull();
+  });
+
+  it("recaptura una sola vez un punto sin lecturas suficientes antes de rechazar el control", async () => {
+    control.dropFirstDriftMeasurement = true;
+    await setup();
+    click("Comenzar presentación");
+    await tick(2000); expect(starts).toBe(0);
+    await tick(1500); await tick(2000); await tick(2000); await tick(20);
+    expect(starts).toBe(1);
+    expect(screen.getByAltText("Pieza 1")).toBeTruthy();
+  });
+
+  it("permite terminar con precisión limitada tras fallos persistentes sin guardarlos como mirada válida", async () => {
+    await setup();
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece();
+    control.failDrift = true; await drift();
+    expect(screen.queryByRole("button", { name: "Continuar con precisión limitada" })).toBeNull();
+    expect(screen.getByText(/La desviación de la mirada supera/)).toBeTruthy();
+    click("Revisar mirada y continuar"); await drift();
+    click("Continuar con precisión limitada"); await tick(20);
+    expect(screen.getByAltText("Pieza 1")).toBeTruthy();
+    await piece(); await piece(); await drift(); await piece(); await drift();
+    expect(screen.getByRole("heading", { name: "Gracias por participar" })).toBeTruthy();
+    expect(completed!.quality.measurementStatus).toBe("limited");
+    expect(completed!.quality.passed).toBe(false);
+    expect(requiredDriftChecksPass(completed!.quality, "desktop", 3, true)).toBe(false);
+    expect(completed!.observations.map((o) => o.assetId)).toEqual(assets.map((a) => a.id));
+    expect(starts).toBe(1);
+  });
+
   it("revisa sólo el punto débil y exige controles antes, entre bloques y al finalizar", async () => {
     control.noisy = true;
     await setup();

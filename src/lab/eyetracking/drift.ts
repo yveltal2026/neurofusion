@@ -1,4 +1,4 @@
-import { median, pxToDeg, THRESHOLDS, type DeviceType, type FrameStats, type Geometry, type Point, type TargetResult } from "./metrics";
+import { median, pxToDeg, THRESHOLDS, type DeviceType, type FrameStats, type GazeFrame, type Geometry, type Point, type TargetResult } from "./metrics";
 
 export interface DriftSummary {
   afterAssetCount: number;
@@ -28,11 +28,35 @@ export function driftCheckpoints(assetCount: number): number[] {
   return checkpoints;
 }
 
-export function driftPasses(check: Omit<DriftSummary, "passed">, device: DeviceType): boolean {
+export function driftFailures(check: Omit<DriftSummary, "passed">, device: DeviceType): string[] {
   const limit = THRESHOLDS.maxMedianErrorDeg[device];
-  return check.coverage === 1 && check.fps >= THRESHOLDS.minFps && check.validRatio >= 0.8
-    && check.medianErrorDeg !== null && check.medianErrorDeg <= limit
-    && check.maxErrorDeg !== null && check.maxErrorDeg <= limit * 1.5;
+  const reasons: string[] = [];
+  if (check.coverage !== 1) reasons.push("No hubo suficientes lecturas en todos los puntos.");
+  if (!Number.isFinite(check.fps) || check.fps < THRESHOLDS.minFps) reasons.push("La cámara o el equipo están entregando pocas lecturas.");
+  if (!Number.isFinite(check.validRatio) || check.validRatio < 0.8) reasons.push("Se perdió la detección de los ojos durante la fijación. Revisa la luz y que tu cara se vea completa.");
+  if (check.medianErrorDeg === null || !Number.isFinite(check.medianErrorDeg) || check.medianErrorDeg > limit) reasons.push("La desviación de la mirada supera la precisión requerida.");
+  if (check.maxErrorDeg === null || !Number.isFinite(check.maxErrorDeg) || check.maxErrorDeg > limit * 1.5) reasons.push("Uno de los puntos quedó demasiado lejos de la mirada estimada.");
+  return reasons;
+}
+
+export function driftPasses(check: Omit<DriftSummary, "passed">, device: DeviceType): boolean {
+  return driftFailures(check, device).length === 0;
+}
+
+/** Mide sólo las fijaciones; las transiciones entre objetivos no cuentan como pérdida de cara. */
+export function driftFrameStats(frames: GazeFrame[], windows: { from: number; to: number }[]): FrameStats {
+  const selected = frames.filter((f) => windows.some((w) => f.t >= w.from && f.t < w.to));
+  const durationMs = windows.reduce((n, w) => n + Math.max(0, w.to - w.from), 0);
+  const valid = selected.filter((f) => f.x !== null && f.y !== null && Number.isFinite(f.x) && Number.isFinite(f.y));
+  const inference = selected.flatMap((f) => f.inferenceMs !== null && Number.isFinite(f.inferenceMs) ? [f.inferenceMs] : []);
+  return { fps: durationMs > 0 ? selected.length * 1000 / durationMs : 0,
+    validRatio: selected.length ? valid.length / selected.length : 0,
+    frames: selected.length, inferenceMsMedian: inference.length ? median(inference) : null };
+}
+
+/** Falta de medición explícita para finalizar con precisión limitada, nunca un control aprobado. */
+export function unmeasuredDriftCheck(afterAssetCount: number): DriftCheck {
+  return { afterAssetCount, medianErrorDeg: null, maxErrorDeg: null, coverage: 0, fps: 0, validRatio: 0, passed: false, targets: [] };
 }
 
 /** Sólo mide; estos objetivos nunca modifican la calibración. */
