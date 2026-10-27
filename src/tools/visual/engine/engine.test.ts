@@ -110,4 +110,50 @@ describe("franjas para la IA", () => {
     expect(aois[0]).toMatchObject({ id: "E1", kind: "cta", attention: 0.8, importance: 5, order: 2 });
     expect(aois[0].box).toEqual([0.5, 0.8, 0.9, 0.9]);
   });
+
+  describe("orden de coordenadas de la IA (box2d = [ymin, xmin, ymax, xmax])", () => {
+    const base = { summary: "s", message: "m", firstSeconds: "f", criteria: Object.fromEntries(["clarity", "hierarchy", "cta", "legibility", "brand", "load"].map((k) => [k, { score: 3, evidence: "e" }])), issues: [], strengths: [], limitations: [] };
+    const parse = (elements: object[]) => pieceAiSchema.parse({ ...base, elements });
+    const el = (extra: object) => ({ id: "E1", label: "x", kind: "product", tile: 0, attention: 4, importance: 5, order: 1, ...extra });
+
+    it("el frasco de la pieza de Taster's Choice (caso real: Gemini respondió [y, x, y, x])", () => {
+      // Frasco: x 63–90 % y y 17–82 % de la imagen. Gemini lo dijo como [ymin, xmin, ymax, xmax].
+      const aois = elementsToAois(parse([el({ box2d: [168, 626, 825, 902] })]), planTiles(687, 685));
+      const [x0, y0, x1, y1] = aois[0].box;
+      expect([x0, y0, x1, y1].map((v) => Math.round(v * 1000))).toEqual([626, 168, 902, 825]);
+      // La caja queda del lado derecho y alta, no abajo-centro como con la lectura transpuesta.
+      expect((x0 + x1) / 2).toBeGreaterThan(0.7);
+      expect((y0 + y1) / 2).toBeLessThan(0.55);
+    });
+
+    it("un elemento en la parte baja tiene y altas; uno a la derecha, x altas", () => {
+      const abajo = elementsToAois(parse([el({ box2d: [800, 100, 950, 300] })]), planTiles(1000, 1000))[0].box;
+      expect(abajo).toEqual([0.1, 0.8, 0.3, 0.95]);
+      const derecha = elementsToAois(parse([el({ box2d: [100, 700, 300, 950] })]), planTiles(1000, 1000))[0].box;
+      expect(derecha).toEqual([0.7, 0.1, 0.95, 0.3]);
+    });
+
+    it("el mapa de calor se centra en el elemento (no en su transposición)", () => {
+      const aois = elementsToAois(parse([el({ box2d: [168, 626, 825, 902] })]), planTiles(687, 685));
+      const gw = 100, gh = 100;
+      const field = attentionField(aois, gw, gh);
+      let best = 0, bx = 0, by = 0;
+      field.forEach((v, i) => {
+        if (v > best) { best = v; bx = i % gw; by = Math.floor(i / gw); }
+      });
+      expect(bx / gw).toBeGreaterThan(0.6); // derecha
+      expect(by / gh).toBeLessThan(0.6); // zona alta/media, no la mesa de abajo
+    });
+
+    it("los análisis guardados con `box` ([x0, y0, x1, y1]) se leen igual que antes", () => {
+      const legacy = elementsToAois(parse([el({ box: [500, 800, 900, 900] })]), planTiles(1080, 1080));
+      expect(legacy[0].box).toEqual([0.5, 0.8, 0.9, 0.9]);
+    });
+
+    it("box2d tiene prioridad y un elemento sin ninguna caja se rechaza", () => {
+      const both = elementsToAois(parse([el({ box2d: [100, 200, 300, 400], box: [0, 0, 1000, 1000] })]), planTiles(1000, 1000));
+      expect(both[0].box).toEqual([0.2, 0.1, 0.4, 0.3]);
+      expect(() => parse([el({})])).toThrow(/box2d/);
+    });
+  });
 });
