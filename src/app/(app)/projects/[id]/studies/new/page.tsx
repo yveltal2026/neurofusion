@@ -45,7 +45,7 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
         <Card className="transition hover:border-primary">
           <h3 className="font-medium">Batería de pasos</h3>
           <p className="mt-1 text-sm text-muted">
-            Une estudios del proyecto (IAT y encuestas) en una sola liga: el participante da un consentimiento y los recorre en el orden que elijas. La plataforma
+            Une estudios del proyecto (IAT, variantes del IAT, encuestas e imágenes con IA) en una sola liga: el participante da un consentimiento y los recorre en el orden que elijas. La plataforma
             sugiere un orden y tú puedes cambiarlo u omitir pasos.
           </p>
         </Card>

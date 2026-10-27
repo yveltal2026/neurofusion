@@ -76,3 +76,40 @@ describe("assembleParticipants", () => {
     expect(out[2]!.iat.iat1).toEqual([null, null]);
   });
 });
+
+describe("assembleParticipants · variantes y exposición", () => {
+  const vSteps: ReportStep[] = [
+    { kind: "variant", studyId: "var1", name: "SC", variant: "sc_iat" },
+    { kind: "exposure", studyId: "exp1", name: "Anuncio", pieces: [] },
+  ];
+  const bs = [
+    { id: "b1", participant_ref: "r1", excluded: false },
+    { id: "b2", participant_ref: "r2", excluded: false },
+  ];
+  const children = [
+    { id: "c1v", battery_session_id: "b1", study_id: "var1", excluded: false },
+    { id: "c1x", battery_session_id: "b1", study_id: "exp1", excluded: false },
+    { id: "c2v", battery_session_id: "b2", study_id: "var1", excluded: false },
+  ];
+  const out = assembleParticipants(
+    vSteps,
+    bs,
+    children,
+    [],
+    [],
+    [
+      { session_id: "c1v", primary_value: 0.42, valid: true },
+      { session_id: "c2v", primary_value: null, valid: false },
+    ],
+  );
+
+  it("une el resultado de la variante de cada participante", () => {
+    expect(out[0]!.variant!.var1).toEqual({ value: 0.42, valid: true });
+    expect(out[1]!.variant!.var1).toEqual({ value: null, valid: false });
+  });
+
+  it("marca la exposición sólo en quien completó ese paso", () => {
+    expect(out[0]!.exposure!.exp1).toBe(true);
+    expect(out[1]!.exposure!.exp1).toBeUndefined();
+  });
+});

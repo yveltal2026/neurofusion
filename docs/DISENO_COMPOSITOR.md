@@ -148,3 +148,23 @@ Motor puro `src/tools/battery/engine`, con pruebas: une por `battery_session_id`
 5. **Legal (postergado, no olvidado).** El diseño ya deja los ganchos: el consentimiento vive en la **batería** y se versiona en `battery_sessions.consent_version`; el código de participación para ARCO puede ser `participant_ref`; borrar una sesión de batería borra las hijas; `quality` y `ip_hash` están acotados. Cuando se retome el tema legal ([`ANALISIS_LEGAL_EYETRACKING.md`](ANALISIS_LEGAL_EYETRACKING.md)), no debería requerir rediseño.
 6. **Orden configurable:** más libertad implica más combinaciones que probar (pasos omitidos, orden distinto por batería). Mitigación: el runner trabaja sólo con «lista de pasos activos en orden», así que la lógica del participante no cambia; la complejidad queda en el editor y en las reglas de aviso.
 7. **Sin decisiones abiertas de arquitectura.** Quedan los detalles de cada fase, que se revisan al implementarlas.
+
+## 6. Todos los tipos de paso (2026-10-27)
+
+Una batería ya no se limita a IAT y encuesta. Pasos admitidos y su familia en el orden sugerido:
+
+| Herramienta | Familia | Qué hace el participante |
+|---|---|---|
+| Análisis de imagen con IA (`visual`, modo **piezas**) | Exposición | Ve las imágenes del estudio, una por una, un mínimo de `EXPOSURE_SECONDS` (5 s, contados desde que carga la imagen) cada una |
+| IAT | Implícita | Igual que antes |
+| Variantes del IAT (`iat_variant`) | Implícita | Corre la variante incrustada (sin consentimiento ni bienvenida propios) |
+| Encuesta | Explícita | Igual que antes |
+
+Fuera: **SEO** (no tiene participantes) y el modo **journey** de imagen (es un panel modelado, no hay imágenes que mostrar a una persona).
+
+- **Variantes.** Mismo mecanismo que la encuesta: `variant/start` acepta `batterySessionId`, `startVariantSession` enlaza con `link_battery_step` y `VariantRunner` tiene modo `embedded`.
+- **Exposición.** El estudio visual no se publica ni tiene liga, así que no pasa por `claim_session`. La sesión del paso la crea `start_battery_exposure` (valida pertenencia al `run_order` y el MISMO orden que `link_battery_step`; es idempotente) y la cierra `complete_battery_exposure`. Rutas: `POST /api/b/[token]/exposure/start` y `/exposure/complete`. Las imágenes viajan como URL firmada de 1 h de la versión ligera y no se muestra el nombre interno de la pieza.
+- **Qué NO es.** La exposición no mide la mirada ni el tiempo real de atención (el cliente lo cuenta y no se guarda): garantiza y registra que la persona vio el estímulo. La mirada medida sigue siendo del módulo de eye tracking.
+- **Guardas.** El disparador `battery_steps_guard` acepta `iat`, `iat_variant`, `survey` y `visual` en modo piezas; la app además impide guardar un paso de imagen activo sin imágenes.
+- **Aviso nuevo.** Una medida antes de la exposición avisa (no bloquea): si lo que se quiere es la reacción a la imagen, conviene mostrarla primero.
+- **Informe integrado (`nf-battery-report-1.1`).** La variante aporta su medida principal (D, contraste de d′ o efecto en ms; el cero significa «sin efecto») con media, IC95 % y p, y entra a los cruces con las métricas de encuesta (Spearman, Holm). La exposición cuenta quién vio las piezas y muestra la lectura de la IA de cada imagen, etiquetada **estimado** (no es mirada medida ni reacción de personas). El CSV agrega una columna por variante y por paso de exposición.

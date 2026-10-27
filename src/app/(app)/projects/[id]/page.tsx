@@ -107,7 +107,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           </Link>
         </div>
         {(batteries ?? []).length === 0 ? (
-          <Card className="text-sm text-muted">Una batería une varios estudios (IAT y encuestas) en una sola liga. Aún no hay ninguna.</Card>
+          <Card className="text-sm text-muted">Una batería une varios estudios (IAT, variantes, encuestas e imágenes con IA) en una sola liga. Aún no hay ninguna.</Card>
         ) : (
           <ul className="space-y-2">
             {(batteries ?? []).map((b) => (

@@ -23,6 +23,8 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 
 ### Estudios de eye tracking con webcam
 
+Los estudios de webcam se ejecutan mediante su liga propia. Las baterías admiten la exposición de imágenes de IA; no sustituyen el protocolo de webcam. La migración `20261027010000_battery_eyetracking_guard.sql` mantiene esa separación al incorporar ambas funciones.
+
 Creación dedicada: `/projects/[id]/studies/new/eyetracking`. Tiene formulario, resumen, imágenes y resultados propios; los estudios de IA no ofrecen opciones de webcam. Los estudios de webcam existentes se reconocen por su configuración y conservan sus enlaces y datos. Se reutiliza el almacenamiento de imágenes (`tool_type=visual` + `config.eyeTracking`); esta separación no requiere migración adicional.
 
 1. En **Nuevo estudio**, elige **Eye tracking con webcam** (herramienta separada de **Análisis visual con IA**) y sube de 1 a 5 imágenes PNG, JPEG o WebP. Configura de 5 a 30 segundos por imagen (10 por defecto). Tras la primera sesión, las piezas quedan fijadas para que las respuestas sean comparables.
@@ -144,6 +146,8 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | Rastreo contra sitios reales, subida a Storage, visión con Anthropic/OpenAI, PageSpeed real | **Tipado y compilado, sin ejecutar contra servicios reales** (requieren credenciales y red abierta) |
 | Encuesta: motor (instrumentos, validación, puntuación, agregados, alfa de Cronbach), lógica de servidor del participante, runner, constructor, resultados y CSV | Pruebas unitarias y de componente (cliente de Supabase falso en memoria) |
 | Encuesta: tabla `survey_answers`, RLS, `claim_session` con encuestas | Pruebas SQL (`supabase/tests/survey.sql`) |
+| Baterías con IAT, variantes, encuesta e imagen con IA: orden y avisos, runner incrustado, paso de exposición, informe integrado y CSV | Pruebas unitarias y de componente (clientes de Supabase falsos) |
+| Baterías: guarda de pasos (variantes y piezas visuales), `start_battery_exposure` / `complete_battery_exposure`, orden y privilegios | Pruebas SQL (`supabase/tests/battery_tools.sql`) |
 | Rutas `/api/s/*`, páginas del investigador, auth (email/Google; el restablecimiento de contraseña sólo se probó contra un Supabase Auth simulado, sin correo real), seed, llamadas reales a Anthropic/OpenAI | **Tipadas y compiladas, pero aún no ejecutadas contra Supabase real ni con API keys** (requieren credenciales). Primero correr `npm run test:e2e` con un usuario de prueba. |
 
 ## Referencia metodológica

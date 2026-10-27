@@ -5,8 +5,17 @@
  * intercambiar pasos y omitir los que no necesite. Los avisos metodológicos no bloquean.
  */
 
-/** Herramientas con participantes que pueden ser un paso de batería. */
-export const BATTERY_TOOLS = ["iat", "survey"] as const;
+/**
+ * Herramientas que pueden ser un paso de batería: las que tienen participantes (IAT, variantes del IAT,
+ * encuesta) y el análisis de imagen con IA, que entra como paso de exposición (el participante ve las
+ * piezas del estudio). La auditoría SEO no tiene participantes y queda fuera.
+ */
+export const BATTERY_TOOLS = [
+  "iat",
+  "iat_variant",
+  "survey",
+  "visual",
+] as const;
 export type BatteryToolType = (typeof BATTERY_TOOLS)[number];
 
 export function isBatteryTool(toolType: string): toolType is BatteryToolType {
@@ -14,8 +23,8 @@ export function isBatteryTool(toolType: string): toolType is BatteryToolType {
 }
 
 /**
- * Familia de medida de un paso. `exposure` (estimulación y mirada) quedará para el eye
- * tracking y las pruebas de estímulos; hoy ninguna herramienta la usa.
+ * Familia de medida de un paso. `exposure` es la estimulación (ver las piezas de un estudio de imagen;
+ * más adelante, eye tracking y pruebas de estímulos).
  */
 export type StepFamily = "exposure" | "implicit" | "explicit";
 
@@ -27,8 +36,21 @@ export const FAMILY_RANK: Record<StepFamily, number> = {
 
 export const FAMILY_BY_TOOL: Record<BatteryToolType, StepFamily> = {
   iat: "implicit",
+  iat_variant: "implicit",
   survey: "explicit",
+  visual: "exposure",
 };
+
+/** Nombre corto de cada herramienta, para listas y avisos. */
+export const TOOL_LABEL: Record<BatteryToolType, string> = {
+  iat: "IAT",
+  iat_variant: "Variante del IAT",
+  survey: "Encuesta",
+  visual: "Imagen con IA",
+};
+
+/** Segundos mínimos que se muestra cada pieza en un paso de exposición antes de poder continuar. */
+export const EXPOSURE_SECONDS = 5;
 
 export const FAMILY_LABEL: Record<StepFamily, string> = {
   exposure: "Exposición",
@@ -124,7 +146,8 @@ export function addStep(
 
 // ----------------------------------------------------------------- avisos y validación
 
-export type WarningCode = "explicit_before_implicit" | "single_active_step";
+export type WarningCode =
+  "explicit_before_implicit" | "exposure_after_measure" | "single_active_step";
 
 export interface OrderWarning {
   code: WarningCode;
@@ -154,6 +177,23 @@ export function orderWarnings(steps: readonly BatteryStep[]): OrderWarning[] {
           `«${before.map((b) => b.name).join("», «")}» va antes de «${implicit.name}». Responder preguntas explícitas antes de una prueba implícita ` +
           "sobre el mismo concepto puede influir en las asociaciones medidas. Si es a propósito, ignora este aviso.",
         studyIds: [...before.map((b) => b.studyId), implicit.studyId],
+      });
+    }
+  }
+
+  // La exposición va primero: una medida antes de ver la pieza no puede reflejar la reacción a ella.
+  for (const exposure of active.filter((s) => familyOf(s) === "exposure")) {
+    const exposureIndex = active.indexOf(exposure);
+    const before = active.filter(
+      (s, i) => i < exposureIndex && familyOf(s) !== "exposure",
+    );
+    if (before.length) {
+      out.push({
+        code: "exposure_after_measure",
+        message:
+          `«${before.map((b) => b.name).join("», «")}» va antes de «${exposure.name}». Si lo que quieres medir es la reacción a las imágenes, ` +
+          "conviene mostrarlas primero. Si es a propósito (por ejemplo, una medida de línea base), ignora este aviso.",
+        studyIds: [...before.map((b) => b.studyId), exposure.studyId],
       });
     }
   }

@@ -87,9 +87,10 @@ export function BatteryBuilder({
   return (
     <form onSubmit={submit} className="space-y-8" noValidate>
       <p className="text-sm text-muted">
-        Proyecto: {projectName}. Una batería une estudios de este proyecto (IAT
-        y encuestas) en una sola liga: el participante da un consentimiento y
-        los recorre uno tras otro.
+        Proyecto: {projectName}. Una batería une estudios de este proyecto (IAT,
+        variantes del IAT, encuestas e imágenes con IA) en una sola liga: el
+        participante da un consentimiento y los recorre uno tras otro. Las
+        imágenes se muestran como estímulo antes de las pruebas.
       </p>
 
       <Card className="space-y-4">

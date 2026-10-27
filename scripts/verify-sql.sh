@@ -20,4 +20,5 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/survey.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/variants.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/battery_cascade.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/battery.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f supabase/tests/battery_tools.sql
 echo "SQL OK: migraciones y RLS verificadas"

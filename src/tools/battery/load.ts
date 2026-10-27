@@ -18,28 +18,94 @@ export function chunk<T>(list: readonly T[], size: number): T[][] {
   return out;
 }
 
-/** Estudios del proyecto que se pueden usar como paso (IAT y encuesta). */
+/** Cuántas imágenes tiene cada estudio de imagen (las que un paso de exposición mostraría). */
+export async function pieceCounts(
+  supabase: SupabaseClient,
+  studyIds: readonly string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>(studyIds.map((id) => [id, 0]));
+  for (const ids of chunk(studyIds, 100)) {
+    const { data } = await supabase
+      .from("visual_assets")
+      .select("study_id")
+      .in("study_id", ids);
+    for (const r of data ?? [])
+      counts.set(
+        r.study_id as string,
+        (counts.get(r.study_id as string) ?? 0) + 1,
+      );
+  }
+  return counts;
+}
+
+/**
+ * Estudios del proyecto que se pueden usar como paso: IAT, variantes del IAT, encuestas y análisis de
+ * imagen con IA en modo piezas (el journey es un panel modelado: no hay nada que mostrarle a una persona).
+ */
 export async function loadAvailableStudies(
   supabase: SupabaseClient,
   projectId: string,
 ): Promise<AvailableStudy[]> {
   const { data } = await supabase
     .from("studies")
-    .select("id, name, tool_type")
+    .select("id, name, tool_type, mode:config->>mode, eyeTracking:config->eyeTracking")
     .eq("project_id", projectId)
-    .in("tool_type", ["iat", "survey"])
+    .in("tool_type", ["iat", "iat_variant", "survey", "visual"])
     .order("created_at", { ascending: true });
-  return (data ?? []).flatMap((s) =>
+  const rows = (data ?? []) as {
+    id: string;
+    name: string;
+    tool_type: string;
+    mode: string | null;
+    eyeTracking?: unknown;
+  }[];
+  const usable = rows.filter(
+    (s) =>
+      isBatteryTool(s.tool_type) &&
+      (s.tool_type !== "visual" || (s.mode === "pieces" && !s.eyeTracking)),
+  );
+  const pieces = await pieceCounts(
+    supabase,
+    usable.filter((s) => s.tool_type === "visual").map((s) => s.id),
+  );
+  return usable.flatMap((s) =>
     isBatteryTool(s.tool_type)
       ? [
           {
-            studyId: s.id as string,
+            studyId: s.id,
             toolType: s.tool_type,
-            name: s.name as string,
+            name: s.name,
+            ...(s.tool_type === "visual"
+              ? { pieces: pieces.get(s.id) ?? 0 }
+              : {}),
           },
         ]
       : [],
   );
+}
+
+/**
+ * Nombres de los pasos de exposición ACTIVOS que no tienen imágenes: un paso así dejaría a los
+ * participantes sin nada que ver, así que no se guarda la batería hasta que el estudio tenga piezas.
+ */
+export async function exposureStepsWithoutPieces(
+  supabase: SupabaseClient,
+  steps: readonly { studyId: string; enabled: boolean }[],
+): Promise<string[]> {
+  const ids = steps.filter((s) => s.enabled).map((s) => s.studyId);
+  if (ids.length === 0) return [];
+  const { data } = await supabase
+    .from("studies")
+    .select("id, name")
+    .in("id", ids)
+    .eq("tool_type", "visual");
+  const visual = (data ?? []) as { id: string; name: string }[];
+  if (visual.length === 0) return [];
+  const counts = await pieceCounts(
+    supabase,
+    visual.map((v) => v.id),
+  );
+  return visual.filter((v) => !counts.get(v.id)).map((v) => v.name);
 }
 
 export interface BatteryDetail {

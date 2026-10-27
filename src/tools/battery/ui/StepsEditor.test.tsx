@@ -12,6 +12,9 @@ const available: AvailableStudy[] = [
   { studyId: "iat-1", toolType: "iat", name: "IAT café" },
   { studyId: "sv-1", toolType: "survey", name: "Encuesta de marca" },
   { studyId: "sv-2", toolType: "survey", name: "Encuesta de precio" },
+  { studyId: "var-1", toolType: "iat_variant", name: "Categoría única" },
+  { studyId: "vis-1", toolType: "visual", name: "Anuncio café", pieces: 3 },
+  { studyId: "vis-0", toolType: "visual", name: "Piezas vacías", pieces: 0 },
 ];
 
 /** Contenedor con estado, para ver el efecto de las acciones como las vería el investigador. */
@@ -44,7 +47,7 @@ const names = () =>
     .map((li) => li.querySelector("p")?.textContent ?? "");
 const step = (
   studyId: string,
-  toolType: "iat" | "survey",
+  toolType: BatteryStep["toolType"],
   name: string,
   enabled = true,
 ): BatteryStep => ({ studyId, toolType, name, enabled });
@@ -76,9 +79,13 @@ describe("StepsEditor · orden sugerido por la plataforma", () => {
     render(<Harness />);
     await add(user, "IAT café");
     const options = screen.getAllByRole("option").map((o) => o.textContent);
+    expect(options).not.toContain("IAT · IAT café");
     expect(options).toEqual([
       "Encuesta · Encuesta de marca",
       "Encuesta · Encuesta de precio",
+      "Variante del IAT · Categoría única",
+      "Imagen con IA · Anuncio café (3 imágenes)",
+      "Imagen con IA · Piezas vacías (sin imágenes: súbelas primero)",
     ]);
   });
 });
@@ -207,5 +214,65 @@ describe("StepsEditor · sólo lectura (batería con participantes)", () => {
     expect(screen.getByText("Omitido")).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.queryByLabelText("Agregar paso")).toBeNull();
+  });
+});
+
+describe("StepsEditor · los cuatro tipos de paso", () => {
+  it("ofrece IAT, variantes, encuestas e imágenes con IA, con su etiqueta y cuántas imágenes tiene cada una", () => {
+    render(<Harness />);
+    const options = screen
+      .getAllByRole("option")
+      .map((o) => o.textContent ?? "");
+    expect(options).toContain("Variante del IAT · Categoría única");
+    expect(options).toContain("Imagen con IA · Anuncio café (3 imágenes)");
+  });
+
+  it("un estudio de imagen sin piezas no se puede agregar", () => {
+    render(<Harness />);
+    const empty = screen.getByRole("option", { name: /Piezas vacías/ });
+    expect((empty as HTMLOptionElement).disabled).toBe(true);
+    expect(empty.textContent).toContain("sin imágenes");
+  });
+
+  it("al agregar los cuatro, el orden sugerido es imagen → variante e IAT → encuesta", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await add(user, "Encuesta de marca");
+    await add(user, "Categoría única");
+    await add(user, "Anuncio café");
+    await add(user, "IAT café");
+    expect(names()).toEqual([
+      "Anuncio café",
+      "Categoría única",
+      "IAT café",
+      "Encuesta de marca",
+    ]);
+  });
+
+  it("avisa si una prueba va antes que la exposición", () => {
+    render(
+      <Harness
+        initial={[
+          step("iat-1", "iat", "IAT café"),
+          step("vis-1", "visual", "Anuncio café"),
+        ]}
+      />,
+    );
+    expect(screen.getByText(/conviene mostrarlas primero/)).toBeTruthy();
+  });
+
+  it("describe cada paso con su tipo y su familia", () => {
+    render(
+      <Harness
+        initial={[
+          step("vis-1", "visual", "Anuncio café"),
+          step("var-1", "iat_variant", "Categoría única"),
+        ]}
+      />,
+    );
+    expect(screen.getByText(/Imagen con IA · Exposición/)).toBeTruthy();
+    expect(
+      screen.getByText(/Variante del IAT · Medida implícita/),
+    ).toBeTruthy();
   });
 });

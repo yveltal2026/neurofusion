@@ -77,7 +77,10 @@ function CorrelationRow({ c }: { c: CorrelationReport }) {
   );
 }
 
-/** Informe integrado de una batería: IAT medido, encuestas medidas y cruces estimados. */
+/**
+ * Informe integrado de una batería: IAT y variantes medidos, encuestas medidas, exposición (quién vio
+ * las piezas y la lectura de la IA) y cruces estimados.
+ */
 export function ReportView({
   batteryId,
   report,
@@ -191,6 +194,128 @@ export function ReportView({
         </Section>
       ) : null}
 
+      {report.variants.length ? (
+        <Section title="Variantes del IAT" evidence="medido">
+          <Card className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <Th>Prueba</Th>
+                  <Th>n</Th>
+                  <Th>Medida media</Th>
+                  <Th>IC95 %</Th>
+                  <Th>p</Th>
+                  <Th>Cómo leerla</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.variants.map((v) => (
+                  <tr
+                    key={v.stepId}
+                    className="border-t border-border align-top"
+                  >
+                    <td className="py-1.5 pr-4">
+                      {v.stepName} · {v.measure}
+                    </td>
+                    <td className="py-1.5 pr-4 tabular-nums">
+                      {v.n}
+                      {v.nInvalid ? (
+                        <span
+                          className="text-muted"
+                          title="Participantes cuyo resultado no es válido o falta"
+                        >
+                          {" "}
+                          (+{v.nInvalid} sin resultado válido)
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="py-1.5 pr-4 tabular-nums">
+                      {num(v.mean)} {v.mean === null ? "" : v.unit}
+                    </td>
+                    <td className="py-1.5 pr-4 tabular-nums">
+                      {range(v.ci95)}
+                    </td>
+                    <td className="py-1.5 pr-4 tabular-nums">{pValue(v.p)}</td>
+                    <td className="py-1.5 pr-4 text-muted">
+                      0 = {v.zeroMeans}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </Section>
+      ) : null}
+
+      {report.exposures.map((e) => (
+        <Section key={e.stepId} title={`Exposición · ${e.stepName}`}>
+          <Card className="space-y-3">
+            <p className="text-sm">
+              <span className="font-semibold tabular-nums">{e.nViewed}</span> de{" "}
+              <span className="tabular-nums">{e.nIncluded}</span> participantes
+              incluidos vieron las {e.pieces.length}{" "}
+              {e.pieces.length === 1 ? "imagen" : "imágenes"} antes de las
+              pruebas siguientes. <EvidenceBadge kind="medido" />
+            </p>
+            <p className="text-sm text-muted">
+              Es un paso de exposición: garantiza que la persona vio el
+              estímulo; no mide hacia dónde miró.
+            </p>
+          </Card>
+          {e.pieces.some((p) => p.criteria) ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium">Lectura de la IA de cada imagen</h3>
+                <EvidenceBadge kind="estimado" />
+              </div>
+              <Card className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-wide text-muted">
+                    <tr>
+                      <Th>Imagen</Th>
+                      {(e.pieces.find((p) => p.criteria)?.criteria ?? []).map(
+                        (c) => (
+                          <Th key={c.label}>{c.label}</Th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {e.pieces.map((p) => (
+                      <tr
+                        key={p.title}
+                        className="border-t border-border align-top"
+                      >
+                        <td className="py-1.5 pr-4">{p.title}</td>
+                        {p.criteria ? (
+                          p.criteria.map((c) => (
+                            <td
+                              key={c.label}
+                              className="py-1.5 pr-4 tabular-nums"
+                            >
+                              {c.score} / 5
+                            </td>
+                          ))
+                        ) : (
+                          <td className="py-1.5 pr-4 text-muted" colSpan={6}>
+                            Sin análisis de IA todavía
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+              <p className="text-xs text-muted">
+                Estimación experta de una IA sobre la imagen. No es eye tracking
+                ni la reacción de personas reales; sirve para leerla junto a lo
+                que sí midieron las otras pruebas.
+              </p>
+            </>
+          ) : null}
+        </Section>
+      ))}
+
       {report.surveys.map((s) => {
         const config = surveyConfigs.get(s.stepId);
         return config ? (
@@ -276,6 +401,12 @@ export function ReportView({
                       D · {d.dimensionName}
                     </Th>
                   ))}
+                  {report.variants.map((v) => (
+                    <Th key={v.stepId}>{v.measure}</Th>
+                  ))}
+                  {report.exposures.map((e) => (
+                    <Th key={e.stepId}>Vio · {e.stepName}</Th>
+                  ))}
                   {report.metrics.map((m) => (
                     <Th key={m.key}>{m.label}</Th>
                   ))}
@@ -295,6 +426,16 @@ export function ReportView({
                         className="py-1.5 pr-4 tabular-nums"
                       >
                         {num(r.d[`${d.stepId}:${d.dimensionId}`] ?? null)}
+                      </td>
+                    ))}
+                    {report.variants.map((v) => (
+                      <td key={v.stepId} className="py-1.5 pr-4 tabular-nums">
+                        {num(r.d[`${v.stepId}:primary`] ?? null)}
+                      </td>
+                    ))}
+                    {report.exposures.map((e) => (
+                      <td key={e.stepId} className="py-1.5 pr-4">
+                        {r.exposed[e.stepId] ? "Sí" : "No"}
                       </td>
                     ))}
                     {report.metrics.map((m) => (

@@ -2,6 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAll } from "@/lib/studies";
 import { iatConfigSchema } from "@/tools/iat/config";
 import { surveyConfigSchema } from "@/tools/survey/engine";
+import { variantConfigSchema } from "@/tools/variants/config";
+import { CRITERIA_LABEL } from "@/tools/visual/analysis/piece";
+import { visualConfigSchema } from "@/tools/visual/config";
+import { loadAssets } from "@/tools/visual/results";
 import { chunk, loadBatteryDetail, type BatteryDetail } from "../load";
 import type { ReportParticipant, ReportStep } from "./report";
 
@@ -27,6 +31,11 @@ export interface AnswersLite {
   session_id: string;
   answers: unknown;
 }
+export interface VariantResultLite {
+  session_id: string;
+  primary_value: number | null;
+  valid: boolean;
+}
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -42,6 +51,7 @@ export function assembleParticipants(
   children: readonly ChildSessionLite[],
   results: readonly ResultLite[],
   answers: readonly AnswersLite[],
+  variantResults: readonly VariantResultLite[] = [],
 ): ReportParticipant[] {
   const resultsBySession = new Map<string, ResultLite[]>();
   for (const r of results) {
@@ -52,6 +62,9 @@ export function assembleParticipants(
   const answersBySession = new Map(
     answers.map((a) => [a.session_id, a.answers]),
   );
+  const variantBySession = new Map(
+    variantResults.map((v) => [v.session_id, v]),
+  );
 
   return batterySessions.map((bs) => {
     const mine = children.filter((c) => c.battery_session_id === bs.id);
@@ -61,6 +74,8 @@ export function assembleParticipants(
       excluded: bs.excluded || mine.some((c) => c.excluded),
       iat: {},
       survey: {},
+      variant: {},
+      exposure: {},
     };
     for (const step of steps) {
       const child = mine.find((c) => c.study_id === step.studyId);
@@ -71,6 +86,14 @@ export function assembleParticipants(
           const row = rows.find((r) => r.dimension_idx === idx);
           return row ? { d: row.d_score, valid: row.valid } : null;
         });
+      } else if (step.kind === "variant") {
+        const row = variantBySession.get(child.id);
+        participant.variant![step.studyId] = row
+          ? { value: row.primary_value, valid: row.valid }
+          : null;
+      } else if (step.kind === "exposure") {
+        // Sólo se consultan sesiones completadas: que exista el paso significa que vio las piezas.
+        participant.exposure![step.studyId] = true;
       } else {
         const stored = answersBySession.get(child.id);
         if (isRecord(stored)) participant.survey[step.studyId] = stored;
@@ -115,6 +138,38 @@ export async function loadReportSteps(
             positiveLabel: d.positiveLabel,
           })),
         });
+    } else if (s.toolType === "iat_variant") {
+      const c = variantConfigSchema.safeParse(raw);
+      if (!c.success) unreadable.push(s.name);
+      else
+        steps.push({
+          kind: "variant",
+          studyId: s.studyId,
+          name: s.name,
+          variant: c.data.variant,
+        });
+    } else if (s.toolType === "visual") {
+      const c = visualConfigSchema.safeParse(raw);
+      if (!c.success) unreadable.push(s.name);
+      else {
+        const assets = await loadAssets(supabase, s.studyId);
+        steps.push({
+          kind: "exposure",
+          studyId: s.studyId,
+          name: s.name,
+          pieces: assets.map((a) => ({
+            title: a.row.title,
+            criteria: a.result
+              ? (
+                  Object.keys(CRITERIA_LABEL) as (keyof typeof CRITERIA_LABEL)[]
+                ).map((k) => ({
+                  label: CRITERIA_LABEL[k],
+                  score: a.result!.criteria[k].score,
+                }))
+              : null,
+          })),
+        });
+      }
     } else {
       const c = surveyConfigSchema.safeParse(raw);
       if (!c.success) unreadable.push(s.name);
@@ -187,6 +242,24 @@ export async function loadBatteryReportInput(
     .filter((c) => stepKind.get(c.study_id) === "survey")
     .map((c) => c.id);
 
+  const variantChildIds = children
+    .filter((c) => stepKind.get(c.study_id) === "variant")
+    .map((c) => c.id);
+
+  const variantResults: VariantResultLite[] = [];
+  for (const ids of chunk(variantChildIds, 100)) {
+    variantResults.push(
+      ...(await fetchAll<VariantResultLite>((from, to) =>
+        supabase
+          .from("variant_results")
+          .select("session_id, primary_value, valid")
+          .in("session_id", ids)
+          .order("session_id")
+          .range(from, to),
+      )),
+    );
+  }
+
   const results: ResultLite[] = [];
   for (const ids of chunk(iatChildIds, 100)) {
     results.push(
@@ -225,6 +298,7 @@ export async function loadBatteryReportInput(
       children,
       results,
       answers,
+      variantResults,
     ),
   };
 }

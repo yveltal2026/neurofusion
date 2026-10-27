@@ -11,6 +11,7 @@ import {
   type SurveyAnswers,
   type SurveyConfig,
 } from "@/tools/survey/engine";
+import type { VariantId } from "@/tools/variants/config";
 import { surveyMetrics, type SurveyMetric } from "./metrics";
 
 /**
@@ -19,10 +20,14 @@ import { surveyMetrics, type SurveyMetric } from "./metrics";
  *
  * Etiquetas de evidencia (ver docs/ROADMAP_MODULOS.md):
  *  - «medido»: lo que el participante hizo (D-score del IAT) o contestó (puntajes de encuesta).
- *  - «estimado»: estadístico inferido de la muestra (correlaciones, intervalos). Depende de n.
+ *  - «estimado»: estadístico inferido de la muestra (correlaciones, intervalos) o lectura de la IA sobre
+ *    una imagen (calificaciones de la pieza). No es lo que hizo una persona.
+ *
+ * Pasos que entran: IAT y variantes del IAT (medidas implícitas), encuesta (explícita) y análisis de
+ * imagen con IA (exposición: el informe cuenta quién vio las piezas y muestra la lectura de la IA).
  */
 
-export const REPORT_ENGINE_VERSION = "nf-battery-report-1.0";
+export const REPORT_ENGINE_VERSION = "nf-battery-report-1.1";
 /** Menos de esto no se calcula una correlación: sería ruido presentado como hallazgo. */
 export const MIN_CORRELATION_N = 10;
 /** Entre MIN_CORRELATION_N y esto, la correlación se marca como exploratoria. */
@@ -42,7 +47,36 @@ export type ReportStep =
       conceptB: string;
       dimensions: { id: string; name: string; positiveLabel: string }[];
     }
-  | { kind: "survey"; studyId: string; name: string; config: SurveyConfig };
+  | { kind: "survey"; studyId: string; name: string; config: SurveyConfig }
+  | { kind: "variant"; studyId: string; name: string; variant: VariantId }
+  | {
+      kind: "exposure";
+      studyId: string;
+      name: string;
+      /** Imágenes del estudio, con la lectura de la IA si ya se generó (calificaciones 1–5). */
+      pieces: {
+        title: string;
+        criteria: { label: string; score: number }[] | null;
+      }[];
+    };
+
+/** Qué mide cada variante y qué significa el cero (la unidad no se compara entre variantes distintas). */
+export const VARIANT_MEASURE: Record<
+  VariantId,
+  { label: string; unit: string; zeroMeans: string }
+> = {
+  sc_iat: { label: "D (SC-IAT)", unit: "D", zeroMeans: "sin asociación" },
+  gnat: {
+    label: "Contraste de d′ (Go/No-Go)",
+    unit: "d′",
+    zeroMeans: "sin diferencia de sensibilidad",
+  },
+  priming: {
+    label: "Efecto de priming (ms)",
+    unit: "ms",
+    zeroMeans: "sin efecto de priming",
+  },
+};
 
 export interface ReportParticipant {
   /** id de la sesión de batería. */
@@ -54,6 +88,10 @@ export interface ReportParticipant {
   iat: Record<string, ({ d: number | null; valid: boolean } | null)[]>;
   /** Por paso de encuesta: sus respuestas. */
   survey: Record<string, SurveyAnswers>;
+  /** Por paso de variante del IAT: su medida principal (null si no se pudo calcular). */
+  variant?: Record<string, { value: number | null; valid: boolean } | null>;
+  /** Por paso de exposición: true si lo completó (vio las piezas). */
+  exposure?: Record<string, boolean>;
 }
 
 // ------------------------------------------------------------------ salida
@@ -76,6 +114,35 @@ export interface DimensionReport {
   interpretation: DInterpretation | null;
   /** Lectura en palabras: «Leve · Marca A más asociada a «Confiable»». */
   reading: string | null;
+}
+
+export interface VariantStepReport {
+  evidence: "medido";
+  stepId: string;
+  stepName: string;
+  measure: string;
+  unit: string;
+  zeroMeans: string;
+  n: number;
+  nInvalid: number;
+  mean: number | null;
+  sd: number | null;
+  ci95: [number, number] | null;
+  p: number | null;
+  cohenD: number | null;
+}
+
+export interface ExposureStepReport {
+  stepId: string;
+  stepName: string;
+  /** Participantes incluidos que completaron el paso / total de incluidos. */
+  nViewed: number;
+  nIncluded: number;
+  /** Lectura de la IA de cada pieza: «estimado», no es mirada medida ni reacción de personas. */
+  pieces: {
+    title: string;
+    criteria: { label: string; score: number }[] | null;
+  }[];
 }
 
 export interface SurveyStepReport {
@@ -105,8 +172,13 @@ export interface ParticipantRow {
   id: string;
   ref: string;
   excluded: boolean;
-  /** `${stepId}:${dimensionId}` → D (null si inválido o sin dato). */
+  /**
+   * `${stepId}:${dimensionId}` → medida implícita (D del IAT; en una variante, su medida principal
+   * bajo `${stepId}:primary`). null si es inválida o no hay dato.
+   */
   d: Record<string, number | null>;
+  /** `${stepId}` → vio las piezas del paso de exposición. */
+  exposed: Record<string, boolean>;
   /** key de la métrica → valor (null si no contestó). */
   metrics: Record<string, number | null>;
 }
@@ -117,6 +189,8 @@ export interface BatteryReport {
   nExcluded: number;
   nIncluded: number;
   iat: DimensionReport[];
+  variants: VariantStepReport[];
+  exposures: ExposureStepReport[];
   surveys: SurveyStepReport[];
   metrics: { key: string; label: string; stepId: string }[];
   correlations: CorrelationReport[];
@@ -274,6 +348,53 @@ export function buildBatteryReport(
     });
   }
 
+  // --- Variantes del IAT: una fila por paso (su medida principal).
+  const variants: VariantStepReport[] = [];
+  for (const step of steps) {
+    if (step.kind !== "variant") continue;
+    const info = VARIANT_MEASURE[step.variant];
+    const values: number[] = [];
+    let nInvalid = 0;
+    for (const p of included) {
+      const r = p.variant?.[step.studyId] ?? null;
+      if (r && r.valid && r.value !== null && Number.isFinite(r.value))
+        values.push(r.value);
+      else nInvalid++;
+    }
+    values.sort((a, b) => a - b);
+    const test = oneSampleTTest(values);
+    variants.push({
+      evidence: "medido",
+      stepId: step.studyId,
+      stepName: step.name,
+      measure: info.label,
+      unit: info.unit,
+      zeroMeans: info.zeroMeans,
+      n: values.length,
+      nInvalid,
+      mean: values.length ? mean(values) : null,
+      sd: values.length >= 2 ? sampleSd(values) : null,
+      ci95: test?.ci95 ?? null,
+      p: test?.p ?? null,
+      cohenD: test?.cohenD ?? null,
+    });
+  }
+
+  // --- Exposición: quién vio las piezas, y la lectura de la IA de cada una.
+  const exposures: ExposureStepReport[] = steps.flatMap((step) =>
+    step.kind === "exposure"
+      ? [
+          {
+            stepId: step.studyId,
+            stepName: step.name,
+            nViewed: included.filter((p) => p.exposure?.[step.studyId]).length,
+            nIncluded: included.length,
+            pieces: step.pieces,
+          },
+        ]
+      : [],
+  );
+
   // --- Encuestas: agregados del motor de encuesta sobre las respuestas de los incluidos.
   const surveys: SurveyStepReport[] = [];
   const metricDefs: SurveyMetric[] = [];
@@ -305,19 +426,41 @@ export function buildBatteryReport(
           r && r.valid && r.d !== null ? r.d : null;
       });
     }
+    for (const step of steps) {
+      if (step.kind !== "variant") continue;
+      const r = p.variant?.[step.studyId] ?? null;
+      d[`${step.studyId}:primary`] =
+        r && r.valid && r.value !== null ? r.value : null;
+    }
+    const exposed: ParticipantRow["exposed"] = {};
+    for (const step of steps)
+      if (step.kind === "exposure")
+        exposed[step.studyId] = Boolean(p.exposure?.[step.studyId]);
     const metrics: ParticipantRow["metrics"] = {};
     for (const m of metricDefs) {
       const answers = p.survey[m.stepId];
       metrics[m.key] = answers ? m.extract(answers) : null;
     }
-    return { id: p.id, ref: p.ref, excluded: p.excluded, d, metrics };
+    return { id: p.id, ref: p.ref, excluded: p.excluded, d, exposed, metrics };
   });
   const includedRows = rows.filter((r) => !r.excluded);
 
   // --- Correlaciones IAT × métrica (sólo con n suficiente) + Holm sobre las calculadas.
   const raw: Omit<CorrelationReport, "pAdjusted">[] = [];
   const skipped: BatteryReport["skipped"] = [];
-  for (const dim of iat) {
+  const implicit = [
+    ...iat.map((dim) => ({
+      stepId: dim.stepId,
+      dimensionId: dim.dimensionId,
+      label: `${dim.stepName} · ${dim.dimensionName}`,
+    })),
+    ...variants.map((v) => ({
+      stepId: v.stepId,
+      dimensionId: "primary",
+      label: `${v.stepName} · ${v.measure}`,
+    })),
+  ];
+  for (const dim of implicit) {
     const dKey = `${dim.stepId}:${dim.dimensionId}`;
     for (const m of metricDefs) {
       const pairs: [number, number][] = [];
@@ -331,7 +474,7 @@ export function buildBatteryReport(
       pairs.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
       const xs = pairs.map((q) => q[0]);
       const ys = pairs.map((q) => q[1]);
-      const label = `${dim.stepName} · ${dim.dimensionName}`;
+      const label = dim.label;
       if (xs.length < MIN_CORRELATION_N) {
         skipped.push({
           implicit: label,
@@ -394,6 +537,8 @@ export function buildBatteryReport(
     nExcluded: participants.length - included.length,
     nIncluded: included.length,
     iat,
+    variants,
+    exposures,
     surveys,
     metrics: metricDefs.map((m) => ({
       key: m.key,

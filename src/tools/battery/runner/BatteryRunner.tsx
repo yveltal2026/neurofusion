@@ -7,6 +7,7 @@ import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice } from "@/tools/iat/runner/device";
 import { Runner } from "@/tools/iat/runner/Runner";
 import { SurveyRunner } from "@/tools/survey/runner/SurveyRunner";
+import { VariantRunner } from "@/tools/variants/runner/VariantRunner";
 import {
   isBatteryComplete,
   nextStep,
@@ -15,6 +16,7 @@ import {
 } from "../engine";
 import type { StepLink } from "../participant";
 import { batteryApi } from "./api";
+import { ExposureRunner } from "./ExposureRunner";
 
 type Stage =
   | { kind: "welcome" }
@@ -232,6 +234,24 @@ export function BatteryRunner({
               config={step.config}
               preview={preview}
               embedded={embedded}
+            />
+          ) : step.tool === "iat_variant" ? (
+            <VariantRunner
+              key={step.studyId}
+              token={step.token}
+              config={step.config}
+              preview={preview}
+              embedded={embedded}
+            />
+          ) : step.tool === "visual" ? (
+            <ExposureRunner
+              key={step.studyId}
+              token={token}
+              batterySessionId={sessionId}
+              studyId={step.studyId}
+              pieces={step.pieces}
+              preview={preview}
+              onComplete={embedded.onComplete}
             />
           ) : (
             <SurveyRunner
