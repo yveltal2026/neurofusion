@@ -2,10 +2,12 @@
 
 import { useId, type ReactNode } from "react";
 import { Icon, type IconName } from "@/components/brand/icon";
+import { Alert } from "@/components/ui/alert";
 import { Field, Input } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { Switch } from "@/components/ui/switch";
 import {
+  blockInstructions,
   getInstrument,
   listPriceItems,
   priceInstructions,
@@ -178,9 +180,11 @@ function PoleRow({
 function InstrumentPreview({
   def,
   subject,
+  instructions,
 }: {
   def: InstrumentDef;
   subject: string;
+  instructions?: string;
 }) {
   const groups = groupByStem(def.items);
   const render = (group: InstrumentItem[]) =>
@@ -201,7 +205,7 @@ function InstrumentPreview({
       <p>{renderItemText(group[0]!, subject)}</p>
     );
   return (
-    <PreviewBox instructions={def.instructions}>
+    <PreviewBox instructions={instructions}>
       {groups.length === 1 ? (
         render(groups[0]!)
       ) : (
@@ -246,7 +250,22 @@ export function InstrumentCard({
           maxLength={80}
         />
       </Field>
-      <InstrumentPreview def={def} subject={subject} />
+      {!block.subject.trim() ? (
+        <Alert tone="warning">
+          Dile al participante de qué se trata. Si lo dejas vacío leerá «
+          {def.defaultSubject}» sin saber a qué se refiere.
+        </Alert>
+      ) : null}
+      <InstrumentPreview
+        def={def}
+        subject={subject}
+        instructions={blockInstructions({
+          kind: "instrument",
+          id: block.id,
+          instrumentId: block.instrumentId,
+          required: block.required,
+        })}
+      />
       <p className="text-xs text-muted">
         {def.source} {def.notes}
       </p>

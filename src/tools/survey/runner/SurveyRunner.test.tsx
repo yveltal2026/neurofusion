@@ -465,3 +465,55 @@ describe("SurveyRunner · claridad para quien responde solo", () => {
     expect(screen.getByText(/Imagina que ese fuera el precio real/)).toBeTruthy();
   });
 });
+
+describe("SurveyRunner · indicaciones por tipo de pregunta", () => {
+  const types: SurveyConfig = {
+    version: 1,
+    title: "Tipos",
+    texts: { consent: "c", thankYou: "t" },
+    blocks: [
+      {
+        kind: "questions",
+        id: "b1",
+        questions: [
+          { id: "p1", type: "select", prompt: "¿Cuál prefieres?", required: true, options: ["Café", "Té"] },
+          { id: "p2", type: "likert", prompt: "Me gusta el producto", required: true, points: 5 },
+          { id: "p3", type: "likert", prompt: "Con etiquetas", required: true, points: 5, minLabel: "Nada", maxLabel: "Mucho" },
+          { id: "p4", type: "number", prompt: "¿Cuántas veces al mes?", required: true, min: 0, max: 31 },
+          { id: "p5", type: "text", prompt: "¿Algo más?", required: false },
+        ],
+      },
+      { kind: "instrument", id: "nps", instrumentId: "nps", subject: "Nespresso", required: true },
+      { kind: "instrument", id: "pi", instrumentId: "purchase_intent", subject: "Nespresso", required: true },
+    ],
+  };
+
+  async function start() {
+    const user = userEvent.setup();
+    render(<SurveyRunner token={TOKEN} config={types} preview />);
+    await consentAndStart(user);
+    return user;
+  }
+
+  it("cada tipo dice qué hacer; las escalas sin etiquetas explican el rango", async () => {
+    await start();
+    expect(screen.getByText("Elige una opción.")).toBeTruthy();
+    // Sólo la escala sin etiquetas lleva la indicación; la rotulada ya se explica sola.
+    expect(screen.getAllByText("Elige un número del 1 al 5.")).toHaveLength(1);
+    expect(screen.getByText("Escribe sólo el número, entre 0 y 31.")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Escribe tu respuesta aquí")).toBeTruthy();
+  });
+
+  it("NPS e intención de compra abren con su indicación", async () => {
+    const user = await start();
+    await user.click(screen.getByRole("radio", { name: "Café" }));
+    await user.click(screen.getAllByRole("radio", { name: /^3$/ })[0]!);
+    await user.click(screen.getAllByRole("radio", { name: /^3\b/ })[1]!);
+    await user.type(screen.getByRole("spinbutton"), "3");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByText("Elige un número del 0 al 10.")).toBeTruthy();
+    await user.click(screen.getAllByRole("radio")[0]!);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    expect(await screen.findByText("Elige la opción que mejor te represente.")).toBeTruthy();
+  });
+});

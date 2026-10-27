@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/brand/icon";
+import { Alert } from "@/components/ui/alert";
 import { Field } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { Switch } from "@/components/ui/switch";
@@ -291,6 +292,12 @@ function LikertEditor({
           />
         </Field>
       </div>
+      {!q.minLabel.trim() && !q.maxLabel.trim() ? (
+        <Alert tone="warning">
+          Sin etiquetas, el participante verá sólo números y no sabrá cuál es el
+          extremo bueno. Escribe qué significa cada extremo.
+        </Alert>
+      ) : null}
       <ScalePreview
         from={1}
         to={q.points}

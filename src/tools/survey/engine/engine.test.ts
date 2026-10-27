@@ -639,11 +639,20 @@ describe("presentación de escalas", () => {
       "Indica qué tan de acuerdo estás con cada afirmación.",
     );
     expect(blockInstructions(config.blocks[0]!)).toBeUndefined();
-    expect(blockInstructions(config.blocks[2]!)).toBeUndefined();
-    for (const id of INSTRUMENT_IDS)
-      expect(INSTRUMENTS[id].instructions ?? "").not.toMatch(
-        /SUS|NPS|SAM|Net Promoter/i,
-      );
+    // Los que no traen indicación propia reciben una derivada de su escala.
+    expect(blockInstructions(config.blocks[2]!)).toBe(
+      "Elige un número del 0 al 10.",
+    );
+    for (const id of INSTRUMENT_IDS) {
+      const text = blockInstructions({
+        kind: "instrument",
+        id,
+        instrumentId: id,
+        required: true,
+      });
+      expect(text).toBeTruthy();
+      expect(text).not.toMatch(/SUS|NPS|SAM|Net Promoter/i);
+    }
   });
 
   it("itemsOfBlock devuelve sólo los elementos del bloque", () => {

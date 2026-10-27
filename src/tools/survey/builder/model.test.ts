@@ -321,3 +321,41 @@ describe("moneda de un bloque de precio", () => {
     expect(buildConfig(updateBlock(d, id, { currency: "USD" })).ok).toBe(true);
   });
 });
+
+describe("ayuda para quien responde", () => {
+  it("una pregunta de escala nueva arranca con etiquetas de acuerdo", () => {
+    let d = addQuestionsBlock(emptyDraft());
+    const blockId = d.blocks[0]!.id;
+    d = addQuestion(d, blockId, "likert");
+    expect(questionsOf(d, 0)[0]).toMatchObject({
+      minLabel: "Totalmente en desacuerdo",
+      maxLabel: "Totalmente de acuerdo",
+    });
+  });
+
+  it("cambiar a escala rellena las etiquetas sólo si estaban vacías", () => {
+    let d = addQuestionsBlock(emptyDraft());
+    const blockId = d.blocks[0]!.id;
+    d = addQuestion(d, blockId, "text");
+    const qid = questionsOf(d, 0)[0]!.id;
+    const filled = changeQuestionType(d, blockId, qid, "likert");
+    expect(questionsOf(filled, 0)[0]!.minLabel).toBe("Totalmente en desacuerdo");
+    const custom = changeQuestionType(
+      updateQuestion(d, blockId, qid, { minLabel: "Mal", maxLabel: "Bien" }),
+      blockId,
+      qid,
+      "likert",
+    );
+    expect(questionsOf(custom, 0)[0]).toMatchObject({ minLabel: "Mal", maxLabel: "Bien" });
+  });
+
+  it.each(TEMPLATES.filter((t) => t.id !== "blank"))(
+    "la plantilla «$name» trae una introducción que da contexto",
+    (t) => {
+      const d = t.build();
+      expect(d.intro.length).toBeGreaterThan(40);
+      const built = buildConfig(d);
+      expect(built.ok && built.config.intro).toBe(d.intro);
+    },
+  );
+});

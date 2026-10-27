@@ -1,12 +1,21 @@
 "use client";
 
 import { Input, Textarea } from "@/components/ui/field";
-import type { SurveyItem } from "../engine";
+import { MAX_TEXT_ANSWER, type SurveyItem } from "../engine";
 
 const OPTION_CLASS =
   "flex cursor-pointer items-center min-h-12 gap-3 rounded-md border border-border px-4 py-3 text-sm transition-colors duration-150 motion-reduce:transition-none hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-primary/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
+// Escala numérica: una sola fila con columnas iguales (nunca se parte en dos renglones), con relleno teal al elegir.
 const POINT_CLASS =
-  "flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
+  "flex h-11 min-w-0 cursor-pointer items-center justify-center rounded-md border border-border text-sm transition-colors duration-150 hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-heading has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-heading motion-reduce:transition-none";
+
+function numberHint(min?: number, max?: number): string {
+  if (min !== undefined && max !== undefined)
+    return `Escribe sólo el número, entre ${min} y ${max}.`;
+  if (min !== undefined) return `Escribe sólo el número (${min} o más).`;
+  if (max !== undefined) return `Escribe sólo el número (${max} o menos).`;
+  return "Escribe sólo el número.";
+}
 
 /**
  * Campo de una encuesta según el tipo de elemento. El valor es el tipado que espera el
@@ -39,7 +48,7 @@ export function ItemField({
         aria-describedby={error ? errorId : undefined}
       >
         <legend className="text-base font-medium">{label}</legend>
-        <p className="text-xs text-muted">Puedes elegir varias opciones.</p>
+        <p className="text-sm text-muted">Puedes elegir varias opciones.</p>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
             <input
@@ -68,6 +77,7 @@ export function ItemField({
         aria-describedby={error ? errorId : undefined}
       >
         <legend className="text-base font-medium">{label}</legend>
+        <p className="text-sm text-muted">Elige una opción.</p>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
             <input
@@ -121,7 +131,18 @@ export function ItemField({
         aria-describedby={error ? errorId : undefined}
       >
         <legend className="text-base font-medium">{label}</legend>
-        <div className="flex flex-wrap gap-2">
+        {/* Los ítems de un instrumento ya traen su propia indicación al inicio de la parte. */}
+        {!item.instrument && !(item.minLabel || item.maxLabel) ? (
+          <p className="text-sm text-muted">
+            Elige un número del {item.min} al {item.max}.
+          </p>
+        ) : null}
+        <div
+          className="grid gap-1.5"
+          style={{
+            gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
+          }}
+        >
           {points.map((n) => (
             <label key={n} className={POINT_CLASS}>
               <input
@@ -157,6 +178,11 @@ export function ItemField({
       <div className="space-y-1.5">
         <label className="block space-y-1.5">
           <span className="text-base font-medium text-heading">{label}</span>
+          {!item.unit ? (
+            <span className="block text-sm text-muted">
+              {numberHint(item.min, item.max)}
+            </span>
+          ) : null}
           <span className="flex items-center gap-3">
             <Input
               type="number"
@@ -191,6 +217,7 @@ export function ItemField({
         <span className="text-base font-medium text-heading">{label}</span>
         <Textarea
           placeholder="Escribe tu respuesta aquí"
+          maxLength={MAX_TEXT_ANSWER}
           value={typeof value === "string" ? value : ""}
           onChange={(e) =>
             onChange(e.target.value === "" ? undefined : e.target.value)

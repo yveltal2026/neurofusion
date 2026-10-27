@@ -106,8 +106,9 @@ export function newQuestion(type: QuestionType, id: string): DraftQuestion {
     optionsText:
       type === "select" || type === "multiselect" ? "Opción 1\nOpción 2" : "",
     points: 5,
-    minLabel: "",
-    maxLabel: "",
+    // Sin etiquetas el participante vería sólo números: arranca con las del acuerdo, editables.
+    minLabel: type === "likert" ? LIKERT_MIN_LABEL : "",
+    maxLabel: type === "likert" ? LIKERT_MAX_LABEL : "",
     min: "",
     max: "",
   };
@@ -139,7 +140,10 @@ export function addInstrumentBlock(
   };
 }
 
-export function addPriceBlock(d: SurveyDraft, method: PriceMethod): SurveyDraft {
+export function addPriceBlock(
+  d: SurveyDraft,
+  method: PriceMethod,
+): SurveyDraft {
   const [next, n] = nextCounter(d);
   const base = method === "van_westendorp" ? "vw" : "gg";
   const taken = new Set(next.blocks.map((b) => b.id));
@@ -186,6 +190,8 @@ export function addQuestion(
 }
 
 const DEFAULT_OPTIONS = "Opción 1\nOpción 2";
+export const LIKERT_MIN_LABEL = "Totalmente en desacuerdo";
+export const LIKERT_MAX_LABEL = "Totalmente de acuerdo";
 
 /** Cambia el tipo de una pregunta conservando su enunciado; las de opciones nunca quedan sin opciones. */
 export function changeQuestionType(
@@ -194,11 +200,17 @@ export function changeQuestionType(
   questionId: string,
   type: QuestionType,
 ): SurveyDraft {
+  const current = findQuestion(d, blockId, questionId);
   return updateQuestion(d, blockId, questionId, {
     type,
     ...((type === "select" || type === "multiselect") &&
-    !findQuestion(d, blockId, questionId)?.optionsText.trim()
+    !current?.optionsText.trim()
       ? { optionsText: DEFAULT_OPTIONS }
+      : {}),
+    ...(type === "likert" &&
+    !current?.minLabel.trim() &&
+    !current?.maxLabel.trim()
+      ? { minLabel: LIKERT_MIN_LABEL, maxLabel: LIKERT_MAX_LABEL }
       : {}),
   });
 }
@@ -400,9 +412,10 @@ export interface SurveyTemplate {
 
 function withBlocks(
   title: string,
+  intro: string,
   build: (d: SurveyDraft) => SurveyDraft,
 ): SurveyDraft {
-  return build(setTitle({ ...emptyDraft(), name: title }, title));
+  return build({ ...setTitle({ ...emptyDraft(), name: title }, title), intro });
 }
 
 export const TEMPLATES: SurveyTemplate[] = [
@@ -418,34 +431,42 @@ export const TEMPLATES: SurveyTemplate[] = [
     description:
       "Escala de usabilidad (SUS), recomendación (NPS) y una pregunta abierta.",
     build: () =>
-      withBlocks("Usabilidad", (d0) => {
-        let d = addInstrumentBlock(d0, "sus");
-        d = addInstrumentBlock(d, "nps");
-        d = addQuestionsBlock(d);
-        const block = d.blocks[d.blocks.length - 1]!;
-        d = addQuestion(d, block.id, "text");
-        const q = (
-          d.blocks[d.blocks.length - 1] as Extract<
-            DraftBlock,
-            { kind: "questions" }
-          >
-        ).questions[0]!;
-        return updateQuestion(d, block.id, q.id, {
-          prompt: "¿Qué mejorarías de esta experiencia?",
-          required: false,
-        });
-      }),
+      withBlocks(
+        "Usabilidad",
+        "Queremos saber qué tan fácil te resultó usar el sitio o la app. Cuéntanos con sinceridad cómo fue tu experiencia.",
+        (d0) => {
+          let d = addInstrumentBlock(d0, "sus");
+          d = addInstrumentBlock(d, "nps");
+          d = addQuestionsBlock(d);
+          const block = d.blocks[d.blocks.length - 1]!;
+          d = addQuestion(d, block.id, "text");
+          const q = (
+            d.blocks[d.blocks.length - 1] as Extract<
+              DraftBlock,
+              { kind: "questions" }
+            >
+          ).questions[0]!;
+          return updateQuestion(d, block.id, q.id, {
+            prompt: "¿Qué mejorarías de esta experiencia?",
+            required: false,
+          });
+        },
+      ),
   },
   {
     id: "brand",
     name: "Percepción de una marca o anuncio",
     description: "Actitud hacia la marca, intención de compra y recomendación.",
     build: () =>
-      withBlocks("Percepción de marca", (d0) => {
-        let d = addInstrumentBlock(d0, "attitude");
-        d = addInstrumentBlock(d, "purchase_intent");
-        return addInstrumentBlock(d, "nps");
-      }),
+      withBlocks(
+        "Percepción de marca",
+        "Queremos conocer tu opinión sobre una marca. Responde lo primero que pienses, sin darle muchas vueltas.",
+        (d0) => {
+          let d = addInstrumentBlock(d0, "attitude");
+          d = addInstrumentBlock(d, "purchase_intent");
+          return addInstrumentBlock(d, "nps");
+        },
+      ),
   },
   {
     id: "emotion",
@@ -453,23 +474,27 @@ export const TEMPLATES: SurveyTemplate[] = [
     description:
       "Valencia, activación y dominancia (SAM) más una pregunta de interés.",
     build: () =>
-      withBlocks("Reacción emocional", (d0) => {
-        let d = addInstrumentBlock(d0, "sam");
-        d = addQuestionsBlock(d);
-        const block = d.blocks[d.blocks.length - 1]!;
-        d = addQuestion(d, block.id, "likert");
-        const q = (
-          d.blocks[d.blocks.length - 1] as Extract<
-            DraftBlock,
-            { kind: "questions" }
-          >
-        ).questions[0]!;
-        return updateQuestion(d, block.id, q.id, {
-          prompt: "¿Qué tan interesante te pareció?",
-          minLabel: "Nada interesante",
-          maxLabel: "Muy interesante",
-        });
-      }),
+      withBlocks(
+        "Reacción emocional",
+        "Después de ver el contenido, cuéntanos cómo te sentiste. Lo importante es tu primera impresión.",
+        (d0) => {
+          let d = addInstrumentBlock(d0, "sam");
+          d = addQuestionsBlock(d);
+          const block = d.blocks[d.blocks.length - 1]!;
+          d = addQuestion(d, block.id, "likert");
+          const q = (
+            d.blocks[d.blocks.length - 1] as Extract<
+              DraftBlock,
+              { kind: "questions" }
+            >
+          ).questions[0]!;
+          return updateQuestion(d, block.id, q.id, {
+            prompt: "¿Qué tan interesante te pareció?",
+            minLabel: "Nada interesante",
+            maxLabel: "Muy interesante",
+          });
+        },
+      ),
   },
 ];
 
@@ -516,7 +541,10 @@ function toBlock(b: DraftBlock): unknown {
       method: b.method,
       subject: b.subject.trim() || undefined,
       currency: b.currency.trim() || undefined,
-      prices: b.method === "gabor_granger" ? parsePrices(b.pricesText).sort((a, c) => a - c) : undefined,
+      prices:
+        b.method === "gabor_granger"
+          ? parsePrices(b.pricesText).sort((a, c) => a - c)
+          : undefined,
       required: b.required,
     };
   }
@@ -586,7 +614,9 @@ function describeIssue(
   if (block?.kind === "instrument")
     where.push(getInstrument(block.instrumentId).name);
   if (block?.kind === "price")
-    where.push(block.method === "van_westendorp" ? "Van Westendorp" : "Gabor-Granger");
+    where.push(
+      block.method === "van_westendorp" ? "Van Westendorp" : "Gabor-Granger",
+    );
   let questionId: string | undefined;
   if (path[2] === "questions" && typeof path[3] === "number") {
     where.push(`pregunta ${path[3] + 1}`);

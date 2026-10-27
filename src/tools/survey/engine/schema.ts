@@ -414,8 +414,14 @@ export function itemsOfBlock(
 
 /** Indicación del instrumento de un bloque (si la tiene), para mostrarla encima de sus ítems. */
 export function blockInstructions(block: SurveyBlock): string | undefined {
-  if (block.kind === "instrument")
-    return getInstrument(block.instrumentId).instructions;
+  if (block.kind === "instrument") {
+    const def = getInstrument(block.instrumentId);
+    if (def.instructions) return def.instructions;
+    // Sin indicación propia (NPS, intención de compra): se deriva de la forma de la escala.
+    return def.scaleDisplay === "labeled"
+      ? "Elige la opción que mejor te represente."
+      : `Elige un número del ${def.scale.min} al ${def.scale.max}.`;
+  }
   if (block.kind === "price") return priceInstructions(block);
   return undefined;
 }

@@ -76,9 +76,7 @@ describe("SurveyBuilder", () => {
     await user.type(nameField, "Cliente X – SUS");
     const subject = screen.getAllByLabelText(/Sobre qué se pregunta/)[0]!;
     await user.type(subject, "esta tienda en línea");
-    await user.click(
-      screen.getByRole("button", CREATE),
-    );
+    await user.click(screen.getByRole("button", CREATE));
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
     const arg = create.mock.calls[0]![0] as {
@@ -108,9 +106,7 @@ describe("SurveyBuilder", () => {
     const user = setup();
     await pickTemplate(user, /Usabilidad/);
     await user.clear(screen.getByLabelText(/Nombre del estudio/));
-    await user.click(
-      screen.getByRole("button", CREATE),
-    );
+    await user.click(screen.getByRole("button", CREATE));
     expect(
       await screen.findByRole("button", {
         name: "Escribe un nombre para el estudio",
@@ -127,9 +123,7 @@ describe("SurveyBuilder", () => {
       screen.getByLabelText("Título para el participante"),
       "Algo",
     );
-    await user.click(
-      screen.getByRole("button", CREATE),
-    );
+    await user.click(screen.getByRole("button", CREATE));
     expect(
       await screen.findByRole("button", { name: /al menos un bloque/ }),
     ).toBeTruthy();
@@ -187,8 +181,12 @@ describe("SurveyBuilder", () => {
     expect(screen.getByText("¿Cuál prefieres?")).toBeTruthy();
     expect(screen.getByLabelText("Puntos de la escala")).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Duplicar pregunta 2" }));
-    expect(screen.getByRole("button", { name: "Quitar pregunta 3" })).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Duplicar pregunta 2" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Quitar pregunta 3" }),
+    ).toBeTruthy();
   });
 
   it("al cambiar el tipo conserva el enunciado y quitar se puede deshacer", async () => {
@@ -277,9 +275,7 @@ describe("SurveyBuilder", () => {
     const user = setup();
     await pickTemplate(user, /Usabilidad/);
     await user.type(screen.getByLabelText(/Nombre del estudio/), " X");
-    await user.click(
-      screen.getByRole("button", CREATE),
-    );
+    await user.click(screen.getByRole("button", CREATE));
     expect(
       await screen.findByText(/No se pudo crear la encuesta/),
     ).toBeTruthy();
@@ -290,5 +286,38 @@ describe("SurveyBuilder", () => {
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(false);
+  });
+  it("avisa cuando el participante no sabría de qué se trata o qué significa una escala", async () => {
+    const user = setup();
+    await pickTemplate(user, /Percepción de una marca/);
+    // Sin «sobre qué se pregunta», cada instrumento avisa; al escribirlo, el aviso se va.
+    expect(
+      screen.getAllByText(/Dile al participante de qué se trata/),
+    ).toHaveLength(3);
+    await user.type(
+      screen.getAllByLabelText(/Sobre qué se pregunta/)[0]!,
+      "Nespresso",
+    );
+    expect(
+      screen.getAllByText(/Dile al participante de qué se trata/),
+    ).toHaveLength(2);
+
+    // Una escala sin etiquetas avisa; la nueva ya trae etiquetas.
+    await user.click(
+      screen.getAllByRole("button", { name: "Agregar bloque" })[0]!,
+    );
+    await user.click(screen.getByRole("button", { name: "Preguntas propias" }));
+    await user.selectOptions(
+      screen.getByLabelText("Tipo de pregunta"),
+      "Escala (Likert)",
+    );
+    expect(
+      screen.queryByText(/Sin etiquetas, el participante verá sólo números/),
+    ).toBeNull();
+    await user.clear(screen.getByLabelText("Etiqueta del extremo bajo"));
+    await user.clear(screen.getByLabelText("Etiqueta del extremo alto"));
+    expect(
+      screen.getByText(/Sin etiquetas, el participante verá sólo números/),
+    ).toBeTruthy();
   });
 });
