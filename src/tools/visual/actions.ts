@@ -9,7 +9,17 @@ import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, StudyRow, VisualAssetRow } from "@/lib/db/types";
 import { ASSETS_BUCKET } from "@/lib/study-files";
 import { buildSuggestText, suggestionsSchema, SUGGEST_SYSTEM_PROMPT } from "./analysis/journey";
-import { buildPieceUserText, elementsToAois, PIECE_SYSTEM_PROMPT, pieceAiSchema, VISION_ENGINE_VERSION } from "./analysis/piece";
+import {
+  buildPieceUserText,
+  buildReviewUserText,
+  elementsToAois,
+  mergeMissingElements,
+  PIECE_SYSTEM_PROMPT,
+  pieceAiSchema,
+  REVIEW_SYSTEM_PROMPT,
+  reviewSchema,
+  VISION_ENGINE_VERSION,
+} from "./analysis/piece";
 import { journeyConfigSchema, siteKey, visualConfigSchema, type JourneyConfig, type VisualConfig } from "./config";
 import { aoiListSchema } from "./engine/aoi";
 import { METRICS_VERSION } from "./engine/metrics";
@@ -31,6 +41,10 @@ const MAX_ASSETS = 80;
 const MAX_VISION_PER_HOUR = 30;
 const MAX_SUGGEST_PER_HOUR = 10;
 const MAX_IFD_RUNS_PER_HOUR = 20;
+/** Segunda pasada de la lectura visual: sólo si la principal terminó pronto y con tope propio (la ruta dura 120 s). */
+const REVIEW_MAX_START_MS = 60_000;
+const REVIEW_TIMEOUT_MS = 45_000;
+const REVIEW_DEADLINE_MS = 105_000;
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
@@ -276,8 +290,34 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   ];
 
   try {
+    const startedAt = Date.now();
     const provider = getAnalysisProvider();
-    const { data, model } = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user, schema: pieceAiSchema });
+    const first = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user, schema: pieceAiSchema });
+    // Proveedor y modelo de la lectura principal (la segunda pasada podría responderla otro nivel).
+    const providerName = provider.name;
+    const model = first.model;
+    let data = first.data;
+
+    // Segunda pasada, opcional: la IA tiende a omitir lo pequeño o periférico (contacto, sellos, plazos).
+    // Si falla o se acaba el tiempo, se conserva la lectura principal.
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < REVIEW_MAX_START_MS) {
+      try {
+        const review = await generateStructured({
+          provider,
+          system: REVIEW_SYSTEM_PROMPT,
+          user: [...parts, { type: "text", text: buildReviewUserText(data.elements, { objective: cfg.objective, brand: cfg.brand, tiles: parts.length }) }],
+          schema: reviewSchema,
+          signal: AbortSignal.timeout(Math.min(REVIEW_TIMEOUT_MS, REVIEW_DEADLINE_MS - elapsed)),
+        });
+        const merged = mergeMissingElements(data, review.data.missing);
+        console.warn(`[vision] segunda pasada: ${review.data.missing.length} propuestos, ${merged.elements.length - data.elements.length} agregados`);
+        data = merged;
+      } catch (e) {
+        console.warn(`[vision] segunda pasada omitida: ${e instanceof AiError ? `${e.kind}${e.detail ? ` (${e.detail})` : ""}` : "error inesperado"}`);
+      }
+    }
+
     const aois = elementsToAois(data, plan);
     const stored: StoredAi = storedAiSchema.parse({ result: data, aois, coverage: plan.coverage, tiles: parts.length });
     const contrast = await textContrasts(buf, aois);
@@ -286,7 +326,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
       .from("visual_assets")
       .update({
         ai_result: stored,
-        ai_provider: provider.name,
+        ai_provider: providerName,
         ai_model: model,
         ai_engine_version: VISION_ENGINE_VERSION,
         ai_generated_at: new Date().toISOString(),

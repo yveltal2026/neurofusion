@@ -34,12 +34,14 @@ export async function generateStructured<S extends z.ZodType>(opts: {
   /** Texto, o texto + imágenes para análisis visual. */
   user: string | ContentPart[];
   schema: S;
+  /** Cancela la llamada (p. ej. un tope de tiempo para una segunda pasada opcional). */
+  signal?: AbortSignal;
 }): Promise<StructuredResult<z.infer<S>>> {
   const messages: ChatMessage[] = [{ role: "user", content: opts.user }];
   let lastProblem = "";
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const res = await opts.provider.complete({ system: opts.system, messages });
+    const res = await opts.provider.complete({ system: opts.system, messages, signal: opts.signal });
     try {
       const parsed = opts.schema.safeParse(extractJson(res.text));
       if (parsed.success) return { data: parsed.data, model: res.model, attempts: attempt };

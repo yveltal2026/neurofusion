@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { saveAois } from "../actions";
-import { AOI_KIND_LABEL, AOI_KINDS, attentionField, blindZones, gazePath, heatColor, type Aoi, type AoiKind } from "../engine/aoi";
+import { AOI_KIND_LABEL, AOI_KINDS, attentionField, coldZones, gazePath, heatColor, LOW_ATTENTION, outsidePath, type Aoi, type AoiKind, type ColdZone } from "../engine/aoi";
 
 export type ViewMode = "original" | "heatmap" | "gaze" | "blind" | "boxes";
 
@@ -19,6 +19,7 @@ const MODES: { id: ViewMode; label: string }[] = [
 const MAX_CANVAS = 1400;
 
 function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], selected: string | null, draft: Aoi["box"] | null) {
+  const cold = coldZones(aois);
   const { width: W, height: H } = ctx.canvas;
   ctx.clearRect(0, 0, W, H);
   const s = W / 800;
@@ -50,6 +51,16 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
     octx.putImageData(img, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(off, 0, 0, W, H);
+    // Lo que casi no tiene calor se marca como «frío»: la ausencia de color no significa que no se analizó.
+    for (const { aoi: a, level } of cold) {
+      const [x, y, w, h] = px(a.box);
+      ctx.setLineDash([6 * s, 4 * s]);
+      ctx.strokeStyle = level === "blind" ? "#D55E00" : "#B26B00";
+      ctx.lineWidth = 2 * s;
+      ctx.strokeRect(x, y, w, h);
+      ctx.setLineDash([]);
+      label(`Frío · ${a.label}`, x, y, level === "blind" ? "#D55E00" : "#B26B00");
+    }
   }
 
   if (mode === "gaze") {
@@ -79,14 +90,23 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
   }
 
   if (mode === "blind") {
-    for (const a of blindZones(aois)) {
+    for (const { aoi: a, level } of cold) {
       const [x, y, w, h] = px(a.box);
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeStyle = "#D55E00";
-      ctx.lineWidth = 3 * s;
-      ctx.strokeRect(x, y, w, h);
-      label(`Zona ciega · ${a.label}`, x, y, "#D55E00");
+      if (level === "blind") {
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeStyle = "#D55E00";
+        ctx.lineWidth = 3 * s;
+        ctx.strokeRect(x, y, w, h);
+        label(`Zona ciega · ${a.label}`, x, y, "#D55E00");
+      } else {
+        ctx.setLineDash([8 * s, 5 * s]);
+        ctx.strokeStyle = "#B26B00";
+        ctx.lineWidth = 3 * s;
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+        label(`Baja atención · ${a.label}`, x, y, "#B26B00");
+      }
     }
   }
 
@@ -108,6 +128,41 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
       ctx.setLineDash([]);
     }
   }
+}
+
+/** Texto bajo la imagen en «Zonas ciegas»: qué se marcó, o por qué no hay nada. */
+function ColdZoneNotes({ cold, total }: { cold: ColdZone[]; total: number }) {
+  const limit = Math.round(LOW_ATTENTION * 100);
+  if (!total) return null;
+  if (!cold.length) {
+    return (
+      <p role="status" className="text-sm text-muted">
+        No se detectaron zonas ciegas: ningún elemento importante tiene atención estimada baja (≤ {limit} %). Si algo pasa desapercibido, ajústalo o agrégalo en «Áreas de interés».
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-1 text-sm">
+      {cold.map(({ aoi, level }) => (
+        <li key={aoi.id}>
+          <span className={`font-medium ${level === "blind" ? "text-[#D55E00]" : "text-[#B26B00]"}`}>{level === "blind" ? "Zona ciega" : "Baja atención"}</span> · {aoi.label} ·{" "}
+          <span className="text-muted">
+            importancia {aoi.importance}/5, atención {Math.round(aoi.attention * 100)} %
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Elementos importantes que la IA no incluyó en el recorrido visual. */
+function OutsidePathNote({ aois }: { aois: Aoi[] }) {
+  if (!aois.length) return null;
+  return (
+    <p className="text-sm text-muted">
+      <span className="font-medium text-foreground">Fuera del recorrido:</span> {aois.map((a) => a.label).join(" · ")}. La IA no prevé que se miren; revísalo en «Áreas de interés».
+    </p>
+  );
 }
 
 function nextId(aois: Aoi[]): string {
@@ -237,7 +292,8 @@ export function AttentionViewer({
   };
 
   const sel = useMemo(() => aois.find((a) => a.id === selected) ?? null, [aois, selected]);
-  const blind = blindZones(aois).length;
+  const cold = useMemo(() => coldZones(aois), [aois]);
+  const unreached = useMemo(() => outsidePath(aois), [aois]);
 
   return (
     <div className="space-y-3">
@@ -252,7 +308,7 @@ export function AttentionViewer({
               className={`min-h-8 rounded-full border px-3 py-1 text-sm ${mode === m.id ? "border-primary bg-primary/10 font-medium" : "border-border text-muted hover:text-foreground"}`}
             >
               {m.label}
-              {m.id === "blind" && blind ? ` (${blind})` : ""}
+              {m.id === "blind" && cold.length ? ` (${cold.length})` : ""}
             </button>
           ))}
           <button type="button" onClick={exportPng} className="ml-auto px-1 py-1.5 text-sm text-heading underline underline-offset-4">
@@ -394,6 +450,8 @@ export function AttentionViewer({
         ) : null}
       </div>
       {msg ? <Alert tone={msg.tone}>{msg.text}</Alert> : null}
+      {mode === "blind" ? <ColdZoneNotes cold={cold} total={aois.length} /> : null}
+      {mode === "gaze" ? <OutsidePathNote aois={unreached} /> : null}
       {mode === "heatmap" || mode === "gaze" || mode === "blind" ? (
         <p className="text-xs text-muted">
           Estimación experta (IA + revisión del analista) a partir de principios de saliencia visual. No es eye tracking ni datos de personas reales.

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AiError, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
+import { AiError, safeDetail, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
 
 /** Modelo por defecto según la guía vigente de la API; sobreescribible con ANTHROPIC_MODEL. */
 export const DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5";
@@ -49,10 +49,10 @@ export function createAnthropicProvider(opts: { apiKey: string; model?: string; 
         return { text, model: res.model };
       } catch (e) {
         if (e instanceof AiError) throw e;
-        if (e instanceof Anthropic.AuthenticationError) throw new AiError("La API key de Anthropic no es válida.", "auth");
-        if (e instanceof Anthropic.RateLimitError) throw new AiError("Anthropic limitó las solicitudes. Espera un momento e inténtalo de nuevo.", "rate_limit");
-        if (e instanceof Anthropic.APIError) throw new AiError(`Error del proveedor de IA (${e.status ?? "red"}).`, "provider");
-        throw new AiError("No se pudo conectar con el proveedor de IA.", "provider");
+        if (e instanceof Anthropic.AuthenticationError) throw new AiError("La API key de Anthropic no es válida.", "auth", "HTTP 401");
+        if (e instanceof Anthropic.RateLimitError) throw new AiError("Anthropic limitó las solicitudes. Espera un momento e inténtalo de nuevo.", "rate_limit", "HTTP 429");
+        if (e instanceof Anthropic.APIError) throw new AiError(`Error del proveedor de IA (${e.status ?? "red"}).`, "provider", safeDetail(`HTTP ${e.status ?? "red"}: ${e.message}`));
+        throw new AiError("No se pudo conectar con el proveedor de IA.", "provider", safeDetail(e instanceof Error ? `${e.name}: ${e.message}` : String(e)));
       }
     },
   };

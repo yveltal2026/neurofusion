@@ -91,7 +91,7 @@ export function createCascadeProvider(tiers: Tier[], opts: CascadeOptions = {}):
           failures.push(err);
           const pause = COOLDOWN_MS[err.kind];
           if (pause) cooldowns.set(tier.id, now() + pause);
-          log(`[ai] ${tier.label} falló (${err.kind}); ${isLast ? "sin más niveles" : "probando el siguiente"}`);
+          log(`[ai] ${tier.label} falló (${err.kind}${err.detail ? `: ${err.detail}` : ""}); ${isLast ? "sin más niveles" : "probando el siguiente"}`);
         }
       }
 

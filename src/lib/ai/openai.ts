@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { AiError, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
+import { AiError, safeDetail, type AnalysisProvider, type ChatMessage, type CompletionRequest, type CompletionResult } from "./types";
 
 /** Traduce los mensajes neutros al formato de OpenAI (imágenes como data URL). */
 export function toOpenAiMessages(messages: ChatMessage[]): OpenAI.ChatCompletionMessageParam[] {
@@ -44,10 +44,10 @@ export function createOpenAiProvider(opts: { apiKey: string; model: string; maxR
         return { text: choice?.message.content ?? "", model: res.model };
       } catch (e) {
         if (e instanceof AiError) throw e;
-        if (e instanceof OpenAI.AuthenticationError) throw new AiError("La API key de OpenAI no es válida.", "auth");
-        if (e instanceof OpenAI.RateLimitError) throw new AiError("OpenAI limitó las solicitudes. Espera un momento e inténtalo de nuevo.", "rate_limit");
-        if (e instanceof OpenAI.APIError) throw new AiError(`Error del proveedor de IA (${e.status ?? "red"}).`, "provider");
-        throw new AiError("No se pudo conectar con el proveedor de IA.", "provider");
+        if (e instanceof OpenAI.AuthenticationError) throw new AiError("La API key de OpenAI no es válida.", "auth", "HTTP 401");
+        if (e instanceof OpenAI.RateLimitError) throw new AiError("OpenAI limitó las solicitudes. Espera un momento e inténtalo de nuevo.", "rate_limit", "HTTP 429");
+        if (e instanceof OpenAI.APIError) throw new AiError(`Error del proveedor de IA (${e.status ?? "red"}).`, "provider", safeDetail(`HTTP ${e.status ?? "red"}: ${e.message}`));
+        throw new AiError("No se pudo conectar con el proveedor de IA.", "provider", safeDetail(e instanceof Error ? `${e.name}: ${e.message}` : String(e)));
       }
     },
   };
