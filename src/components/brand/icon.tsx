@@ -211,6 +211,63 @@ const GLYPHS = {
       <Bubble cx={27} cy={15} r={3.2} />
     </>
   ),
+  radio: (
+    <>
+      <circle cx="20" cy="20" r="14" />
+      <Bubble cx={20} cy={20} r={5.5} />
+    </>
+  ),
+  checks: (
+    <>
+      <rect x="6" y="6" width="28" height="28" rx="6" />
+      <path d="M13 20.5l5 5 9-10" />
+      <Bubble cx={33} cy={7} r={3.5} />
+    </>
+  ),
+  scale: (
+    <>
+      <path d="M5 20h30M8 13v14M32 13v14" />
+      <Bubble cx={20} cy={20} r={4.2} />
+    </>
+  ),
+  gauge: (
+    <>
+      <path d="M6 30a14 14 0 0 1 28 0" />
+      <path d="M20 30l7-9" />
+      <Bubble cx={20} cy={30} r={3.2} />
+    </>
+  ),
+  hash: (
+    <>
+      <path d="M15 6l-3 24M28 6l-3 24M6 14h26M5 24h26" />
+      <Bubble cx={33} cy={34} r={3.2} />
+    </>
+  ),
+  lines: (
+    <>
+      <path d="M6 11h28M6 19h28M6 27h15" />
+      <Bubble cx={31} cy={30} r={3.4} />
+    </>
+  ),
+  coin: (
+    <>
+      <circle cx="20" cy="20" r="15" />
+      <path d="M24.5 14.5h-6a3.5 3.5 0 0 0 0 7h3a3.5 3.5 0 0 1 0 7h-6.5M20 10v4.5M20 28.5V32" />
+      <Bubble cx={34} cy={7} r={3.4} />
+    </>
+  ),
+  chevron: (
+    <>
+      <path d="M9 15l11 11 11-11" />
+      <Bubble cx={33} cy={8} r={3.2} />
+    </>
+  ),
+  close: (
+    <>
+      <path d="M11 11l18 18M29 11L11 29" />
+      <Bubble cx={33} cy={33} r={3.2} />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof GLYPHS;

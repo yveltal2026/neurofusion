@@ -4,7 +4,7 @@ import { Input, Textarea } from "@/components/ui/field";
 import type { SurveyItem } from "../engine";
 
 const OPTION_CLASS =
-  "flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2.5 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
+  "flex cursor-pointer items-center min-h-12 gap-3 rounded-md border border-border px-4 py-3 text-sm transition-colors duration-150 motion-reduce:transition-none hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-primary/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
 const POINT_CLASS =
   "flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
 
@@ -38,7 +38,7 @@ export function ItemField({
         className="space-y-2"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-sm font-medium">{label}</legend>
+        <legend className="text-base font-medium">{label}</legend>
         <p className="text-xs text-muted">Puedes elegir varias opciones.</p>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
@@ -67,7 +67,7 @@ export function ItemField({
         className="space-y-2"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-sm font-medium">{label}</legend>
+        <legend className="text-base font-medium">{label}</legend>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
             <input
@@ -92,7 +92,7 @@ export function ItemField({
           className="space-y-2"
           aria-describedby={error ? errorId : undefined}
         >
-          <legend className="text-sm font-medium">{label}</legend>
+          <legend className="text-base font-medium">{label}</legend>
           {item.labels.map((text, i) => {
             const n = item.min + i;
             return (
@@ -120,7 +120,7 @@ export function ItemField({
         className="space-y-2"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-sm font-medium">{label}</legend>
+        <legend className="text-base font-medium">{label}</legend>
         <div className="flex flex-wrap gap-2">
           {points.map((n) => (
             <label key={n} className={POINT_CLASS}>
@@ -156,7 +156,7 @@ export function ItemField({
     return (
       <div className="space-y-1.5">
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-heading">{label}</span>
+          <span className="text-base font-medium text-heading">{label}</span>
           <Input
             type="number"
             inputMode="decimal"
@@ -181,7 +181,7 @@ export function ItemField({
   return (
     <div className="space-y-1.5">
       <label className="block space-y-1.5">
-        <span className="text-sm font-medium text-heading">{label}</span>
+        <span className="text-base font-medium text-heading">{label}</span>
         <Textarea
           value={typeof value === "string" ? value : ""}
           onChange={(e) =>

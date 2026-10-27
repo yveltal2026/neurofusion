@@ -32,7 +32,9 @@ function setup() {
 const pickTemplate = (
   user: ReturnType<typeof userEvent.setup>,
   name: RegExp | string,
-) => user.click(screen.getByRole("heading", { name }));
+) => user.click(screen.getByRole("button", { name }));
+
+const CREATE = { name: "Crear encuesta y generar liga" };
 
 describe("SurveyBuilder", () => {
   it("ofrece plantillas y, al elegir una, muestra sus bloques editables", async () => {
@@ -44,7 +46,7 @@ describe("SurveyBuilder", () => {
       "Percepción de una marca o anuncio",
       "Reacción emocional ante un estímulo",
     ]) {
-      expect(screen.getByRole("heading", { name: t })).toBeTruthy();
+      expect(screen.getByRole("button", { name: t })).toBeTruthy();
     }
     await pickTemplate(user, /Usabilidad/);
     expect(
@@ -75,7 +77,7 @@ describe("SurveyBuilder", () => {
     const subject = screen.getAllByLabelText(/Sobre qué se pregunta/)[0]!;
     await user.type(subject, "esta tienda en línea");
     await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
+      screen.getByRole("button", CREATE),
     );
 
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
@@ -107,10 +109,12 @@ describe("SurveyBuilder", () => {
     await pickTemplate(user, /Usabilidad/);
     await user.clear(screen.getByLabelText(/Nombre del estudio/));
     await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
+      screen.getByRole("button", CREATE),
     );
     expect(
-      await screen.findByText("Escribe un nombre para el estudio"),
+      await screen.findByRole("button", {
+        name: "Escribe un nombre para el estudio",
+      }),
     ).toBeTruthy();
     expect(create).not.toHaveBeenCalled();
   });
@@ -124,9 +128,11 @@ describe("SurveyBuilder", () => {
       "Algo",
     );
     await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
+      screen.getByRole("button", CREATE),
     );
-    expect(await screen.findByText(/al menos un bloque/)).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: /al menos un bloque/ }),
+    ).toBeTruthy();
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -138,22 +144,71 @@ describe("SurveyBuilder", () => {
       screen.getByLabelText("Título para el participante"),
       "Título",
     );
+    // La pantalla vacía enseña el primer paso: preguntas propias arranca con una pregunta lista.
     await user.click(screen.getByRole("button", { name: "Preguntas propias" }));
-    await user.click(screen.getByRole("button", { name: "Agregar pregunta" }));
-    await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
-    );
-    expect(await screen.findByText(/Bloque 1 · pregunta 1: /)).toBeTruthy();
+    expect(
+      (screen.getByRole("textbox", { name: "Opción 1" }) as HTMLInputElement)
+        .value,
+    ).toBe("Opción 1");
+    await user.click(screen.getByRole("button", CREATE));
+    expect(
+      await screen.findByRole("button", { name: /Bloque 1 · pregunta 1: / }),
+    ).toBeTruthy();
     expect(create).not.toHaveBeenCalled();
 
-    // Al corregirlo, ya se puede crear.
+    // El error también aparece junto a la pregunta y desaparece al corregirlo.
+    expect(screen.getAllByText("Campo obligatorio").length).toBeGreaterThan(0);
     await user.type(screen.getByLabelText("Enunciado"), "¿Qué tal?");
-    const options = screen.getByLabelText(/Opciones/);
-    expect((options as HTMLTextAreaElement).value).toBe("Opción 1\nOpción 2");
-    await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
-    );
+    expect(screen.queryByText(/Falta corregir/)).toBeNull();
+    await user.click(screen.getByRole("button", CREATE));
     await waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+  });
+
+  it("agrega una pregunta de un clic, edita opciones con Enter y duplica", async () => {
+    const user = setup();
+    await pickTemplate(user, "En blanco");
+    await user.click(screen.getByRole("button", { name: "Preguntas propias" }));
+    await user.type(screen.getByLabelText("Enunciado"), "¿Cuál prefieres?");
+    // Enter en la última opción agrega otra debajo y le da el foco.
+    await user.click(screen.getByRole("textbox", { name: "Opción 2" }));
+    await user.keyboard("{Enter}Tercera");
+    expect(
+      (screen.getByRole("textbox", { name: "Opción 3" }) as HTMLInputElement)
+        .value,
+    ).toBe("Tercera");
+    // Retroceso en una opción vacía la quita.
+    await user.click(screen.getByRole("button", { name: "Agregar opción" }));
+    await user.keyboard("{Backspace}");
+    expect(screen.queryByRole("textbox", { name: "Opción 4" })).toBeNull();
+
+    // Agregar de un clic una escala: queda activa y la anterior se ve como vista previa.
+    await user.click(screen.getByRole("button", { name: "Escala (Likert)" }));
+    expect(screen.getAllByLabelText("Enunciado")).toHaveLength(1);
+    expect(screen.getByText("¿Cuál prefieres?")).toBeTruthy();
+    expect(screen.getByLabelText("Puntos de la escala")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Duplicar pregunta 2" }));
+    expect(screen.getByRole("button", { name: "Quitar pregunta 3" })).toBeTruthy();
+  });
+
+  it("al cambiar el tipo conserva el enunciado y quitar se puede deshacer", async () => {
+    const user = setup();
+    await pickTemplate(user, "En blanco");
+    await user.click(screen.getByRole("button", { name: "Preguntas propias" }));
+    await user.type(screen.getByLabelText("Enunciado"), "¿Cómo te fue?");
+    await user.selectOptions(
+      screen.getByLabelText("Tipo de pregunta"),
+      "Texto libre",
+    );
+    expect((screen.getByLabelText("Enunciado") as HTMLInputElement).value).toBe(
+      "¿Cómo te fue?",
+    );
+    await user.click(screen.getByRole("button", { name: "Quitar pregunta 1" }));
+    expect(screen.queryByLabelText("Enunciado")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Deshacer" }));
+    expect((screen.getByLabelText("Enunciado") as HTMLInputElement).value).toBe(
+      "¿Cómo te fue?",
+    );
   });
 
   it("reordena y quita bloques", async () => {
@@ -188,9 +243,7 @@ describe("SurveyBuilder", () => {
     await pickTemplate(user, /Usabilidad/);
     const first = screen.getAllByLabelText(/Sobre qué se pregunta/)[0]!;
     await user.type(first, "esta app");
-    const block = screen
-      .getByRole("heading", { name: /Bloque 1/ })
-      .closest("div")!.parentElement!;
+    const block = screen.getByRole("region", { name: /Bloque 1/ });
     await user.click(within(block).getByText(/Ver los 10 textos/));
     expect(
       within(block).getByText("Me pareció fácil usar esta app."),
@@ -201,8 +254,11 @@ describe("SurveyBuilder", () => {
     const user = setup();
     await pickTemplate(user, "En blanco");
     const title = screen.getByLabelText("Título para el participante");
+    await user.click(
+      screen.getByRole("button", { name: "Editar consentimiento" }),
+    );
     const consent = screen.getByLabelText(
-      /Consentimiento/,
+      "Consentimiento",
     ) as HTMLTextAreaElement;
     await user.type(title, "Café");
     expect(consent.value).toContain("«Café»");
@@ -221,7 +277,7 @@ describe("SurveyBuilder", () => {
     await pickTemplate(user, /Usabilidad/);
     await user.type(screen.getByLabelText(/Nombre del estudio/), " X");
     await user.click(
-      screen.getByRole("button", { name: "Crear encuesta y generar liga" }),
+      screen.getByRole("button", CREATE),
     );
     expect(
       await screen.findByText(/No se pudo crear la encuesta/),

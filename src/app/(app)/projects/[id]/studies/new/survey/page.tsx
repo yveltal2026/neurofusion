@@ -16,10 +16,5 @@ export default async function NewSurveyStudyPage({
     .maybeSingle();
   if (!project) notFound();
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Nueva encuesta</h1>
-      <SurveyBuilder projectId={project.id} projectName={project.name} />
-    </div>
-  );
+  return <SurveyBuilder projectId={project.id} projectName={project.name} />;
 }

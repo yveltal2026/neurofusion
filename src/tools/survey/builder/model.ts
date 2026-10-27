@@ -3,6 +3,7 @@ import {
   DEFAULT_THANK_YOU,
   getInstrument,
   surveyConfigSchema,
+  VW_QUESTIONS,
   type InstrumentId,
   type PriceMethod,
   type SurveyConfig,
@@ -182,6 +183,86 @@ export function addQuestion(
         : b,
     ),
   };
+}
+
+const DEFAULT_OPTIONS = "Opción 1\nOpción 2";
+
+/** Cambia el tipo de una pregunta conservando su enunciado; las de opciones nunca quedan sin opciones. */
+export function changeQuestionType(
+  d: SurveyDraft,
+  blockId: string,
+  questionId: string,
+  type: QuestionType,
+): SurveyDraft {
+  return updateQuestion(d, blockId, questionId, {
+    type,
+    ...((type === "select" || type === "multiselect") &&
+    !findQuestion(d, blockId, questionId)?.optionsText.trim()
+      ? { optionsText: DEFAULT_OPTIONS }
+      : {}),
+  });
+}
+
+/** Copia una pregunta justo debajo de la original, con identificador nuevo. */
+export function duplicateQuestion(
+  d: SurveyDraft,
+  blockId: string,
+  questionId: string,
+): SurveyDraft {
+  const [next, n] = nextCounter(d);
+  return {
+    ...next,
+    blocks: next.blocks.map((b) => {
+      if (b.kind !== "questions" || b.id !== blockId) return b;
+      const at = b.questions.findIndex((q) => q.id === questionId);
+      if (at < 0) return b;
+      const copy = { ...b.questions[at]!, id: `p${n}` };
+      return {
+        ...b,
+        questions: [
+          ...b.questions.slice(0, at + 1),
+          copy,
+          ...b.questions.slice(at + 1),
+        ],
+      };
+    }),
+  };
+}
+
+function findQuestion(
+  d: SurveyDraft,
+  blockId: string,
+  questionId: string,
+): DraftQuestion | undefined {
+  const b = d.blocks.find((x) => x.id === blockId);
+  return b?.kind === "questions"
+    ? b.questions.find((q) => q.id === questionId)
+    : undefined;
+}
+
+/** Opciones de una pregunta como lista editable (una por línea; las vacías se conservan mientras se escribe). */
+export function splitOptions(optionsText: string): string[] {
+  return optionsText === "" ? [] : optionsText.split("\n");
+}
+
+export function joinOptions(options: readonly string[]): string {
+  return options.join("\n");
+}
+
+/** Cuántos bloques y elementos (preguntas, ítems de instrumentos y de precio) llevará la encuesta. */
+export function countItems(d: SurveyDraft): { blocks: number; items: number } {
+  let items = 0;
+  for (const b of d.blocks) {
+    if (b.kind === "questions") items += b.questions.length;
+    else if (b.kind === "instrument")
+      items += getInstrument(b.instrumentId).items.length;
+    else
+      items +=
+        b.method === "van_westendorp"
+          ? VW_QUESTIONS.length
+          : parsePrices(b.pricesText).filter(Number.isFinite).length;
+  }
+  return { blocks: d.blocks.length, items };
 }
 
 // ----------------------------------------------------------------- edición
@@ -455,27 +536,50 @@ function toBlock(b: DraftBlock): unknown {
   };
 }
 
+/** Dónde se corrige un error: el campo del encabezado, el bloque o la pregunta. */
+export interface BuildIssue {
+  /** Mensaje con ubicación («Bloque 2 · pregunta 1: …»). */
+  text: string;
+  /** Mensaje sin ubicación, para mostrarlo junto al campo. */
+  message: string;
+  field?: "title" | "intro" | "consent" | "thankYou" | "name";
+  blockId?: string;
+  questionId?: string;
+}
+
 export type BuildResult =
-  { ok: true; config: SurveyConfig } | { ok: false; errors: string[] };
+  | { ok: true; config: SurveyConfig }
+  | { ok: false; errors: string[]; issues: BuildIssue[] };
+
+const FIELD_LABELS = {
+  title: "Título",
+  intro: "Introducción",
+  consent: "Consentimiento",
+  thankYou: "Texto de cierre",
+} as const;
 
 /** Ubica un error del esquema en lenguaje del investigador («Bloque 2 · pregunta 1: …»). */
 function describeIssue(
   d: SurveyDraft,
   path: readonly PropertyKey[],
   message: string,
-): string {
+): BuildIssue {
   if (path[0] !== "blocks" || typeof path[1] !== "number") {
     const field =
       path[0] === "title"
-        ? "Título"
+        ? "title"
         : path[0] === "intro"
-          ? "Introducción"
+          ? "intro"
           : path[0] === "texts"
             ? path[1] === "consent"
-              ? "Consentimiento"
-              : "Texto de cierre"
-            : null;
-    return field ? `${field}: ${message}` : message;
+              ? "consent"
+              : "thankYou"
+            : undefined;
+    return {
+      text: field ? `${FIELD_LABELS[field]}: ${message}` : message,
+      message,
+      field,
+    };
   }
   const block = d.blocks[path[1]];
   const where = [`Bloque ${path[1] + 1}`];
@@ -483,9 +587,17 @@ function describeIssue(
     where.push(getInstrument(block.instrumentId).name);
   if (block?.kind === "price")
     where.push(block.method === "van_westendorp" ? "Van Westendorp" : "Gabor-Granger");
-  if (path[2] === "questions" && typeof path[3] === "number")
+  let questionId: string | undefined;
+  if (path[2] === "questions" && typeof path[3] === "number") {
     where.push(`pregunta ${path[3] + 1}`);
-  return `${where.join(" · ")}: ${message}`;
+    if (block?.kind === "questions") questionId = block.questions[path[3]]?.id;
+  }
+  return {
+    text: `${where.join(" · ")}: ${message}`,
+    message,
+    blockId: block?.id,
+    questionId,
+  };
 }
 
 /** Convierte el borrador en la configuración validada del motor, o lista lo que falta corregir. */
@@ -498,10 +610,10 @@ export function buildConfig(d: SurveyDraft): BuildResult {
     blocks: d.blocks.map(toBlock),
   });
   if (parsed.success) return { ok: true, config: parsed.data };
-  const errors: string[] = [];
+  const issues: BuildIssue[] = [];
   for (const issue of parsed.error.issues) {
-    const text = describeIssue(d, issue.path, issue.message);
-    if (!errors.includes(text)) errors.push(text);
+    const found = describeIssue(d, issue.path, issue.message);
+    if (!issues.some((i) => i.text === found.text)) issues.push(found);
   }
-  return { ok: false, errors };
+  return { ok: false, errors: issues.map((i) => i.text), issues };
 }

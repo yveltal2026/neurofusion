@@ -5,7 +5,11 @@ import {
   addQuestion,
   addQuestionsBlock,
   buildConfig,
+  changeQuestionType,
+  countItems,
+  duplicateQuestion,
   emptyDraft,
+  joinOptions,
   moveBlock,
   moveItem,
   moveQuestion,
@@ -13,6 +17,7 @@ import {
   removeQuestion,
   setConsent,
   setTitle,
+  splitOptions,
   TEMPLATES,
   updateBlock,
   updateQuestion,
@@ -236,5 +241,66 @@ describe("conversión a configuración", () => {
     expect(built.ok && listItems(built.config)[0]!.label).toContain(
       "esta tienda en línea",
     );
+  });
+});
+
+describe("edición estilo formulario", () => {
+  function oneQuestion() {
+    let d = setTitle(emptyDraft(), "Mi encuesta");
+    d = addQuestionsBlock(d);
+    const blockId = d.blocks[0]!.id;
+    d = addQuestion(d, blockId, "text");
+    return { d, blockId, qid: questionsOf(d, 0)[0]!.id };
+  }
+
+  it("duplica una pregunta justo debajo, con identificador nuevo", () => {
+    const { d, blockId, qid } = oneQuestion();
+    const d2 = addQuestion(updateQuestion(d, blockId, qid, { prompt: "A" }), blockId, "nps");
+    const copy = duplicateQuestion(d2, blockId, qid);
+    const qs = questionsOf(copy, 0);
+    expect(qs.map((q) => q.prompt)).toEqual(["A", "A", ""]);
+    expect(new Set(qs.map((q) => q.id)).size).toBe(3);
+    expect(qs[1]!.id).not.toBe(qid);
+  });
+
+  it("cambiar a opciones agrega opciones por defecto y conserva las existentes", () => {
+    const { d, blockId, qid } = oneQuestion();
+    const asSelect = changeQuestionType(
+      updateQuestion(d, blockId, qid, { prompt: "¿Cuál?" }),
+      blockId,
+      qid,
+      "select",
+    );
+    const q = questionsOf(asSelect, 0)[0]!;
+    expect(q.type).toBe("select");
+    expect(q.prompt).toBe("¿Cuál?");
+    expect(q.optionsText).toBe("Opción 1\nOpción 2");
+    const edited = updateQuestion(asSelect, blockId, qid, { optionsText: "Rojo\nAzul" });
+    const multi = changeQuestionType(edited, blockId, qid, "multiselect");
+    expect(questionsOf(multi, 0)[0]!.optionsText).toBe("Rojo\nAzul");
+  });
+
+  it("las opciones se editan como lista y conservan las filas vacías mientras se escribe", () => {
+    expect(splitOptions("")).toEqual([]);
+    expect(splitOptions("A\n")).toEqual(["A", ""]);
+    expect(joinOptions(["A", "", "B"])).toBe("A\n\nB");
+  });
+
+  it("cuenta bloques y elementos que llevará la encuesta", () => {
+    const usability = TEMPLATES.find((t) => t.id === "usability")!.build();
+    expect(countItems(usability)).toEqual({ blocks: 3, items: 12 });
+    expect(countItems(emptyDraft())).toEqual({ blocks: 0, items: 0 });
+  });
+
+  it("los errores indican a qué bloque y pregunta pertenecen", () => {
+    const { d, blockId, qid } = oneQuestion();
+    const built = buildConfig(d);
+    expect(built.ok).toBe(false);
+    if (built.ok) return;
+    expect(built.issues).toContainEqual(
+      expect.objectContaining({ blockId, questionId: qid }),
+    );
+    const noTitle = buildConfig(setTitle(d, ""));
+    expect(!noTitle.ok && noTitle.issues.some((i) => i.field === "title")).toBe(true);
   });
 });

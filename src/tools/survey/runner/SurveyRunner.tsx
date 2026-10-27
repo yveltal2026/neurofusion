@@ -59,7 +59,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
       aria-label="Progreso"
     >
       <div
-        className="h-full bg-primary transition-[width] duration-300"
+        className="h-full bg-heading transition-[width] duration-300 motion-reduce:transition-none"
         style={{ width: `${pct}%` }}
       />
     </div>

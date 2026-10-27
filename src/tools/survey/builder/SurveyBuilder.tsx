@@ -1,306 +1,66 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { Icon } from "@/components/brand/icon";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Field, Input, Textarea } from "@/components/ui/field";
-import {
-  getInstrument,
-  INSTRUMENT_IDS,
-  renderItemText,
-  type InstrumentId,
-} from "../engine";
+import { Textarea } from "@/components/ui/field";
+import { getInstrument, type InstrumentId, type PriceMethod } from "../engine";
 import { createSurveyStudy } from "./actions";
+import { AddBlockPanel, AddQuestionRow } from "./AddBlockPanel";
+import { BlockSection, InstrumentCard, PriceCard } from "./BlockCards";
+import { INSTRUMENT_CATALOG, PRICE_CATALOG } from "./catalog";
 import {
   addInstrumentBlock,
   addPriceBlock,
-  parsePrices,
   addQuestion,
   addQuestionsBlock,
   buildConfig,
+  changeQuestionType,
+  countItems,
+  duplicateQuestion,
   emptyDraft,
   moveBlock,
   moveQuestion,
-  QUESTION_TYPE_LABELS,
   removeBlock,
   removeQuestion,
   setConsent,
   setTitle,
-  TEMPLATES,
   updateBlock,
   updateQuestion,
-  type DraftBlock,
-  type DraftQuestion,
+  type BuildIssue,
   type QuestionType,
   type SurveyDraft,
+  type SurveyTemplate,
 } from "./model";
+import { QuestionCard } from "./QuestionCard";
+import { TemplatePicker } from "./TemplatePicker";
 
-const SELECT_CLASS =
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm";
+/** Nombre del estudio vacío: se valida aquí porque el motor sólo conoce la configuración. */
+function validate(d: SurveyDraft): BuildIssue[] {
+  const issues: BuildIssue[] = [];
+  if (!d.name.trim())
+    issues.push({
+      text: "Escribe un nombre para el estudio",
+      message: "Escribe un nombre para el estudio",
+      field: "name",
+    });
+  const built = buildConfig(d);
+  if (!built.ok) issues.push(...built.issues);
+  return issues;
+}
 
-type QuestionsBlock = Extract<DraftBlock, { kind: "questions" }>;
-type InstrumentBlock = Extract<DraftBlock, { kind: "instrument" }>;
-type PriceBlock = Extract<DraftBlock, { kind: "price" }>;
-
-function IconButton({
-  label,
-  onClick,
-  disabled,
-}: {
+interface UndoState {
   label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      className="h-9 px-3"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      title={label}
-    >
-      {label.startsWith("Subir") ? "↑" : label.startsWith("Bajar") ? "↓" : "✕"}
-    </Button>
-  );
+  draft: SurveyDraft;
+  started: boolean;
 }
 
-function QuestionEditor({
-  q,
-  index,
-  count,
-  onChange,
-  onMove,
-  onRemove,
-}: {
-  q: DraftQuestion;
-  index: number;
-  count: number;
-  onChange: (patch: Partial<DraftQuestion>) => void;
-  onMove: (delta: -1 | 1) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <fieldset className="space-y-3 rounded-md border border-border p-3">
-      <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
-        Pregunta {index + 1} · {QUESTION_TYPE_LABELS[q.type]}
-      </legend>
-      <Field label="Enunciado">
-        <Input
-          value={q.prompt}
-          onChange={(e) => onChange({ prompt: e.target.value })}
-          maxLength={300}
-        />
-      </Field>
+const UNDO_MS = 8000;
 
-      {q.type === "select" || q.type === "multiselect" ? (
-        <Field label="Opciones" hint="Una opción por línea.">
-          <Textarea
-            value={q.optionsText}
-            onChange={(e) => onChange({ optionsText: e.target.value })}
-            rows={4}
-          />
-        </Field>
-      ) : null}
-
-      {q.type === "likert" ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Puntos de la escala">
-            <Input
-              type="number"
-              min={3}
-              max={10}
-              value={q.points}
-              onChange={(e) => onChange({ points: Number(e.target.value) })}
-            />
-          </Field>
-          <Field label="Etiqueta del extremo bajo">
-            <Input
-              value={q.minLabel}
-              onChange={(e) => onChange({ minLabel: e.target.value })}
-              maxLength={40}
-            />
-          </Field>
-          <Field label="Etiqueta del extremo alto">
-            <Input
-              value={q.maxLabel}
-              onChange={(e) => onChange({ maxLabel: e.target.value })}
-              maxLength={40}
-            />
-          </Field>
-        </div>
-      ) : null}
-
-      {q.type === "number" ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Mínimo (opcional)">
-            <Input
-              type="number"
-              value={q.min}
-              onChange={(e) => onChange({ min: e.target.value })}
-            />
-          </Field>
-          <Field label="Máximo (opcional)">
-            <Input
-              type="number"
-              value={q.max}
-              onChange={(e) => onChange({ max: e.target.value })}
-            />
-          </Field>
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={q.required}
-            onChange={(e) => onChange({ required: e.target.checked })}
-          />
-          Obligatoria
-        </label>
-        <div className="flex gap-1">
-          <IconButton
-            label={`Subir pregunta ${index + 1}`}
-            onClick={() => onMove(-1)}
-            disabled={index === 0}
-          />
-          <IconButton
-            label={`Bajar pregunta ${index + 1}`}
-            onClick={() => onMove(1)}
-            disabled={index === count - 1}
-          />
-          <IconButton
-            label={`Quitar pregunta ${index + 1}`}
-            onClick={onRemove}
-          />
-        </div>
-      </div>
-    </fieldset>
-  );
-}
-
-function BlockShell({
-  title,
-  index,
-  count,
-  onMove,
-  onRemove,
-  children,
-}: {
-  title: string;
-  index: number;
-  count: number;
-  onMove: (delta: -1 | 1) => void;
-  onRemove: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium">
-          Bloque {index + 1} · {title}
-        </h3>
-        <div className="flex gap-1">
-          <IconButton
-            label={`Subir bloque ${index + 1}`}
-            onClick={() => onMove(-1)}
-            disabled={index === 0}
-          />
-          <IconButton
-            label={`Bajar bloque ${index + 1}`}
-            onClick={() => onMove(1)}
-            disabled={index === count - 1}
-          />
-          <IconButton label={`Quitar bloque ${index + 1}`} onClick={onRemove} />
-        </div>
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-function PriceEditor({ block, onChange }: { block: PriceBlock; onChange: (patch: Partial<PriceBlock>) => void }) {
-  const gg = block.method === "gabor_granger";
-  const prices = parsePrices(block.pricesText);
-  return (
-    <div className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Sobre qué se pregunta" hint="Frase completa. Ejemplo: «esta suscripción mensual». Por defecto: «este producto».">
-          <Input value={block.subject} onChange={(e) => onChange({ subject: e.target.value })} placeholder="este producto" maxLength={80} />
-        </Field>
-        <Field label="Moneda" hint="Se muestra junto a los precios.">
-          <Input value={block.currency} onChange={(e) => onChange({ currency: e.target.value })} placeholder="MXN" maxLength={8} />
-        </Field>
-      </div>
-      {gg ? (
-        <Field label="Precios a probar" hint="Entre 3 y 10, separados por comas (decimales con punto). Se muestran de menor a mayor.">
-          <Input value={block.pricesText} onChange={(e) => onChange({ pricesText: e.target.value })} placeholder="100, 150, 200, 250, 300" />
-        </Field>
-      ) : null}
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input type="checkbox" checked={block.required} onChange={(e) => onChange({ required: e.target.checked })} />
-        Obligatorio
-      </label>
-      <p className="text-xs text-muted">
-        {gg
-          ? `El participante responde sí o no a cada uno de los ${prices.filter((p) => Number.isFinite(p)).length} precios. `
-          : "El participante escribe cuatro precios: muy barato, ganga, caro y demasiado caro. "}
-        Es intención declarada: sobreestima la compra real y no es un pronóstico de ventas. Se recomiendan 100 respuestas o más.
-      </p>
-    </div>
-  );
-}
-
-function InstrumentEditor({
-  block,
-  onChange,
-}: {
-  block: InstrumentBlock;
-  onChange: (patch: Partial<InstrumentBlock>) => void;
-}) {
-  const def = getInstrument(block.instrumentId);
-  const subject = block.subject.trim() || def.defaultSubject;
-  return (
-    <div className="space-y-3">
-      <Field
-        label="Sobre qué se pregunta"
-        hint={`Frase completa que sustituye al sujeto de los ítems (por defecto: «${def.defaultSubject}»). Ejemplo: «esta tienda en línea».`}
-      >
-        <Input
-          value={block.subject}
-          onChange={(e) => onChange({ subject: e.target.value })}
-          placeholder={def.defaultSubject}
-          maxLength={80}
-        />
-      </Field>
-      <label className="flex cursor-pointer items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={block.required}
-          onChange={(e) => onChange({ required: e.target.checked })}
-        />
-        Obligatorio
-      </label>
-      <details className="text-sm">
-        <summary className="cursor-pointer py-1 text-muted">
-          Ver los{" "}
-          {def.items.length === 1 ? "texto" : `${def.items.length} textos`} que
-          verá el participante
-        </summary>
-        <ol className="mt-2 list-decimal space-y-1 pl-5">
-          {def.items.map((item) => (
-            <li key={item.n}>{renderItemText(item, subject)}</li>
-          ))}
-        </ol>
-        <p className="mt-2 text-xs text-muted">
-          {def.source} {def.notes}
-        </p>
-      </details>
-    </div>
-  );
+function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
 export function SurveyBuilder({
@@ -311,27 +71,126 @@ export function SurveyBuilder({
   projectName: string;
 }) {
   const [draft, setDraft] = useState<SurveyDraft>(emptyDraft());
-  const [chosenTemplate, setChosenTemplate] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [started, setStarted] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [newType, setNewType] = useState<QuestionType>("select");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
+  const [undo, setUndo] = useState<UndoState | null>(null);
+  const [scrollTo, setScrollTo] = useState<{ id: string; n: number } | null>(
+    null,
+  );
 
-  const patch = (fn: (d: SurveyDraft) => SurveyDraft) => setDraft(fn);
+  // Tras un primer intento fallido, los errores se recalculan al editar: desaparecen al corregirlos.
+  const issues = useMemo(
+    () => (attempted ? validate(draft) : []),
+    [attempted, draft],
+  );
+  const stats = useMemo(() => countItems(draft), [draft]);
+
+  const problemsOf = (blockId: string, questionId?: string) =>
+    issues
+      .filter(
+        (i) =>
+          i.blockId === blockId &&
+          (questionId ? i.questionId === questionId : !i.questionId),
+      )
+      .map((i) => i.message);
+  const fieldProblem = (field: BuildIssue["field"]) =>
+    issues.find((i) => i.field === field)?.message;
+
+  useEffect(() => {
+    if (!scrollTo) return;
+    const reduce = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    document
+      .getElementById(`sb-${scrollTo.id}`)
+      ?.scrollIntoView?.({
+        block: "center",
+        behavior: reduce ? "auto" : "smooth",
+      });
+  }, [scrollTo]);
+
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), UNDO_MS);
+    return () => clearTimeout(t);
+  }, [undo]);
+
+  const reveal = (id: string) =>
+    setScrollTo((s) => ({ id, n: (s?.n ?? 0) + 1 }));
+
+  function startFrom(t: SurveyTemplate) {
+    setDraft(t.build());
+    setStarted(true);
+    setAttempted(false);
+    setActiveId(null);
+    setAdding(false);
+    setUndo(null);
+    window.scrollTo?.({ top: 0 });
+  }
+
+  /** Aplica un borrado y deja un aviso para deshacerlo, en lugar de pedir confirmación. */
+  function removeWith(label: string, fn: (d: SurveyDraft) => SurveyDraft) {
+    setUndo({ label, draft, started: true });
+    setDraft(fn(draft));
+  }
+
+  function addQuestionOfType(blockId: string, type: QuestionType) {
+    const id = `p${draft.counter + 1}`;
+    setDraft(addQuestion(draft, blockId, type));
+    setActiveId(id);
+    reveal(id);
+  }
+
+  function addBlockWith(next: SurveyDraft, activate?: string) {
+    const added = next.blocks[next.blocks.length - 1]!;
+    setDraft(next);
+    setAdding(false);
+    if (activate) setActiveId(activate);
+    reveal(activate ?? added.id);
+  }
+
+  function addOwnQuestions() {
+    // Un bloque nunca queda vacío: arranca con una pregunta de opción única lista para escribir.
+    const withBlock = addQuestionsBlock(draft);
+    const block = withBlock.blocks[withBlock.blocks.length - 1]!;
+    const next = addQuestion(withBlock, block.id, "select");
+    addBlockWith(next, `p${next.counter}`);
+  }
+
+  function goTo(i: BuildIssue) {
+    if (i.questionId) setActiveId(i.questionId);
+    if (i.field === "consent") setConsentOpen(true);
+    const target =
+      i.questionId ??
+      i.blockId ??
+      (i.field === "name"
+        ? "name"
+        : i.field === "thankYou"
+          ? "end"
+          : i.field
+            ? "header"
+            : "add");
+    reveal(target);
+    if (i.field === "name")
+      document.getElementById("sb-name")?.focus({ preventScroll: true });
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setServerError(null);
-    if (!draft.name.trim()) {
-      setErrors(["Escribe un nombre para el estudio"]);
+    setAttempted(true);
+    const found = validate(draft);
+    if (found.length) {
+      goTo(found[0]!);
       return;
     }
     const built = buildConfig(draft);
-    if (!built.ok) {
-      setErrors(built.errors);
-      return;
-    }
-    setErrors([]);
+    if (!built.ok) return;
     startTransition(async () => {
       const res = await createSurveyStudy({
         projectId,
@@ -343,276 +202,344 @@ export function SurveyBuilder({
     });
   }
 
-  if (!chosenTemplate) {
-    return (
-      <div className="space-y-4">
-        <p className="text-sm text-muted">
-          Proyecto: {projectName}. Elige un punto de partida; todo es editable
-          después.
-        </p>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {TEMPLATES.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                className="block h-full w-full text-left"
-                onClick={() => {
-                  setDraft(t.build());
-                  setChosenTemplate(true);
-                }}
-              >
-                <Card className="h-full transition hover:border-primary">
-                  <h2 className="font-medium">{t.name}</h2>
-                  <p className="mt-1 text-sm text-muted">{t.description}</p>
-                </Card>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
+  if (!started) {
+    return <TemplatePicker projectName={projectName} onPick={startFrom} />;
   }
 
+  const nameProblem = fieldProblem("name");
+  const titleProblem = fieldProblem("title");
+  const introProblem = fieldProblem("intro");
+  const consentProblem = fieldProblem("consent");
+  const thankYouProblem = fieldProblem("thankYou");
+  const consentVisible = consentOpen || Boolean(consentProblem);
+
   return (
-    <form onSubmit={submit} className="space-y-8" noValidate>
-      <Card className="space-y-4">
-        <h2 className="font-medium">Datos básicos</h2>
-        <Field label="Nombre del estudio" hint="Sólo lo ves tú.">
-          <Input
-            value={draft.name}
-            onChange={(e) => patch((d) => ({ ...d, name: e.target.value }))}
-            maxLength={160}
-          />
-        </Field>
-        <Field label="Título para el participante">
-          <Input
-            value={draft.title}
-            onChange={(e) => patch((d) => setTitle(d, e.target.value))}
-            maxLength={160}
-          />
-        </Field>
-        <Field
-          label="Introducción (opcional)"
-          hint="Se muestra antes del consentimiento."
+    <form onSubmit={submit} noValidate>
+      <div className="sticky top-0 z-20 -mx-6 border-b border-border bg-background px-6 py-3">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2">
+          <Link
+            href={`/projects/${projectId}`}
+            aria-label={`Volver al proyecto ${projectName}`}
+            title={`Proyecto: ${projectName}`}
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-heading hover:bg-heading/10"
+          >
+            <Icon name="folder" className="size-6" />
+          </Link>
+          <div className="min-w-0 flex-1 basis-56">
+            <input
+              id="sb-name"
+              aria-label="Nombre del estudio (sólo lo ves tú)"
+              aria-invalid={nameProblem ? true : undefined}
+              placeholder="Nombre del estudio"
+              className={`w-full border-b-2 bg-transparent py-1 font-display text-base font-semibold text-heading outline-none transition placeholder:font-normal placeholder:text-muted focus:border-heading focus-visible:outline-none ${
+                nameProblem
+                  ? "border-danger"
+                  : "border-transparent hover:border-border"
+              }`}
+              value={draft.name}
+              maxLength={160}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+            />
+            <p className="text-xs text-muted" aria-live="polite">
+              {plural(stats.blocks, "bloque", "bloques")} ·{" "}
+              {plural(stats.items, "pregunta", "preguntas")}
+              {issues.length ? (
+                <span className="ml-2 font-semibold text-foreground">
+                  {plural(issues.length, "pendiente", "pendientes")}
+                </span>
+              ) : null}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              setUndo({
+                label: "Volviste a las plantillas",
+                draft,
+                started: true,
+              });
+              setDraft(emptyDraft());
+              setStarted(false);
+              setAttempted(false);
+              setAdding(false);
+              setActiveId(null);
+            }}
+          >
+            Cambiar plantilla
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Creando…" : "Crear encuesta y generar liga"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-3xl space-y-5 py-6">
+        {issues.length ? (
+          <Alert tone="error">
+            <p className="font-medium">
+              Falta corregir {plural(issues.length, "cosa", "cosas")} para crear
+              la encuesta:
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {issues.slice(0, 8).map((i) => (
+                <li key={i.text}>
+                  <button
+                    type="button"
+                    onClick={() => goTo(i)}
+                    className="text-left underline underline-offset-2 hover:text-heading"
+                  >
+                    {i.text}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {issues.length > 8 ? (
+              <p className="mt-1">…y {issues.length - 8} más.</p>
+            ) : null}
+          </Alert>
+        ) : null}
+        {serverError ? <Alert tone="error">{serverError}</Alert> : null}
+
+        <section
+          id="sb-header"
+          aria-label="Encabezado de la encuesta"
+          className="scroll-mt-28 space-y-4 rounded-lg border border-t-[6px] border-border border-t-primary bg-surface p-6"
         >
-          <Textarea
-            value={draft.intro}
-            onChange={(e) => patch((d) => ({ ...d, intro: e.target.value }))}
-            rows={3}
-            maxLength={2000}
-          />
-        </Field>
-      </Card>
+          <div className="space-y-1">
+            <input
+              aria-label="Título para el participante"
+              aria-invalid={titleProblem ? true : undefined}
+              placeholder="Título de la encuesta"
+              className={`w-full border-b-2 bg-transparent py-1.5 font-display text-2xl font-bold tracking-tight text-heading outline-none transition placeholder:text-muted/70 focus:border-heading focus-visible:outline-none ${
+                titleProblem ? "border-danger" : "border-border"
+              }`}
+              value={draft.title}
+              maxLength={160}
+              onChange={(e) => setDraft(setTitle(draft, e.target.value))}
+            />
+            {titleProblem ? <FieldProblem>{titleProblem}</FieldProblem> : null}
+          </div>
+          <div className="space-y-1">
+            <textarea
+              aria-label="Introducción (opcional)"
+              aria-invalid={introProblem ? true : undefined}
+              placeholder="Introducción o descripción (opcional). Se muestra antes del consentimiento."
+              rows={2}
+              className="w-full resize-y border-b border-border bg-transparent py-1.5 text-sm outline-none transition placeholder:text-muted focus:border-heading focus-visible:outline-none"
+              value={draft.intro}
+              maxLength={2000}
+              onChange={(e) => setDraft({ ...draft, intro: e.target.value })}
+            />
+            {introProblem ? <FieldProblem>{introProblem}</FieldProblem> : null}
+          </div>
 
-      <section className="space-y-4" aria-label="Bloques">
-        <h2 className="text-lg font-semibold">Bloques</h2>
-        <p className="text-sm text-muted">
-          El participante ve un bloque por pantalla, en este orden.
-        </p>
-
-        {draft.blocks.map((block, index) =>
-          block.kind === "price" ? (
-            <BlockShell
-              key={block.id}
-              title={block.method === "van_westendorp" ? "Precio · Van Westendorp" : "Precio · Gabor-Granger"}
-              index={index}
-              count={draft.blocks.length}
-              onMove={(delta) => patch((d) => moveBlock(d, block.id, delta))}
-              onRemove={() => patch((d) => removeBlock(d, block.id))}
-            >
-              <PriceEditor block={block} onChange={(p) => patch((d) => updateBlock(d, block.id, p))} />
-            </BlockShell>
-          ) : block.kind === "instrument" ? (
-            <BlockShell
-              key={block.id}
-              title={getInstrument(block.instrumentId).name}
-              index={index}
-              count={draft.blocks.length}
-              onMove={(delta) => patch((d) => moveBlock(d, block.id, delta))}
-              onRemove={() => patch((d) => removeBlock(d, block.id))}
-            >
-              <InstrumentEditor
-                block={block}
-                onChange={(p) => patch((d) => updateBlock(d, block.id, p))}
-              />
-            </BlockShell>
-          ) : (
-            <BlockShell
-              key={block.id}
-              title="Preguntas"
-              index={index}
-              count={draft.blocks.length}
-              onMove={(delta) => patch((d) => moveBlock(d, block.id, delta))}
-              onRemove={() => patch((d) => removeBlock(d, block.id))}
-            >
-              <QuestionsEditor
-                block={block}
-                newType={newType}
-                setNewType={setNewType}
-                onAdd={() => patch((d) => addQuestion(d, block.id, newType))}
-                onChange={(qid, p) =>
-                  patch((d) => updateQuestion(d, block.id, qid, p))
-                }
-                onMove={(qid, delta) =>
-                  patch((d) => moveQuestion(d, block.id, qid, delta))
-                }
-                onRemove={(qid) =>
-                  patch((d) => removeQuestion(d, block.id, qid))
-                }
-              />
-            </BlockShell>
-          ),
-        )}
-
-        <Card className="space-y-3">
-          <h3 className="font-medium">Agregar bloque</h3>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => patch(addQuestionsBlock)}
-            >
-              Preguntas propias
-            </Button>
-            {INSTRUMENT_IDS.map((id: InstrumentId) => (
+          <div className="space-y-3 border-t border-border pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-sm font-medium text-heading">
+                  Consentimiento informado
+                </p>
+                <p className="text-xs text-muted">
+                  {draft.consentEdited
+                    ? "Editado por ti."
+                    : "Se genera con el título."}{" "}
+                  Tu equipo legal debe validarlo antes de usar la liga con
+                  personas reales.
+                </p>
+              </div>
               <Button
-                key={id}
                 type="button"
                 variant="secondary"
-                onClick={() => patch((d) => addInstrumentBlock(d, id))}
+                size="sm"
+                aria-expanded={consentVisible}
+                onClick={() => setConsentOpen(!consentVisible)}
               >
-                {getInstrument(id).name}
+                {consentVisible ? "Ocultar texto" : "Editar consentimiento"}
               </Button>
-            ))}
-            <Button type="button" variant="secondary" onClick={() => patch((d) => addPriceBlock(d, "van_westendorp"))}>
-              Precio: Van Westendorp
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => patch((d) => addPriceBlock(d, "gabor_granger"))}>
-              Precio: Gabor-Granger
-            </Button>
+            </div>
+            {consentVisible ? (
+              <div className="space-y-1">
+                <Textarea
+                  aria-label="Consentimiento"
+                  aria-invalid={consentProblem ? true : undefined}
+                  value={draft.consent}
+                  onChange={(e) => setDraft(setConsent(draft, e.target.value))}
+                  rows={8}
+                  maxLength={4000}
+                />
+                {consentProblem ? (
+                  <FieldProblem>{consentProblem}</FieldProblem>
+                ) : null}
+              </div>
+            ) : null}
           </div>
-        </Card>
-      </section>
+        </section>
 
-      <Card className="space-y-4">
-        <h2 className="font-medium">Textos para el participante</h2>
-        <Field
-          label="Consentimiento"
-          hint="Se genera con el título; edítalo si lo necesitas. Tu equipo legal debe validarlo antes de usar la liga con personas reales."
+        {draft.blocks.map((block, index) => {
+          const common = {
+            index,
+            count: draft.blocks.length,
+            onMove: (delta: -1 | 1) =>
+              setDraft(moveBlock(draft, block.id, delta)),
+            onRemove: () =>
+              removeWith(`Bloque ${index + 1} quitado`, (d) =>
+                removeBlock(d, block.id),
+              ),
+          };
+          if (block.kind === "price")
+            return (
+              <BlockSection
+                key={block.id}
+                id={block.id}
+                icon={PRICE_CATALOG[block.method].icon}
+                title={
+                  block.method === "van_westendorp"
+                    ? "Precio · Van Westendorp"
+                    : "Precio · Gabor-Granger"
+                }
+                {...common}
+              >
+                <PriceCard
+                  block={block}
+                  problems={problemsOf(block.id)}
+                  onChange={(p) => setDraft(updateBlock(draft, block.id, p))}
+                />
+              </BlockSection>
+            );
+          if (block.kind === "instrument")
+            return (
+              <BlockSection
+                key={block.id}
+                id={block.id}
+                icon={INSTRUMENT_CATALOG[block.instrumentId].icon}
+                title={getInstrument(block.instrumentId).name}
+                {...common}
+              >
+                <InstrumentCard
+                  block={block}
+                  problems={problemsOf(block.id)}
+                  onChange={(p) => setDraft(updateBlock(draft, block.id, p))}
+                />
+              </BlockSection>
+            );
+          return (
+            <BlockSection
+              key={block.id}
+              id={block.id}
+              icon="survey"
+              title="Preguntas"
+              {...common}
+            >
+              {block.questions.map((q, i) => (
+                <QuestionCard
+                  key={q.id}
+                  q={q}
+                  index={i}
+                  count={block.questions.length}
+                  active={activeId === q.id}
+                  problems={problemsOf(block.id, q.id)}
+                  onActivate={() => setActiveId(q.id)}
+                  onChange={(p) =>
+                    setDraft(updateQuestion(draft, block.id, q.id, p))
+                  }
+                  onChangeType={(type) =>
+                    setDraft(changeQuestionType(draft, block.id, q.id, type))
+                  }
+                  onMove={(delta) =>
+                    setDraft(moveQuestion(draft, block.id, q.id, delta))
+                  }
+                  onDuplicate={() => {
+                    const id = `p${draft.counter + 1}`;
+                    setDraft(duplicateQuestion(draft, block.id, q.id));
+                    setActiveId(id);
+                    reveal(id);
+                  }}
+                  onRemove={() =>
+                    removeWith(`Pregunta ${i + 1} quitada`, (d) =>
+                      removeQuestion(d, block.id, q.id),
+                    )
+                  }
+                />
+              ))}
+              <AddQuestionRow
+                first={block.questions.length === 0}
+                onAdd={(type) => addQuestionOfType(block.id, type)}
+              />
+            </BlockSection>
+          );
+        })}
+
+        <AddBlockPanel
+          empty={draft.blocks.length === 0}
+          open={adding}
+          onOpen={() => setAdding(true)}
+          onClose={() => setAdding(false)}
+          onAddQuestions={addOwnQuestions}
+          onAddInstrument={(id: InstrumentId) =>
+            addBlockWith(addInstrumentBlock(draft, id))
+          }
+          onAddPrice={(m: PriceMethod) => addBlockWith(addPriceBlock(draft, m))}
+        />
+
+        <section
+          id="sb-end"
+          aria-label="Pantalla final"
+          className="scroll-mt-28 space-y-3 rounded-lg border border-border bg-surface p-6"
         >
+          <div className="space-y-0.5">
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              <Icon name="check" className="size-6" />
+              Pantalla final
+            </h2>
+            <p className="text-sm text-muted">
+              Lo último que lee el participante al enviar sus respuestas.
+            </p>
+          </div>
           <Textarea
-            value={draft.consent}
-            onChange={(e) => patch((d) => setConsent(d, e.target.value))}
-            rows={7}
-            maxLength={4000}
-          />
-        </Field>
-        <Field label="Mensaje de agradecimiento">
-          <Textarea
+            aria-label="Mensaje de agradecimiento"
+            aria-invalid={thankYouProblem ? true : undefined}
             value={draft.thankYou}
-            onChange={(e) => patch((d) => ({ ...d, thankYou: e.target.value }))}
+            onChange={(e) => setDraft({ ...draft, thankYou: e.target.value })}
             rows={3}
             maxLength={1000}
           />
-        </Field>
-      </Card>
-
-      {errors.length ? (
-        <Alert tone="error">
-          <p className="font-medium">Revisa lo siguiente:</p>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">
-            {errors.slice(0, 8).map((er) => (
-              <li key={er}>{er}</li>
-            ))}
-          </ul>
-          {errors.length > 8 ? (
-            <p className="mt-1">…y {errors.length - 8} más.</p>
+          {thankYouProblem ? (
+            <FieldProblem>{thankYouProblem}</FieldProblem>
           ) : null}
-        </Alert>
-      ) : null}
-      {serverError ? <Alert tone="error">{serverError}</Alert> : null}
-
-      <div className="flex flex-wrap gap-3">
-        <Button type="submit" disabled={pending}>
-          {pending ? "Creando…" : "Crear encuesta y generar liga"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={pending}
-          onClick={() => {
-            if (
-              window.confirm("¿Empezar de nuevo? Se perderá lo que llevas.")
-            ) {
-              setDraft(emptyDraft());
-              setErrors([]);
-              setChosenTemplate(false);
-            }
-          }}
-        >
-          Cambiar plantilla
-        </Button>
+        </section>
       </div>
+
+      {undo ? (
+        <div
+          role="status"
+          className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-sm items-center justify-between gap-4 rounded-full bg-heading py-2 pl-5 pr-2 text-sm text-background shadow-lg"
+        >
+          {undo.label}
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(undo.draft);
+              setStarted(undo.started);
+              setUndo(null);
+            }}
+            className="rounded-full px-4 py-2 font-semibold underline underline-offset-4 hover:bg-background/15 focus-visible:outline-background"
+          >
+            Deshacer
+          </button>
+        </div>
+      ) : null}
     </form>
   );
 }
 
-function QuestionsEditor({
-  block,
-  newType,
-  setNewType,
-  onAdd,
-  onChange,
-  onMove,
-  onRemove,
-}: {
-  block: QuestionsBlock;
-  newType: QuestionType;
-  setNewType: (t: QuestionType) => void;
-  onAdd: () => void;
-  onChange: (questionId: string, patch: Partial<DraftQuestion>) => void;
-  onMove: (questionId: string, delta: -1 | 1) => void;
-  onRemove: (questionId: string) => void;
-}) {
+function FieldProblem({ children }: { children: React.ReactNode }) {
   return (
-    <div className="space-y-3">
-      {block.questions.length === 0 ? (
-        <p className="text-sm text-muted">
-          Este bloque aún no tiene preguntas.
-        </p>
-      ) : null}
-      {block.questions.map((q, i) => (
-        <QuestionEditor
-          key={q.id}
-          q={q}
-          index={i}
-          count={block.questions.length}
-          onChange={(p) => onChange(q.id, p)}
-          onMove={(delta) => onMove(q.id, delta)}
-          onRemove={() => onRemove(q.id)}
-        />
-      ))}
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="space-y-1.5 text-sm">
-          <span className="block font-medium text-heading">
-            Tipo de pregunta
-          </span>
-          <select
-            className={SELECT_CLASS}
-            value={newType}
-            onChange={(e) => setNewType(e.target.value as QuestionType)}
-          >
-            {(Object.keys(QUESTION_TYPE_LABELS) as QuestionType[]).map((t) => (
-              <option key={t} value={t}>
-                {QUESTION_TYPE_LABELS[t]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button type="button" variant="secondary" onClick={onAdd}>
-          Agregar pregunta
-        </Button>
-      </div>
-    </div>
+    <p role="alert" className="flex items-center gap-2 text-sm text-foreground">
+      <Icon name="alert" className="size-5 text-danger" />
+      {children}
+    </p>
   );
 }
