@@ -36,6 +36,7 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   if (!observationsMatchStudy(input.observations, study.assets.map((a) => a.id), study.config.eyeTracking.durationSeconds)) {
     return apiError("invalid_data");
   }
+  if (input.quality.recovery?.repeatedAssetIds.some((id) => !study.assets.some((a) => a.id === id))) return apiError("invalid_data");
 
   const admin = createAdminClient();
   const { data: session, error } = await admin.from("sessions").select("id, study_id, status, consent_version, device_type").eq("id", input.sessionId).maybeSingle();
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
     study_id: study.id,
     validation: { ...input.quality,
       driftChecks: input.quality.driftChecks?.map((check) => ({ ...check, passed: driftPasses(check, device) })),
+      ...(input.quality.recovery ? { recovery: { ...input.quality.recovery,
+        checks: input.quality.recovery.checks.map((check) => ({ ...check, passed: driftPasses(check, device) })),
+      } } : {}),
       passed: qualityPasses(input.quality, session.device_type, input.observations.length) },
     observations: input.observations,
   }, { onConflict: "session_id", ignoreDuplicates: true });

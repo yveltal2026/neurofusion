@@ -92,7 +92,12 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                     <td className="pr-4">{run.quality.driftChecks?.length
                       ? `${Math.max(...run.quality.driftChecks.map((c) => c.maxErrorDeg ?? 0)).toFixed(1)}° · ${run.quality.driftChecks.length} controles`
                       : "—"}</td>
-                    <td className="pr-4">{run.session.excluded ? "Excluida" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}</td>
+                    <td className="pr-4">
+                      {run.session.excluded ? "Excluida" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
+                      {run.quality.recovery ? <p className="text-xs text-muted">
+                        {run.quality.recovery.interruptions} pausas · {run.quality.recovery.recalibrations} recalibraciones · {run.quality.recovery.repeatedAssetIds.length} imágenes repetidas
+                      </p> : null}
+                    </td>
                     <td>
                       <form action={setSessionExcluded}>
                         <input type="hidden" name="studyId" value={study.id} />

@@ -25,6 +25,16 @@ export const eyeObservationSchema = z.object({
   }
 });
 
+const driftCheckSchema = z.object({
+  afterAssetCount: z.number().int().min(0).max(5),
+  medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
+  maxErrorDeg: z.number().finite().min(0).max(90).nullable(),
+  coverage: z.number().finite().min(0).max(1),
+  fps: z.number().finite().min(0).max(120),
+  validRatio: z.number().finite().min(0).max(1),
+  passed: z.boolean(),
+});
+
 export const eyeQualitySchema = z.object({
   engineId: z.literal("webeyetrack@0.0.2"),
   medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
@@ -34,15 +44,14 @@ export const eyeQualitySchema = z.object({
   passed: z.boolean(),
   calibrationClicks: z.number().int().min(9).max(18),
   calibrationLayout: z.string().max(40),
-  driftChecks: z.array(z.object({
-    afterAssetCount: z.number().int().min(0).max(5),
-    medianErrorDeg: z.number().finite().min(0).max(90).nullable(),
-    maxErrorDeg: z.number().finite().min(0).max(90).nullable(),
-    coverage: z.number().finite().min(0).max(1),
-    fps: z.number().finite().min(0).max(120),
-    validRatio: z.number().finite().min(0).max(1),
-    passed: z.boolean(),
-  })).max(8).optional(),
+  driftChecks: z.array(driftCheckSchema).max(8).optional(),
+  recovery: z.object({
+    interruptions: z.number().int().min(1).max(100),
+    recalibrations: z.number().int().min(0).max(100),
+    repeatedAssetIds: z.array(z.string().uuid()).max(5),
+    /** Historial separado: una medición fallida descarta el bloque, no invalida los bloques repetidos y validados. */
+    checks: z.array(driftCheckSchema).min(1).max(24),
+  }).optional(),
 });
 
 export const eyeRunSchema = z.object({
@@ -68,6 +77,10 @@ export function requiredDriftChecksPass(q: EyeQuality, deviceType: string, asset
   if (!assetCount) return false;
   const expected = driftCheckpoints(assetCount);
   const device = deviceType === "mobile" ? "phone" : deviceType === "tablet" ? "tablet" : "laptop";
+  if (q.recovery) {
+    const last = q.recovery.checks.at(-1);
+    if (!last || !driftPasses(last, device) || q.recovery.checks.some((c) => !expected.includes(c.afterAssetCount))) return false;
+  }
   return q.driftChecks?.length === expected.length && q.driftChecks.every((check, i) =>
     check.afterAssetCount === expected[i] && driftPasses(check, device));
 }

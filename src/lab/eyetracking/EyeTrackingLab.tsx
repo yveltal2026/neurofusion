@@ -29,10 +29,10 @@ import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
 import { applyCalibration, assessFixation, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
-import { buildDriftCheck, driftCheckpoints, driftSummary, driftTargets, type DriftCheck } from "./drift";
+import { buildDriftCheck, driftCheckpoints, driftSummary, driftTargets, type DriftCheck, type DriftSummary } from "./drift";
 import { screenWidthCm, type ScreenFormat } from "./screen";
 
-type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "drift" | "preparing" | "results" | "free" | "stimulus" | "saving" | "done";
+type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "drift" | "recovery" | "preparing" | "results" | "free" | "stimulus" | "saving" | "done";
 
 interface EyeStudyMode {
   token: string;
@@ -106,6 +106,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [remaining, setRemaining] = useState(0);
   const [studyBusy, setStudyBusy] = useState(false);
   const [needsCalibration, setNeedsCalibration] = useState(false);
+  const [resumeCount, setResumeCount] = useState<number | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const stimulusImgRef = useRef<HTMLImageElement | null>(null);
@@ -123,6 +124,15 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const relocatedPointsRef = useRef<number[]>([]);
   const reviewedPointsRef = useRef<number[]>([]);
   const driftChecksRef = useRef<DriftCheck[]>([]);
+  const confirmedCountRef = useRef(0);
+  const recoveringRef = useRef(false);
+  const recoveryCountRef = useRef(0);
+  const recalibrationCountRef = useRef(0);
+  const recoveryChecksRef = useRef<DriftSummary[]>([]);
+  const presentedAssetsRef = useRef(new Set<string>());
+  const repeatedAssetsRef = useRef(new Set<string>());
+  const calibrationEpochRef = useRef(0);
+  const studyValidationsRef = useRef(new Map<number, ExportedSession>());
   const calibrationViewportRef = useRef({ width: 0, height: 0 });
   const readyMsRef = useRef(0);
   const calibStartRef = useRef(0);
@@ -130,6 +140,26 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const calibDurationRef = useRef(0);
   const lastClickRef = useRef(0);
   const runIdRef = useRef(0);
+
+  const recoverStudy = useCallback((message: string, invalidateFit = false) => {
+    if (!study) return;
+    runIdRef.current++;
+    recoveringRef.current = true;
+    recoveryCountRef.current = Math.min(100, recoveryCountRef.current + 1);
+    const confirmed = confirmedCountRef.current;
+    setResumeCount(confirmed);
+    for (const asset of study.assets.slice(confirmed)) {
+      if (presentedAssetsRef.current.has(asset.id)) repeatedAssetsRef.current.add(asset.id);
+    }
+    // Sólo se descartan las imágenes cuyo bloque aún no pasó un control posterior.
+    observationsRef.current = observationsRef.current.slice(0, confirmed);
+    driftChecksRef.current = driftChecksRef.current.filter((c) => c.afterAssetCount <= confirmed);
+    if (invalidateFit) calibrationFitRef.current = null;
+    setStimulusIndex(confirmed);
+    setNeedsCalibration(!calibrationFitRef.current);
+    setError(message);
+    setStage("recovery");
+  }, [study]);
 
   // Evita el ajuste incremental de WebEyeTrack por clics globales. Usamos todas las fijaciones
   // en un ajuste propio; React recibe los clics antes de que alcancen document/window.
@@ -163,25 +193,31 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   useEffect(() => {
     if (!["calibration", "countdown", "validation", "drift", "preparing"].includes(stage)) return;
-    const interrupt = () => {
+    const interrupt = (event: Event) => {
+      if (event.type === "resize" && window.innerWidth === calibrationViewportRef.current.width && window.innerHeight === calibrationViewportRef.current.height) return;
+      if (study && (recoveringRef.current || studySessionIdRef.current)) {
+        recoverStudy("La prueba se pausó. Conservamos las imágenes ya validadas. Revisa tu posición para continuar.",
+          window.innerWidth !== calibrationViewportRef.current.width || window.innerHeight !== calibrationViewportRef.current.height || !calibrationFitRef.current);
+        return;
+      }
       runIdRef.current++;
       calibrationFitRef.current = null;
       setNeedsCalibration(true);
       setError("La prueba se interrumpió o cambió la ventana. Repite la calibración sin cambiar de pestaña ni tamaño.");
       setStage("position");
     };
-    const visibility = () => { if (document.hidden) interrupt(); };
+    const visibility = (event: Event) => { if (document.hidden) interrupt(event); };
     window.addEventListener("resize", interrupt);
     document.addEventListener("visibilitychange", visibility);
     return () => {
       window.removeEventListener("resize", interrupt);
       document.removeEventListener("visibilitychange", visibility);
     };
-  }, [stage]);
+  }, [stage, study, recoverStudy]);
 
   // Indicadores en vivo (sin re-renderizar a la frecuencia de la cámara).
   useEffect(() => {
-    if (stage !== "position") return;
+    if (stage !== "position" && stage !== "recovery") return;
     const id = setInterval(() => {
       const now = performance.now();
       const recent = framesRef.current.filter((f) => f.t > now - 1000);
@@ -251,6 +287,21 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }
 
   function startCalibration() {
+    calibrationEpochRef.current++;
+    if (study && recoveringRef.current) {
+      recalibrationCountRef.current = Math.min(100, recalibrationCountRef.current + 1);
+    } else {
+      setResumeCount(null);
+      confirmedCountRef.current = 0;
+      recoveryCountRef.current = 0;
+      recalibrationCountRef.current = 0;
+      recoveryChecksRef.current = [];
+      presentedAssetsRef.current.clear();
+      repeatedAssetsRef.current.clear();
+      studyValidationsRef.current.clear();
+      driftChecksRef.current = [];
+      observationsRef.current = [];
+    }
     runIdRef.current++;
     calibrationFitRef.current = null;
     calibrationPairsRef.current = [];
@@ -258,8 +309,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     calibrationAttemptsRef.current = 0;
     relocatedPointsRef.current = [];
     reviewedPointsRef.current = [];
-    driftChecksRef.current = [];
-    observationsRef.current = [];
     setReviewingCalibration(false);
     setNeedsCalibration(false);
     setSession(null);
@@ -379,7 +428,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     setValTargets(targets);
     setValIndex(0);
     setStage("validation");
-    driftChecksRef.current = [];
+    if (!recoveringRef.current) driftChecksRef.current = [];
 
     const startedAt = performance.now();
     const results: TargetResult[] = [];
@@ -429,6 +478,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     const runId = ++runIdRef.current;
     const { width, height } = session.viewport;
     if (window.innerWidth !== width || window.innerHeight !== height) {
+      if (study) {
+        recoverStudy("Cambió el tamaño de la ventana. Recalibra para continuar conservando tu avance validado.", true);
+        return false;
+      }
       setNeedsCalibration(true);
       calibrationFitRef.current = null;
       setError("La ventana cambió. Recalibra antes de continuar.");
@@ -451,17 +504,27 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     }
     const check = buildDriftCheck(afterAssetCount, results,
       frameStats(framesRef.current, startedAt, performance.now()), session.geometry, device);
-    driftChecksRef.current = [...driftChecksRef.current, check].slice(-10);
-    setSession((previous) => previous ? recordDriftChecks(previous, [...driftChecksRef.current]) : previous);
-    if (!check.passed) {
-      observationsRef.current = [];
-      calibrationFitRef.current = null;
-      setNeedsCalibration(true);
-      setError("La mirada perdió precisión. Recalibra antes de continuar; la presentación deberá empezar de nuevo.");
-      setStage("results");
+    if (study) {
+      if (recoveringRef.current || !check.passed) recoveryChecksRef.current = [...recoveryChecksRef.current, driftSummary(check)].slice(-24);
+      if (!check.passed) {
+        recoverStudy("El control de mirada necesita un ajuste. Recolócate frente a la cámara y vuelve a mirar los puntos.");
+        return false;
+      }
+      // Un control para reanudar no sustituye el control que ya validó el bloque conservado.
+      if (!driftChecksRef.current.some((c) => c.afterAssetCount === afterAssetCount)) driftChecksRef.current.push(check);
+      confirmedCountRef.current = Math.max(confirmedCountRef.current, afterAssetCount);
+    } else {
+      driftChecksRef.current = [...driftChecksRef.current, check].slice(-10);
+      if (!check.passed) {
+        calibrationFitRef.current = null;
+        setNeedsCalibration(true);
+        setError("La mirada perdió precisión. Recalibra antes de continuar.");
+        setStage("results");
+      }
     }
+    setSession((previous) => previous ? recordDriftChecks(previous, [...driftChecksRef.current]) : previous);
     return check.passed;
-  }, [session, device]);
+  }, [session, device, study, recoverStudy]);
 
   async function startStudy() {
     if (!study || !session || studyBusy) return;
@@ -477,8 +540,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     setError(null);
     let operationId = runIdRef.current;
     try {
-      driftChecksRef.current = [];
-      if (!await runDriftCheck(0)) return;
+      if (!recoveringRef.current) driftChecksRef.current = [];
+      const resumeIndex = recoveringRef.current ? confirmedCountRef.current : 0;
+      if (!await runDriftCheck(resumeIndex)) return;
       const runId = runIdRef.current;
       operationId = runId;
       setStage("preparing");
@@ -502,8 +566,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         studySessionIdRef.current = result.sessionId;
       }
       if (runIdRef.current !== runId) return;
-      observationsRef.current = [];
-      setStimulusIndex(0);
+      studyValidationsRef.current.set(calibrationEpochRef.current, session);
+      if (!recoveringRef.current) observationsRef.current = [];
+      recoveringRef.current = false;
+      setNeedsCalibration(false);
+      setStimulusIndex(resumeIndex);
       setStage("stimulus");
     } catch (cause) {
       if (operationId !== runIdRef.current) return;
@@ -527,16 +594,24 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       setError("La sesión no tiene un motor real activo. Vuelve a abrir la liga.");
       return;
     }
+    const validations = [...studyValidationsRef.current.values()];
+    if (!validations.length) validations.push(session);
     const quality: EyeQuality = {
       engineId: session.engineId,
-      medianErrorDeg: session.summary.medianErrorDeg,
-      coverage: session.summary.coverage,
-      fps: session.fps,
-      validRatio: session.validation.stream.validRatio,
-      passed: session.verdict.pass,
+      medianErrorDeg: validations.some((s) => s.summary.medianErrorDeg === null) ? null : Math.max(...validations.map((s) => s.summary.medianErrorDeg!)),
+      coverage: Math.min(...validations.map((s) => s.summary.coverage)),
+      fps: Math.min(...validations.map((s) => s.fps)),
+      validRatio: Math.min(...validations.map((s) => s.validation.stream.validRatio)),
+      passed: validations.every((s) => s.verdict.pass),
       calibrationClicks: session.calibration.clicks,
       calibrationLayout: session.calibration.layout ?? "v2-corners-last",
       driftChecks: driftChecksRef.current.map(driftSummary),
+      ...(recoveryCountRef.current ? { recovery: {
+        interruptions: recoveryCountRef.current,
+        recalibrations: recalibrationCountRef.current,
+        repeatedAssetIds: [...repeatedAssetsRef.current],
+        checks: recoveryChecksRef.current,
+      } } : {}),
     };
     try {
       const response = await fetch(`/api/s/${study.token}/eye/complete`, {
@@ -572,19 +647,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     let ticker: ReturnType<typeof setInterval> | undefined;
     const onInterrupted = () => {
       if (document.hidden) {
-        runIdRef.current++;
-        calibrationFitRef.current = null;
-        setNeedsCalibration(true);
-        setError("La prueba se interrumpió al cambiar de pestaña. Vuelve a iniciar la presentación de piezas.");
-        setStage("results");
+        recoverStudy("La prueba se pausó al cambiar de pestaña. Conservamos las imágenes ya validadas; revisa tu posición para continuar.");
       }
     };
     const onResize = () => {
-      runIdRef.current++;
-      calibrationFitRef.current = null;
-      setNeedsCalibration(true);
-      setError("La pantalla cambió de tamaño u orientación. Repite la presentación sin mover el dispositivo.");
-      setStage("results");
+      if (window.innerWidth === calibrationViewportRef.current.width && window.innerHeight === calibrationViewportRef.current.height) return;
+      recoverStudy("La pantalla cambió de tamaño. Recalibra para continuar desde el último bloque validado.", true);
     };
     document.addEventListener("visibilitychange", onInterrupted);
     window.addEventListener("resize", onResize);
@@ -592,10 +660,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       const image = stimulusImgRef.current;
       const rect = image?.getBoundingClientRect();
       if (!rect || rect.width < 1 || rect.height < 1) {
-        setError("No se pudo mostrar la imagen completa. Vuelve a intentar.");
-        setStage("results");
+        recoverStudy("No se pudo mostrar la imagen completa. Conservamos el avance validado; vuelve a intentar.");
         return;
       }
+      presentedAssetsRef.current.add(study.assets[stimulusIndex].id);
       const from = performance.now();
       const durationMs = study.durationSeconds * 1000;
       setRemaining(study.durationSeconds);
@@ -614,7 +682,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       document.removeEventListener("visibilitychange", onInterrupted);
       window.removeEventListener("resize", onResize);
     };
-  }, [stage, study, stimulusIndex, continueAfterPiece]);
+  }, [stage, study, stimulusIndex, continueAfterPiece, recoverStudy]);
 
   // Cuenta regresiva antes de validar: el último clic de calibración ya pasó y no se pide ninguno más.
   useEffect(() => {
@@ -657,7 +725,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     URL.revokeObjectURL(url);
   }
 
-  const showPreview = stage === "position";
+  const showPreview = stage === "position" || stage === "recovery";
 
   return (
     <>
@@ -808,6 +876,27 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         </div>
       ) : null}
 
+      {stage === "recovery" && study ? (
+        <div className="mx-auto max-w-xl space-y-4 px-4 py-8 text-center">
+          <h1 className="text-xl font-semibold">Hagamos un ajuste rápido</h1>
+          {error ? <Alert tone="warning">{error}</Alert> : null}
+          <p className="text-sm">
+            Conservamos {resumeCount ?? 0} de {study.assets.length} imágenes validadas en esta sesión.
+            Continuarás desde la imagen {(resumeCount ?? 0) + 1}.
+          </p>
+          <p className="text-sm text-muted">
+            Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control, unos 6 segundos.
+            Repetiremos sólo las imágenes del bloque que quedó sin validar.
+          </p>
+          {needsCalibration ? <p className="text-sm">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
+            <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+          </div>
+          <p className="text-xs text-muted">El avance se conserva mientras mantengas abierta esta sesión.</p>
+        </div>
+      ) : null}
+
       {stage === "calibration" && calibPoints[calibIndex] ? (
         <div className="fixed inset-0 z-50 touch-manipulation bg-background select-none">
           <p className="absolute top-4 right-0 left-0 px-4 text-center text-sm text-muted" role="status">
@@ -898,9 +987,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                   : "La calibración tuvo precisión baja. Repite la calibración antes de mirar las piezas."}
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : "Comenzar presentación"}</Button>
+                <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>
                 <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
               </div>
+              {resumeCount !== null ? <p className="text-sm text-muted">Conservamos {resumeCount} imágenes ya validadas. Continuaremos desde ese punto.</p> : null}
               {study.preview ? <p className="text-xs text-muted">Vista previa: no se guardarán datos.</p> : null}
             </Card>
           ) : (

@@ -12,6 +12,23 @@ const observation: EyeObservation = {
 const quality: EyeQuality = { engineId: "webeyetrack@0.0.2", medianErrorDeg: 2.5, coverage: 1, fps: 25, validRatio: 0.9, passed: true, calibrationClicks: 9, calibrationLayout: "v2-corners-last" };
 
 describe("captura para un estudio visual", () => {
+  it("la recuperación conserva el historial fallido pero exige un último control válido", () => {
+    const check = { afterAssetCount: 0, medianErrorDeg: 2, maxErrorDeg: 3, coverage: 1, fps: 30, validRatio: 1, passed: true };
+    const q: EyeQuality = { ...quality, calibrationLayout: "v5-weighted-refinement",
+      driftChecks: [check, { ...check, afterAssetCount: 2 }, { ...check, afterAssetCount: 4 }],
+      recovery: { interruptions: 1, recalibrations: 0, repeatedAssetIds: [assetId],
+        checks: [{ ...check, afterAssetCount: 4, medianErrorDeg: 9, maxErrorDeg: 12, passed: false }, { ...check, afterAssetCount: 2 }] },
+    };
+    expect(requiredDriftChecksPass(eyeRunSchema.parse({ sessionId, quality: q, observations: [observation] }).quality, "desktop", 4, true)).toBe(true);
+    expect(qualityPasses(q, "desktop", 4)).toBe(true);
+    q.recovery!.checks[1] = { ...check, medianErrorDeg: 9, passed: true };
+    expect(requiredDriftChecksPass(q, "desktop", 4, true)).toBe(false);
+    q.recovery!.checks[1] = { ...check, afterAssetCount: 3 };
+    expect(requiredDriftChecksPass(q, "desktop", 4, true)).toBe(false);
+    q.recovery!.checks[1] = { ...check, afterAssetCount: 2 };
+    q.driftChecks!.pop();
+    expect(requiredDriftChecksPass(q, "desktop", 4, true)).toBe(false);
+  });
   it("exige todos los controles en orden y recalcula su veredicto para las nuevas sesiones", () => {
     const check = { afterAssetCount: 0, medianErrorDeg: 2, maxErrorDeg: 3, coverage: 1, fps: 30, validRatio: 1, passed: false };
     const q: EyeQuality = { ...quality, calibrationLayout: "v5-weighted-refinement", driftChecks: [check, { ...check, afterAssetCount: 2 }, { ...check, afterAssetCount: 3 }] };

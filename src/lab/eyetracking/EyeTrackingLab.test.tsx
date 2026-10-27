@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EyeTrackingLab } from "./EyeTrackingLab";
 import { eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ failDrift: false, noisy: false, saturateLower: false, startError: false }));
+const control = vi.hoisted(() => ({ failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0 }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
   return { ...actual, requestCamera: vi.fn(), checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
@@ -24,6 +24,7 @@ vi.mock("./engine", async (original) => {
             }
             if (control.saturateLower && y > window.innerHeight * 0.85) y = window.innerHeight;
             if (control.failDrift && dot?.dataset.testid === "drift-target") { x = 0; y = 0; }
+            if (dot?.dataset.testid === "validation-target") x += control.validationBiasPx;
             onFrame({ t: performance.now(), x, y, inferenceMs: 10 });
           }, 25);
           return { readyMs: 1 };
@@ -33,6 +34,7 @@ vi.mock("./engine", async (original) => {
 
 const assets = [1, 2, 3].map((n) => ({ id: `40000000-0000-4000-8000-00000000000${n}`, title: `Pieza ${n}`, url: `/piece-${n}.png` }));
 const study = { token: "t".repeat(43), title: "Estudio de prueba", assets, durationSeconds: 5, preview: false };
+let activeAssets = assets;
 let starts: number;
 let completed: ReturnType<typeof eyeRunSchema.parse> | null;
 
@@ -64,8 +66,9 @@ async function calibrate() {
   expect(screen.getByRole("heading", { name: "Calibración terminada" })).toBeTruthy();
 }
 
-async function setup() {
-  render(<EyeTrackingLab study={study} />);
+async function setup(currentStudy = study) {
+  activeAssets = currentStudy.assets;
+  render(<EyeTrackingLab study={currentStudy} />);
   fireEvent.change(screen.getByLabelText("Tamaño de pantalla (pulgadas)"), { target: { value: "27" } });
   fireEvent.change(screen.getByLabelText("Calibración"), { target: { value: "1" } });
   fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
@@ -81,8 +84,9 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
   control.startError = false;
+  control.validationBiasPx = 0;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
-  starts = 0; completed = null;
+  starts = 0; completed = null; activeAssets = assets;
   vi.stubGlobal("matchMedia", () => ({ matches: false }));
   Object.defineProperty(window.screen, "width", { value: 1280, configurable: true });
   Object.defineProperty(window.screen, "height", { value: 800, configurable: true });
@@ -100,7 +104,7 @@ beforeEach(() => {
     }
     if (url.endsWith("/complete")) {
       const run = eyeRunSchema.parse(JSON.parse(String(init.body)));
-      expect(requiredDriftChecksPass(run.quality, "desktop", assets.length, true)).toBe(true);
+      expect(requiredDriftChecksPass(run.quality, "desktop", activeAssets.length, true)).toBe(true);
       completed = run;
       return Response.json({ ok: true });
     }
@@ -127,27 +131,91 @@ describe("estudios con control de calidad", () => {
     expect(completed!.quality.driftChecks?.map((c) => c.afterAssetCount)).toEqual([0, 2, 3]);
   });
 
-  it("no guarda una presentación con deriva y permite recalibrar usando la misma sesión", async () => {
+  it("pausa ante deriva y permite recolocarse con 3 puntos sin recalibrar ni abrir otra sesión", async () => {
     await setup();
     click("Comenzar presentación"); await drift();
     await piece(); await piece();
-    control.failDrift = true;
-    await drift();
-    expect(screen.getByText(/La mirada perdió precisión/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Comenzar presentación" }) as HTMLButtonElement).disabled).toBe(true);
+    control.failDrift = true; await drift();
+    expect(screen.getByRole("heading", { name: "Hagamos un ajuste rápido" })).toBeTruthy();
     expect(completed).toBeNull();
     control.failDrift = false;
-    await calibrateFromResults();
-    click("Comenzar presentación"); await drift();
+    click("Revisar mirada y continuar"); await drift();
+    expect(screen.getByAltText("Pieza 1")).toBeTruthy();
     expect(starts).toBe(1);
     await piece(); await piece(); await drift(); await piece(); await drift();
     expect(completed!.observations).toHaveLength(3);
+    expect(completed!.quality.recovery).toMatchObject({ interruptions: 1, recalibrations: 0, repeatedAssetIds: assets.slice(0, 2).map((a) => a.id) });
+    expect(completed!.quality.recovery!.checks.map((c) => c.passed)).toEqual([false, true]);
+  });
+
+  it("si falla al terminar la cuarta imagen, conserva las dos primeras incluso tras recalibrar", async () => {
+    const four = [...assets, { id: "40000000-0000-4000-8000-000000000004", title: "Pieza 4", url: "/piece-4.png" }];
+    control.validationBiasPx = 30;
+    await setup({ ...study, assets: four });
+    control.validationBiasPx = 0;
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece(); await drift();
+    await piece(); await piece();
+    control.failDrift = true; await drift();
+    expect(screen.getByText(/Conservamos 2 de 4 imágenes validadas/)).toBeTruthy();
+    click("Revisar mirada y continuar"); await drift();
+    expect(screen.getByRole("heading", { name: "Hagamos un ajuste rápido" })).toBeTruthy();
+    expect(completed).toBeNull();
+    control.failDrift = false;
+    await calibrateFromResults();
+    click("Continuar desde imagen 3"); await drift();
+    expect(screen.getByAltText("Pieza 3")).toBeTruthy();
+    expect(screen.queryByAltText("Pieza 1")).toBeNull();
+    expect(starts).toBe(1);
+    await piece(); await piece(); await drift();
+    expect(completed!.observations.map((o) => o.assetId)).toEqual(four.map((a) => a.id));
+    expect(completed!.quality.driftChecks!.map((c) => c.afterAssetCount)).toEqual([0, 2, 4]);
+    expect(completed!.quality.recovery).toMatchObject({ recalibrations: 1, repeatedAssetIds: four.slice(2).map((a) => a.id) });
+    // La nueva calibración más precisa no oculta el error de la que midió las imágenes conservadas.
+    expect(completed!.quality.medianErrorDeg).toBeGreaterThan(0.5);
+  });
+
+  it("conserva el bloque validado si se oculta la pestaña durante la siguiente imagen", async () => {
+    await setup();
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece(); await drift(); await tick(20);
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+    await tick(8000);
+    expect(screen.getByText(/Conservamos 2 de 3 imágenes validadas/)).toBeTruthy();
+    expect(completed).toBeNull();
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    click("Revisar mirada y continuar"); await drift();
+    expect(screen.getByAltText("Pieza 3")).toBeTruthy();
+    await piece(); await drift();
+    expect(completed!.observations).toHaveLength(3);
+    expect(completed!.quality.recovery!.repeatedAssetIds).toEqual([assets[2].id]);
+    expect(starts).toBe(1);
   });
 
   it("desplaza puntos saturados y vuelve a capturar únicamente esos puntos", async () => {
     control.saturateLower = true;
     await setup();
     expect((screen.getByRole("button", { name: "Comenzar presentación" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("ignora un resize sin cambio real y exige recalibrar si cambia la geometría, conservando el bloque validado", async () => {
+    await setup();
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece(); await drift(); await tick(20);
+    act(() => { window.dispatchEvent(new Event("resize")); });
+    expect(screen.getByAltText("Pieza 3")).toBeTruthy();
+    const descriptor = Object.getOwnPropertyDescriptor(window, "innerWidth")!;
+    try {
+      Object.defineProperty(window, "innerWidth", { value: window.innerWidth + 100, configurable: true });
+      act(() => { window.dispatchEvent(new Event("resize")); });
+      expect(screen.getByText(/Conservamos 2 de 3 imágenes validadas/)).toBeTruthy();
+      expect((screen.getByRole("button", { name: "Revisar mirada y continuar" }) as HTMLButtonElement).disabled).toBe(true);
+      await tick(10_000);
+      expect(completed).toBeNull();
+    } finally {
+      Object.defineProperty(window, "innerWidth", descriptor);
+    }
   });
 
   it("cancela una comprobación al ocultar la pestaña sin iniciar ni guardar la sesión", async () => {
