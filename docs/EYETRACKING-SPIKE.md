@@ -2,11 +2,23 @@
 
 Rama: `spike/eyetracking` · Ruta: `/lab/eyetracking` · Decisión de origen: [`EYETRACKING-DECISION.md`](EYETRACKING-DECISION.md)
 
-## Calibración actual: v3-affine-fixations
+## Calibración actual: v4-interior-refinement
+
+La opción recomendada ejecuta dos etapas: nueve puntos para el ajuste afín base y nueve puntos interiores para aprender una corrección de escala y desplazamiento por eje. Los parámetros son propios de la persona y la sesión, sin valores fijados a partir de los JSON de prueba. Los ocho objetivos de validación final son distintos de los puntos de ajuste fino y no se usan para entrenar. La opción básica conserva sólo la primera etapa (`v4-stable-base`).
+
+Después de cada clic se espera al menos 1 s y se busca una ventana de 800 ms con diez o más lecturas válidas, cobertura válida de al menos 80 %, antigüedad máxima de 200 ms y un tramo de al menos 500 ms entre primera y última lectura. Se rechazan ventanas con dispersión p90 por eje superior al 4 % del viewport o deriva entre primer y último tercio superior al 2.5 %. Tras unos 3 s sin ventana aceptable se pide repetir ese punto. Son filtros operativos iniciales; su idoneidad debe medirse en dispositivos reales. Una salida constante puede parecer estable: los ajustes también comprueban variación entre objetivos.
+
+El JSON guarda las fijaciones por etapa, muestras, cobertura, dispersión, deriva y parámetros del ajuste base y fino. Permite distinguir una fijación poco estable de un fallo de escala. La validación final y sus umbrales de aceptación permanecen independientes de estas estadísticas de entrenamiento.
+
+La sesión real `1212` de v3 mostró 7.89° de error mediano y ganancia horizontal de 1.369. En un análisis retrospectivo de ocho objetivos, una corrección por eje entrenada con siete y evaluada en el objetivo restante produjo 3.86° de error mediano. Esto motivó la segunda etapa, pero no demuestra precisión real de v4: se necesita una nueva sesión completa para comprobarla.
+
+La sesión posterior `434`, todavía con v3, usó 18 clics y un viewport más estrecho (1767 × 939). Registró 4.50° de error mediano, ganancias de 1.194 y 1.133 y R² de 0.982 en ambos ejes. El mismo análisis retrospectivo por eje dio 2.33°; la corrección afín completa dio 2.53°. Esto respalda probar el ajuste fino por eje. La muestra sigue siendo una sola sesión de ocho objetivos; los valores retrospectivos no sustituyen una medición nueva de v4.
+
+## Antecedentes: v3-affine-fixations
 
 El archivo de una prueba real del 27 de octubre mostró ocho objetivos con mirada constante en la esquina superior derecha: error mediano 36.5°, 36 lecturas/s y dispersión cero. Esto confirma saturación de la salida, aunque el JSON por sí solo no identifica qué paso interno de la librería la produjo.
 
-La versión actual bloquea todos los clics dirigidos al ajuste automático de WebEyeTrack y conserva el modelo base. Después de pulsar cada punto, mantiene el objetivo 800 ms y toma la mediana de las lecturas de los últimos 600 ms. Ajusta una transformación afín regularizada usando las 9 o 18 fijaciones completas, detecta entradas constantes o sin independencia entre ejes y valida en los ocho puntos independientes. La transformación no recorta resultados a los bordes. El JSON incluye las parejas crudas de calibración para diagnosticar futuras pruebas. No se permiten piezas de estudio si la validación falla.
+Desde v3 se bloquean los clics dirigidos al ajuste automático de WebEyeTrack y se conserva el modelo base. V3 mantenía cada objetivo 800 ms tras el clic y tomaba la mediana de las lecturas de los últimos 600 ms. Ajustaba una transformación afín regularizada usando las 9 o 18 fijaciones completas, detectaba entradas constantes o sin independencia entre ejes y validaba en los ocho puntos independientes. La transformación no recorta resultados a los bordes. No se permiten piezas de estudio si la validación falla.
 
 Se pide diagonal en pulgadas y formato de la pantalla completa, con opciones ultrawide 21:9 y 32:9. El ancho físico se calcula con esa diagonal y la proporción seleccionada (o detectada con `screen.width/screen.height`), respetando orientación vertical. El tamaño físico sólo interviene en las métricas angulares; no arregla una predicción fija.
 
@@ -17,9 +29,9 @@ Objetivo: medir, con personas y dispositivos reales, si WebEyeTrack cumple los c
 ## Cómo probar
 
 1. Abre la URL del **preview de Vercel de la rama** (`https://<preview>/lab/eyetracking`) en el dispositivo a probar. Necesita HTTPS (o `localhost`) para usar la cámara. Si el proyecto tiene *Deployment Protection* activa en previews, el celular pedirá iniciar sesión en Vercel o hará falta un enlace con bypass.
-2. Completa: código de la persona (P01, P02… sin nombres), dispositivo, **ancho físico de la pantalla en cm** (con regla, en la orientación de uso) y distancia aproximada a los ojos. De esos dos datos salen los grados; si están mal, los grados también.
+2. Completa: código de la persona (P01, P02… sin nombres), dispositivo, **diagonal física en pulgadas**, formato de pantalla (incluye ultrawide) y distancia aproximada a los ojos. Estos datos determinan la conversión de píxeles a grados.
 3. «Iniciar cámara y cargar modelos» → acomoda la cara (el indicador debe decir «Cara detectada: sí») → «Comenzar calibración».
-4. Calibración: 9 puntos. Mirar el punto y tocarlo cuando se ponga verde, sin dejar de mirarlo. Cabeza quieta, dispositivo apoyado y sin girarlo.
+4. Calibración recomendada: 18 puntos en dos etapas. Mirar el punto y tocarlo cuando se ponga verde, sin dejar de mirarlo hasta que cambie. Si no hay fijación estable, se pide repetir ese punto. Cabeza quieta, dispositivo apoyado y sin girarlo.
 5. Validación (automática, ~20 s): 8 puntos distintos a los de calibración. Solo mirar; **no tocar la pantalla**.
 6. «Descargar JSON». «Repetir validación» y «Recalibrar» sirven para ver si mejora con una segunda pasada.
 

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
 test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ page }) => {
-  test.setTimeout(80_000);
+  test.setTimeout(110_000);
   await page.goto("/lab/eyetracking?engine=fake");
   await page.evaluate(() => {
     const state = window as Window & { calibrationLeaks?: number };
@@ -16,7 +16,7 @@ test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ p
   await expect(page.getByRole("heading", { name: "Acomódate frente a la cámara" })).toBeVisible();
   await page.getByRole("button", { name: "Comenzar calibración" }).click();
 
-  for (let i = 1; i <= 9; i++) {
+  for (let i = 1; i <= 18; i++) {
     const dot = page.getByRole("button", { name: `Punto de calibración ${i}` });
     await expect(dot).toBeEnabled();
     await dot.click();
@@ -34,7 +34,10 @@ test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ p
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toContain("eyetracking-E2E-laptop");
   const session = JSON.parse(await readFile((await download.path())!, "utf8"));
-  expect(session.calibration.layout).toBe("v3-affine-fixations");
+  expect(session.calibration.layout).toBe("v4-interior-refinement");
+  expect(session.calibration.pairs).toHaveLength(18);
+  expect(session.calibration.pairs.every((p: { quality: { samples: number } }) => p.quality.samples >= 10)).toBe(true);
+  expect(session.calibration.fit.refinement.x.r2).toBeGreaterThan(0.95);
   expect(session.geometry.diagonalInches).toBe(34);
   expect(session.geometry.screenFormat).toBe("21:9");
   expect(session.verdict.pass).toBe(true);

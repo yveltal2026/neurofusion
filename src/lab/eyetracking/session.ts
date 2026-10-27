@@ -12,10 +12,10 @@ import {
   type TargetResult,
   type ViewportSpan,
 } from "./metrics";
-import type { CalibrationPair } from "./calibration";
+import type { CalibrationFit, CalibrationPair } from "./calibration";
 
 /** Disposición de calibración usada: permite comparar sesiones hechas antes y después de cambiarla. */
-export const CALIBRATION_LAYOUT = "v3-affine-fixations";
+export const CALIBRATION_LAYOUT = "v4-stable-base";
 
 export type Lighting = "buena" | "media" | "mala";
 
@@ -37,7 +37,7 @@ export interface SessionInput {
   engineId: string;
   /** Tiempo desde «iniciar» hasta la primera lectura (descarga de modelos + cámara), en ms. */
   readyMs: number;
-  calibration: { passes: number; clicks: number; durationMs: number; layout?: string; pairs?: CalibrationPair[] };
+  calibration: { passes: number; clicks: number; durationMs: number; layout?: string; pairs?: CalibrationPair[]; fit?: CalibrationFit };
   validation: { results: TargetResult[]; stream: FrameStats; durationMs: number };
   createdAt: Date;
 }

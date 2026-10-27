@@ -46,7 +46,7 @@ describe("buildSession", () => {
     expect(s.summary.medianErrorDeg).toBeGreaterThan(1);
     expect(s.summary.medianErrorDeg).toBeLessThan(1.5);
     expect(s.verdict.pass).toBe(true);
-    expect(s.calibration.layout).toBe("v3-affine-fixations");
+    expect(s.calibration.layout).toBe("v4-stable-base");
   });
 
   it("diagnóstico: ganancia por eje, error normalizado y área de prueba", () => {

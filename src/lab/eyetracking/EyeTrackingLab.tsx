@@ -28,7 +28,7 @@ import { buildSession, type ExportedSession, type Lighting } from "./session";
 import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
-import { applyCalibration, fitCalibration, fixationMedian, type CalibrationFit, type CalibrationPair } from "./calibration";
+import { applyCalibration, fitCalibration, refineCalibration, refinementGrid, stableFixation, type CalibrationFit, type CalibrationPair } from "./calibration";
 import { screenWidthCm, type ScreenFormat } from "./screen";
 
 type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "results" | "free" | "stimulus" | "saving" | "done";
@@ -65,13 +65,11 @@ function guessDevice(): DeviceType {
 }
 
 /**
- * Todas las pasadas usan la cuadrícula completa. El ajuste conserva todas las fijaciones.
+ * La segunda etapa usa puntos interiores; la validación final tiene sus propios objetivos.
  */
 function buildCalibrationPoints(passes: number): Point[] {
   const grid = calibrationGrid(window.innerWidth, window.innerHeight);
-  const out: Point[] = [];
-  for (let p = 0; p < passes; p++) out.push(...grid);
-  return out;
+  return passes === 2 ? [...grid, ...refinementGrid(window.innerWidth, window.innerHeight)] : grid;
 }
 
 export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
@@ -87,13 +85,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [distanceCm, setDistanceCm] = useState(() => PRESETS[guessDevice()].distanceCm);
   const [glasses, setGlasses] = useState(false);
   const [lighting, setLighting] = useState<Lighting>("buena");
-  const [passes, setPasses] = useState(1);
+  const [passes, setPasses] = useState(2);
 
   // Progreso
   const [calibPoints, setCalibPoints] = useState<Point[]>([]);
   const [calibIndex, setCalibIndex] = useState(0);
   /** Índice del punto ya “armado”; el punto actual está activo solo si coincide con `calibIndex`. */
   const [armedIndex, setArmedIndex] = useState(-1);
+  const [samplingIndex, setSamplingIndex] = useState(-1);
   const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const [valIndex, setValIndex] = useState(0);
   const [valTargets, setValTargets] = useState<Point[]>([]);
@@ -252,19 +251,21 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     setCalibPoints(points);
     setCalibIndex(0);
     setArmedIndex(-1);
+    setSamplingIndex(-1);
     calibClicksRef.current = 0;
     lastClickRef.current = 0;
     calibStartRef.current = performance.now();
     setStage("calibration");
   }
 
-  // Cada punto se “arma” pasado el plazo de antirrebote de la librería.
+  // Cada punto se activa después de dar tiempo a llevar la mirada hasta él.
   useEffect(() => {
     if (stage !== "calibration") return;
     const id = setTimeout(() => setArmedIndex(calibIndex), CALIB_ACTIVATE_MS);
     return () => clearTimeout(id);
   }, [stage, calibIndex]);
   const dotActive = stage === "calibration" && armedIndex === calibIndex;
+  const dotSampling = stage === "calibration" && samplingIndex === calibIndex;
 
   async function onCalibrationDot() {
     setError(null);
@@ -272,34 +273,48 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     if (now - lastClickRef.current < 1000) return;
     lastClickRef.current = now;
     setArmedIndex(-1);
+    setSamplingIndex(calibIndex);
     const runId = runIdRef.current;
-    await sleep(800);
-    if (runId !== runIdRef.current) return;
     const viewport = calibrationViewportRef.current;
+    let fixation: ReturnType<typeof stableFixation> = null;
+    // Espera una ventana estable después del clic, hasta un máximo de 3 s.
+    await sleep(1000);
+    while (performance.now() - now <= 3200) {
+      if (runId !== runIdRef.current) return;
+      const end = performance.now();
+      fixation = stableFixation(rawFramesRef.current, Math.max(now + 200, end - 800), end, viewport);
+      if (fixation) break;
+      await sleep(200);
+    }
+    if (runId !== runIdRef.current) return;
+    setSamplingIndex(-1);
     if (window.innerWidth !== viewport.width || window.innerHeight !== viewport.height) {
       setError("La ventana cambió de tamaño. Repite la calibración con la ventana estable.");
       setStage("position");
       return;
     }
-    const gaze = fixationMedian(rawFramesRef.current.filter((f) => f.t >= now + 200 && f.t <= now + 800
-      && f.x !== null && f.y !== null && Number.isFinite(f.x) && Number.isFinite(f.y))
-      .map((f) => ({ x: f.x! / viewport.width, y: f.y! / viewport.height })));
-    if (!gaze) {
-      setError("No se detectaron suficientes lecturas. Mira el punto y vuelve a pulsarlo.");
+    if (!fixation) {
+      setError("No se obtuvo una fijación estable. Mantén la cabeza quieta, mira el punto y vuelve a pulsarlo.");
       setArmedIndex(calibIndex);
       return;
     }
-    calibrationPairsRef.current.push({ gaze, target: { x: calibPoints[calibIndex].x / viewport.width, y: calibPoints[calibIndex].y / viewport.height } });
+    calibrationPairsRef.current.push({ ...fixation, phase: calibIndex < 9 ? "base" : "refinement", target: { x: calibPoints[calibIndex].x / viewport.width, y: calibPoints[calibIndex].y / viewport.height } });
     calibClicksRef.current++;
-    if (calibIndex + 1 >= calibPoints.length) {
-      try {
+    try {
+      if (calibClicksRef.current === 9) {
         calibrationFitRef.current = fitCalibration(calibrationPairsRef.current);
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "No se pudo calibrar la mirada.");
-        setStage("position");
-        return;
       }
-      calibDurationRef.current = now - calibStartRef.current;
+      if (calibClicksRef.current === 18 && calibrationFitRef.current) {
+        calibrationFitRef.current = refineCalibration(calibrationFitRef.current, calibrationPairsRef.current.slice(9));
+      }
+    } catch (cause) {
+      calibrationFitRef.current = null;
+      setError(cause instanceof Error ? cause.message : "No se pudo calibrar la mirada.");
+      setStage("position");
+      return;
+    }
+    if (calibIndex + 1 >= calibPoints.length) {
+      calibDurationRef.current = performance.now() - calibStartRef.current;
       setCountdown(COUNTDOWN_S);
       setStage("countdown");
     } else {
@@ -356,7 +371,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         },
         engineId: engineRef.current?.id ?? "desconocido",
         readyMs: readyMsRef.current,
-        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current), layout: "v3-affine-fixations", pairs: calibrationPairsRef.current },
+        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current), layout: passes === 2 ? "v4-interior-refinement" : "v4-stable-base", pairs: calibrationPairsRef.current, fit: calibrationFitRef.current ?? undefined },
         validation: { results, stream: frameStats(framesRef.current, startedAt, endedAt), durationMs: Math.round(endedAt - startedAt) },
         createdAt: new Date(),
       }),
@@ -556,7 +571,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <p className="text-sm text-muted">
               {study
                 ? `Calibra la cámara y mira ${study.assets.length} ${study.assets.length === 1 ? "pieza" : "piezas"} durante ${study.durationSeconds} segundos cada una. No necesitas crear una cuenta.`
-                : "Mide qué tan preciso es WebEyeTrack en este dispositivo. Tarda unos 2 minutos: calibración de 9 puntos y validación de 8."}
+                : "Mide qué tan preciso es WebEyeTrack en este dispositivo. Calibración recomendada de 18 puntos en dos etapas y validación independiente de 8."}
             </p>
           </header>
 
@@ -624,14 +639,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                   <option value="mala">Mala (contraluz / oscuro)</option>
                 </select>
               </Field>
-              <Field label="Pasadas de calibración">
+              <Field label="Calibración">
                 <select
                   className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm"
                   value={passes}
                   onChange={(e) => setPasses(Number(e.target.value))}
                 >
-                  <option value={1}>1 (9 clics)</option>
-                  <option value={2}>2 (18 clics)</option>
+                  <option value={1}>Básica (9 puntos)</option>
+                  <option value={2}>Con ajuste fino (18 puntos · recomendada)</option>
                 </select>
               </Field>
             </div>
@@ -683,8 +698,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "calibration" && calibPoints[calibIndex] ? (
         <div className="fixed inset-0 z-50 touch-manipulation bg-background select-none">
           <p className="absolute top-4 right-0 left-0 px-4 text-center text-sm text-muted" role="status">
-            Punto {calibIndex + 1} de {calibPoints.length}. Mira el punto y, cuando se ponga verde, tócalo o haz clic sin
+            {calibIndex < 9 ? "Calibración base" : "Ajuste fino"} · Punto {calibIndex + 1} de {calibPoints.length}. Mira el punto y, cuando se ponga verde, tócalo o haz clic sin
             dejar de mirarlo. Mantén la mirada hasta que cambie de posición.
+            {dotSampling ? " Registrando mirada… sigue mirando el punto." : ""}
           </p>
           {error ? <p role="alert" className="absolute right-4 bottom-4 left-4 text-center text-sm text-danger">{error}</p> : null}
           <button
@@ -694,7 +710,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             disabled={!dotActive}
             onClick={onCalibrationDot}
             className={`absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 transition-colors ${
-              dotActive ? "border-heading bg-primary" : "border-border bg-transparent"
+              dotActive || dotSampling ? "border-heading bg-primary" : "border-border bg-transparent"
             }`}
             style={{ left: calibPoints[calibIndex].x, top: calibPoints[calibIndex].y }}
           />
