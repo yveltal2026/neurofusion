@@ -35,6 +35,7 @@ const TABS = {
     t("report", "Informe", "/report"),
     t("settings", "Ajustes", "/settings"),
   ],
+  eye: [t("overview", "Piezas y enlace"), t("results", "Miradas", "/eye"), t("settings", "Ajustes", "/settings")],
   journey: [
     t("overview", "Capturas"),
     t("ratings", "Calificación", "/ratings"),

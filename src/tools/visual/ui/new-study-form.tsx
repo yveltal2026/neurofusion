@@ -40,8 +40,8 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
     setError(null);
     const keys: string[] = [];
     const config =
-      mode === "pieces"
-        ? { mode, objective, brand, audience }
+      mode !== "journey"
+        ? { mode: "pieces", objective, brand, audience }
         : {
             mode,
             objective,

@@ -73,11 +73,21 @@ export async function createVisualStudy(raw: unknown): Promise<VisualFormState> 
   if (input && input.mode === "journey") input.panel = { seed: randomInt(1, 2_147_483_647), ...(input.panel as object) };
   const config = visualConfigSchema.safeParse(input);
   if (!config.success) return { error: config.error.issues[0]?.message ?? "La configuración no es válida" };
+  if (config.data.mode === "pieces" && config.data.eyeTracking) {
+    return { error: "Crea este estudio desde la herramienta Eye tracking con webcam." };
+  }
 
   const { supabase } = await requireUser();
   const { data, error } = await supabase
     .from("studies")
-    .insert({ project_id: parsed.data.projectId, tool_type: "visual", name: parsed.data.name, status: "published", config: config.data })
+    .insert({
+      project_id: parsed.data.projectId,
+      tool_type: "visual",
+      name: parsed.data.name,
+      status: "published",
+      config: config.data,
+      access_token: null,
+    })
     .select("id")
     .single();
   if (error || !data) return { error: "No se pudo crear el estudio. Verifica que el proyecto exista." };
@@ -166,7 +176,16 @@ export async function registerAsset(raw: unknown): Promise<VisualFormState> {
   const loaded = await loadVisualStudy(supabase, input.studyId);
   if (!loaded) return fail("Estudio no encontrado");
   const { count } = await supabase.from("visual_assets").select("id", { count: "exact", head: true }).eq("study_id", input.studyId);
-  if ((count ?? 0) >= MAX_ASSETS) return fail(`Máximo ${MAX_ASSETS} imágenes por estudio`);
+  const eyeStudy = loaded.config.mode === "pieces" && Boolean(loaded.config.eyeTracking);
+  const limit = eyeStudy ? 5 : MAX_ASSETS;
+  if ((count ?? 0) >= limit) return fail(`Máximo ${limit} imágenes por estudio`);
+  if (eyeStudy) {
+    const { count: runs } = await supabase.from("eye_tracking_runs").select("session_id", { count: "exact", head: true }).eq("study_id", input.studyId);
+    const { count: active } = await supabase.from("sessions").select("id", { count: "exact", head: true })
+      .eq("study_id", input.studyId).eq("status", "started")
+      .gte("started_at", new Date(Date.now() - 2 * 60 * 60_000).toISOString());
+    if (runs || active) return fail("El estudio ya tiene respuestas o sesiones en curso; las piezas quedaron fijadas para poder compararlas");
+  }
 
   if (loaded.config.mode === "journey") {
     if (!loaded.config.sites.some((s) => s.key === input.siteKey)) return fail("Elige el sitio de la captura");
@@ -240,6 +259,12 @@ export async function deleteAsset(fd: FormData) {
   const assetId = uuid.safeParse(fd.get("assetId"));
   if (!studyId.success || !assetId.success) return;
   const { supabase } = await requireUser();
+  const { count: runs } = await supabase.from("eye_tracking_runs")
+    .select("session_id", { count: "exact", head: true }).eq("study_id", studyId.data);
+  const { count: active } = await supabase.from("sessions").select("id", { count: "exact", head: true })
+    .eq("study_id", studyId.data).eq("status", "started")
+    .gte("started_at", new Date(Date.now() - 2 * 60 * 60_000).toISOString());
+  if (runs || active) return;
   const { data } = await supabase.from("visual_assets").select("storage_path").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle();
   if (!data) return;
   await supabase.storage
@@ -259,6 +284,9 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   const { supabase } = await requireUser();
   const loaded = await loadVisualStudy(supabase, studyId.data);
   if (!loaded) return { error: "Estudio no encontrado" };
+  if (loaded.config.mode === "pieces" && loaded.config.eyeTracking) {
+    return { error: "Este estudio mide la mirada con webcam. El análisis con IA pertenece a otra herramienta." };
+  }
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle<VisualAssetRow>();
   if (!row) return { error: "Imagen no encontrada" };
 
@@ -372,6 +400,8 @@ export async function restoreAiAois(fd: FormData) {
   const assetId = uuid.safeParse(fd.get("assetId"));
   if (!studyId.success || !assetId.success) return;
   const { supabase } = await requireUser();
+  const loaded = await loadVisualStudy(supabase, studyId.data);
+  if (!loaded || (loaded.config.mode === "pieces" && loaded.config.eyeTracking)) return;
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId.data).eq("study_id", studyId.data).maybeSingle<VisualAssetRow>();
   if (!row) return;
   const asset = toVisualAsset(row);

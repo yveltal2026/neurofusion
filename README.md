@@ -1,13 +1,15 @@
 # NeuroFusion
 
-Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Cuatro herramientas:
+Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Herramientas disponibles:
 
 | Herramienta | Para qué |
 |---|---|
 | **IAT** (Test de Asociación Implícita) | Asociaciones implícitas con participantes reales vía liga mágica |
 | **Auditoría SEO** | Rastreo, on-page, datos estructurados, enlaces y Core Web Vitals; plan de acción redactado por IA |
 | **Análisis visual con IA** | Piezas gráficas y capturas web (mapa de atención estimado, recorrido, zonas ciegas, métricas de imagen) y modo journey con rúbrica e Índice de Fricción Digital (IFD) |
+| **Eye tracking con webcam** | Mirada de participantes sobre imágenes, calibración, controles de deriva y mapas de atención medidos |
 | **Encuesta** | Preguntas propias e instrumentos estandarizados (SUS, NPS, SAM, intención de compra, actitud) con liga mágica; el servidor valida y puntúa; resultados con intervalos de confianza y CSV |
+| **Variantes del IAT** | SC-IAT, Go/No-Go y priming evaluativo con participantes y validación en el servidor |
 
 SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en [`docs/HERRAMIENTAS_SEO_VISUAL.md`](docs/HERRAMIENTAS_SEO_VISUAL.md). Lo que sigue en «Qué hace» describe el flujo del IAT.
 
@@ -18,6 +20,19 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 3. Se genera una **liga mágica** que comparte con N participantes. Puede cerrarse, limitarse por número de respuestas o fecha, regenerarse o probarse en **vista previa** (no guarda datos).
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
+
+### Estudios de eye tracking con webcam
+
+Creación dedicada: `/projects/[id]/studies/new/eyetracking`. Tiene formulario, resumen, imágenes y resultados propios; los estudios de IA no ofrecen opciones de webcam. Los estudios de webcam existentes se reconocen por su configuración y conservan sus enlaces y datos. Se reutiliza el almacenamiento de imágenes (`tool_type=visual` + `config.eyeTracking`); esta separación no requiere migración adicional.
+
+1. En **Nuevo estudio**, elige **Eye tracking con webcam** (herramienta separada de **Análisis visual con IA**) y sube de 1 a 5 imágenes PNG, JPEG o WebP. Configura de 5 a 30 segundos por imagen (10 por defecto). Tras la primera sesión, las piezas quedan fijadas para que las respuestas sean comparables.
+2. Comparte la liga mágica desde el resumen del estudio. La vista previa ejecuta el recorrido sin guardar datos. Los participantes aceptan el uso de cámara, calibran por defecto en dos etapas de 9 puntos, validan en otros 8 objetivos y miran las piezas. La cámara requiere HTTPS o localhost.
+3. El video se procesa en el dispositivo. El servidor guarda coordenadas normalizadas dentro de cada imagen, tiempos y calidad de calibración en `eye_tracking_runs`; no recibe ni guarda video. El investigador ve mapas agregados de sesiones con calibración aceptable, puede excluir sesiones y descargar las lecturas en CSV desde **Miradas**.
+4. El motor WebEyeTrack descarga recursos de `cdn.jsdelivr.net` y `storage.googleapis.com`; ambos dominios deben estar disponibles en los dispositivos participantes. Aplica también `20261027000000_visual_eyetracking.sql` antes de usar el flujo. La precisión y compatibilidad con Safari/iOS deben medirse en dispositivos reales siguiendo [`docs/EYETRACKING-SPIKE.md`](docs/EYETRACKING-SPIKE.md); el simulador `?engine=fake` comprueba la interfaz, no la precisión.
+
+La configuración pide la diagonal física en pulgadas y el formato del monitor (incluye ultrawide 21:9 y 32:9); calcula el ancho para estimar el error angular. La calibración recomendada `v5-weighted-refinement` pondera las fijaciones por calidad, detecta saturación, acerca el punto afectado al centro y revisa como máximo dos fijaciones débiles. Usa un ajuste afín inicial y una segunda ronda de nueve puntos interiores para corregir escala y desplazamiento por eje. La validación final usa objetivos distintos y no interviene en el entrenamiento. Mantén la mirada sobre cada punto hasta que cambie.
+
+Los estudios comprueban la deriva con tres objetivos antes de empezar, cada dos piezas y al terminar. Un control fallido exige recalibrar y reiniciar la presentación; las lecturas parciales no se guardan como respuesta completa. El laboratorio permite ejecutar el mismo control con «Comprobar deriva» y exporta sus resultados en JSON. Las sesiones nuevas usan el protocolo `eye-v2`: el servidor exige los controles previstos y recalcula su aceptación; los resúmenes se guardan dentro de `eye_tracking_runs.validation`, sin migración adicional. La tabla de Miradas muestra la deriva máxima. La precisión de v5 debe confirmarse con nuevas sesiones reales.
 
 ## Principios de diseño
 
@@ -35,7 +50,7 @@ Next.js 16 (App Router) · TypeScript · Tailwind · Supabase (Postgres, Auth, R
 
 ### 1. Supabase
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor). La migración `20261013000000_seo_visual_tools.sql` también crea el bucket privado de Storage `study-assets` y sus políticas.
+2. Aplica las migraciones de `supabase/migrations` en orden (`supabase db push`, o pegando el SQL en el editor). La migración `20261013000000_seo_visual_tools.sql` crea el bucket privado de Storage `study-assets`; `20261027000000_visual_eyetracking.sql` agrega las mediciones de mirada y sus políticas.
 3. En *Authentication → Providers* habilita **Email** y, si lo quieres, **Google** (necesitas credenciales OAuth de Google Cloud). Añade `http://localhost:3000/auth/callback` (y la URL de producción) a las *Redirect URLs*. Ese mismo callback sirve para confirmar el correo, Google y el **restablecimiento de contraseña** (`/forgot-password` → correo → `/reset-password`); la plantilla *Reset Password* de *Authentication → Email Templates* debe conservar `{{ .ConfirmationURL }}`.
 4. Copia URL, `anon key` y `service_role key` (*Project Settings → API*).
 
@@ -124,6 +139,8 @@ Importa el repositorio, define las mismas variables de entorno y añade `NEXT_PU
 | SEO: reglas, robots, sitemaps, PageSpeed, puntuación, rastreador (sitio simulado), protección SSRF, prompt | Pruebas unitarias |
 | Visual: métricas de imagen (sharp), formatos, AOI y mapa de atención, franjas para IA, modelo journey/IFD, configuración, visor (componente) | Pruebas unitarias y de componente |
 | Tablas SEO/Visual, RLS y políticas del bucket | Pruebas SQL (`supabase/tests/tools.sql`) |
+| Eye tracking en estudios visuales: esquema, métricas, coordenadas, mapa, RLS | Pruebas unitarias y SQL; recorrido completo del laboratorio simulado en Chromium |
+| Eye tracking con cámara real, precisión y Safari/iOS | Pendiente de prueba con personas y dispositivos reales; ver `docs/EYETRACKING-SPIKE.md` |
 | Rastreo contra sitios reales, subida a Storage, visión con Anthropic/OpenAI, PageSpeed real | **Tipado y compilado, sin ejecutar contra servicios reales** (requieren credenciales y red abierta) |
 | Encuesta: motor (instrumentos, validación, puntuación, agregados, alfa de Cronbach), lógica de servidor del participante, runner, constructor, resultados y CSV | Pruebas unitarias y de componente (cliente de Supabase falso en memoria) |
 | Encuesta: tabla `survey_answers`, RLS, `claim_session` con encuestas | Pruebas SQL (`supabase/tests/survey.sql`) |

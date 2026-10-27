@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-14T04:57:05.635Z",
+  "participant": "PO2",
+  "device": "laptop",
+  "glasses": true,
+  "lighting": "buena",
+  "geometry": { "screenWidthPx": 2560, "screenWidthCm": 80, "distanceCm": 50 },
+  "viewport": { "width": 2519, "height": 914 },
+  "environment": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+    "platform": "Win32",
+    "devicePixelRatio": 1,
+    "maxTouchPoints": 20,
+    "orientation": "landscape-primary"
+  },
+  "engineId": "webeyetrack@0.0.2",
+  "readyMs": 1824,
+  "calibration": { "passes": 1, "clicks": 9, "durationMs": 26411 },
+  "summary": {
+    "targets": 8,
+    "measured": 8,
+    "coverage": 1,
+    "medianErrorPx": 287.27011154126683,
+    "meanErrorPx": 296.6809956627646,
+    "p75ErrorPx": 351.41399358753904,
+    "maxErrorPx": 470.5843487583095,
+    "medianErrorCm": 8.977190985664588,
+    "medianErrorDeg": 10.178654773237815,
+    "p75ErrorDeg": 12.387400956859352,
+    "medianPrecisionPx": 85.18884919662045
+  },
+  "fps": 24.980390393540837,
+  "verdict": { "pass": false, "reasons": ["Error mediano 10.2° > 4° (laptop)."] },
+  "validation": {
+    "durationMs": 20016,
+    "targets": [
+      { "target": { "x": 755.6999999999999, "y": 274.2 }, "samples": 36, "gaze": { "x": 1208.4222833636682, "y": 402.62181840430696 }, "errorPx": 470.5843487583095, "precisionPx": 91.66168966482809 },
+      { "target": { "x": 1763.3, "y": 639.8 }, "samples": 34, "gaze": { "x": 1715.6177127197298, "y": 407.4189947177857 }, "errorPx": 237.22253715920564, "precisionPx": 79.36535248079574 },
+      { "target": { "x": 1763.3, "y": 274.2 }, "samples": 39, "gaze": { "x": 2057.8367086348494, "y": 409.57385521514016 }, "errorPx": 324.15729732532617, "precisionPx": 91.01234591244516 },
+      { "target": { "x": 755.6999999999999, "y": 639.8 }, "samples": 37, "gaze": { "x": 553.0233471370519, "y": 570.1866970783749 }, "errorPx": 214.29847773464434, "precisionPx": 106.8698583184164 },
+      { "target": { "x": 1259.5, "y": 182.8 }, "samples": 38, "gaze": { "x": 1313.8339983896922, "y": 289.18959944238 }, "errorPx": 119.46099886791977, "precisionPx": 129.23897010253407 },
+      { "target": { "x": 1259.5, "y": 731.2 }, "samples": 35, "gaze": { "x": 1137.3147137656679, "y": 468.0607236528921 }, "errorPx": 290.12328918693396, "precisionPx": 77.64327050635717 },
+      { "target": { "x": 503.8, "y": 457 }, "samples": 39, "gaze": { "x": 922.9998032898435, "y": 347.8213658992073 }, "errorPx": 433.18408237417754, "precisionPx": 76.41000327884882 },
+      { "target": { "x": 2015.2, "y": 457 }, "samples": 34, "gaze": { "x": 2298.0551637429708, "y": 427.23511077609777 }, "errorPx": 284.4169338955997, "precisionPx": 67.46383552224367 }
+    ],
+    "stream": { "fps": 24.980390393540837, "validRatio": 0.99, "inferenceMsMedian": 33.59999999997672, "frames": 500 }
+  }
+}

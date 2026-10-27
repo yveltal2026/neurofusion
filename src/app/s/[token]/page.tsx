@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { apiMessage, availabilityError, loadParticipantStudyByToken } from "@/lib/participant-api";
+import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
+import { EyeStudyRunner } from "@/tools/visual/eye/EyeStudyRunner";
 import { Runner } from "@/tools/iat/runner/Runner";
 import { SurveyRunner } from "@/tools/survey/runner/SurveyRunner";
 import { VariantRunner } from "@/tools/variants/runner/VariantRunner";
@@ -25,7 +27,14 @@ export default async function ParticipantPage({ params, searchParams }: PageProp
   const preview = sp.preview === "1";
 
   const loaded = await loadParticipantStudyByToken(token);
-  if (!loaded.ok) return <Unavailable message={apiMessage(loaded.code)} />;
+  if (!loaded.ok) {
+    if (loaded.code !== "invalid_link") return <Unavailable message={apiMessage(loaded.code)} />;
+    const eye = await loadEyeStudyByToken(token, true);
+    if (!eye.ok) return <Unavailable message={apiMessage(eye.code)} />;
+    const unavailable = availabilityError(eye.study);
+    if (unavailable && !preview) return <Unavailable message={apiMessage(unavailable)} />;
+    return <EyeStudyRunner token={token} study={eye.study} preview={preview} />;
+  }
 
   const unavailable = availabilityError(loaded.study);
   if (unavailable && !preview) return <Unavailable message={apiMessage(unavailable)} />;

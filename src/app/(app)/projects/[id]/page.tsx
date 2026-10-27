@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { IconTile } from "@/components/ui/icon-tile";
 import { requireUser } from "@/lib/auth/session";
 import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
-import { getTool } from "@/tools/registry";
+import { getStudyTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
 
 const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
@@ -25,10 +25,10 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
   const { data: studies } = await supabase
     .from("studies")
-    .select("id, name, tool_type, status, created_at")
+    .select("id, name, tool_type, config, status, created_at")
     .eq("project_id", id)
     .order("created_at", { ascending: false })
-    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "status" | "created_at">[]>();
+    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "config" | "status" | "created_at">[]>();
 
   const { data: batteries } = await supabase
     .from("batteries")
@@ -84,11 +84,11 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                 <Link href={`/studies/${s.id}`} className="block">
                   <Card className="flex items-center justify-between gap-3 py-4 transition hover:border-primary">
                     <span className="flex min-w-0 items-center gap-3">
-                      <IconTile name={getTool(s.tool_type)?.icon ?? "layers"} size="sm" />
+                      <IconTile name={getStudyTool(s)?.icon ?? "layers"} size="sm" />
                       <span className="truncate font-medium">{s.name}</span>
                     </span>
                     <span className="text-xs uppercase text-muted">
-                      {getTool(s.tool_type)?.shortName ?? s.tool_type}
+                      {getStudyTool(s)?.shortName ?? s.tool_type}
                       {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
                   </Card>

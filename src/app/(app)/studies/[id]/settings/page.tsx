@@ -24,7 +24,7 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
 
   const seo = study.tool_type === "seo" ? seoConfigSchema.safeParse(study.config) : null;
   const visual = study.tool_type === "visual" ? visualConfigSchema.safeParse(study.config) : null;
-  const variant = study.tool_type === "seo" ? "seo" : visual?.success && visual.data.mode === "journey" ? "journey" : "pieces";
+  const variant = study.tool_type === "seo" ? "seo" : visual?.success && visual.data.mode === "journey" ? "journey" : visual?.success && visual.data.mode === "pieces" && visual.data.eyeTracking ? "eye" : "pieces";
 
   return (
     <div className="space-y-8">
@@ -41,7 +41,7 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
       ) : null}
       {visual?.success ? (
         <Card className="space-y-4">
-          <h2 className="font-medium">Contexto del análisis</h2>
+          <h2 className="font-medium">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
           <VisualContextForm studyId={study.id} config={visual.data} />
         </Card>
       ) : null}

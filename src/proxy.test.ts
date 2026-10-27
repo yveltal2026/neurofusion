@@ -11,7 +11,7 @@ const covered = (path: string) => matcher.test(path);
 
 describe("matcher del proxy", () => {
   it("deja fuera las rutas públicas del participante (IAT/encuesta y batería)", () => {
-    for (const p of ["/s/abc", "/api/s/abc/start", "/b/abc", "/api/b/abc/start", "/api/b/abc/progress"]) {
+    for (const p of ["/s/abc", "/api/s/abc/start", "/b/abc", "/api/b/abc/start", "/api/b/abc/progress", "/lab/eyetracking", "/web/model.json", "/web/group1-shard1of1.bin"]) {
       expect(covered(p), p).toBe(false);
     }
   });

@@ -1,0 +1,153 @@
+import { describe, expect, it } from "vitest";
+import { buildSession, parseExportedSession, recordDriftChecks, type SessionInput } from "./session";
+import type { TargetResult } from "./metrics";
+
+const target = (errorPx: number | null): TargetResult => ({
+  target: { x: 100, y: 100 },
+  samples: errorPx === null ? 0 : 30,
+  gaze: errorPx === null ? null : { x: 100 + errorPx, y: 100 },
+  errorPx,
+  precisionPx: errorPx === null ? null : 4,
+});
+
+function input(overrides: Partial<SessionInput> = {}): SessionInput {
+  return {
+    participant: "  P01 ",
+    device: "laptop",
+    glasses: false,
+    lighting: "buena",
+    geometry: { screenWidthPx: 1440, screenWidthCm: 30.4, distanceCm: 50 },
+    viewport: { width: 1440, height: 800 },
+    environment: { userAgent: "UA", platform: "Linux", devicePixelRatio: 2, maxTouchPoints: 0, orientation: null },
+    engineId: "webeyetrack@0.0.2",
+    readyMs: 4321.7,
+    calibration: { passes: 1, clicks: 9, durationMs: 20_000 },
+    validation: {
+      results: Array.from({ length: 8 }, () => target(50)),
+      stream: { fps: 24, validRatio: 0.95, inferenceMsMedian: 18, frames: 480 },
+      durationMs: 20_000,
+    },
+    createdAt: new Date("2026-10-14T12:00:00Z"),
+    ...overrides,
+  };
+}
+
+describe("buildSession", () => {
+  it("marca una sesión como no aceptable si falla un control posterior, conservando las métricas iniciales", () => {
+    const initial = buildSession(input());
+    const checked = recordDriftChecks(initial, [{ afterAssetCount: 2, targets: [], medianErrorDeg: 10,
+      maxErrorDeg: 12, coverage: 1, fps: 30, validRatio: 1, passed: false }]);
+    expect(initial.verdict.pass).toBe(true);
+    expect(checked.verdict.pass).toBe(false);
+    expect(checked.summary).toEqual(initial.summary);
+    expect(parseExportedSession(checked)?.verdict.pass).toBe(false);
+  });
+  it("calcula resumen y veredicto, normaliza el código y redondea readyMs", () => {
+    const s = buildSession(input());
+    expect(s.version).toBe(1);
+    expect(s.participant).toBe("P01");
+    expect(s.readyMs).toBe(4322);
+    expect(s.createdAt).toBe("2026-10-14T12:00:00.000Z");
+    expect(s.summary.medianErrorPx).toBe(50);
+    expect(s.summary.coverage).toBe(1);
+    expect(s.fps).toBe(24);
+    // 50 px ≈ 1.06 cm a 50 cm ≈ 1.2°
+    expect(s.summary.medianErrorDeg).toBeGreaterThan(1);
+    expect(s.summary.medianErrorDeg).toBeLessThan(1.5);
+    expect(s.verdict.pass).toBe(true);
+    expect(s.calibration.layout).toBe("v5-weighted-base");
+  });
+
+  it("diagnóstico: ganancia por eje, error normalizado y área de prueba", () => {
+    // Objetivos con gaze = objetivo + 20 px en x (ganancia 1, sesgo 20) y constante en y (ganancia 0).
+    const results: TargetResult[] = [100, 400, 700, 1000].map((x, i) => ({
+      target: { x, y: 100 + i * 200 },
+      samples: 30,
+      gaze: { x: x + 20, y: 400 },
+      errorPx: 0,
+      precisionPx: 3,
+    }));
+    const s = buildSession(
+      input({
+        viewport: { width: 1440, height: 800 },
+        validation: { results, stream: { fps: 30, validRatio: 1, inferenceMsMedian: 5, frames: 100 }, durationMs: 1 },
+      }),
+    );
+    expect(s.diagnostics.x.gain).toBeCloseTo(1);
+    expect(s.diagnostics.x.biasPx).toBeCloseTo(20);
+    expect(s.diagnostics.y.gain).toBeCloseTo(0);
+    expect(s.verdict.pass).toBe(false);
+    expect(s.verdict.reasons.join(" ")).toContain("quedó fija");
+    expect(s.diagnostics.normalizedErrorX).toBeCloseTo(20 / 1440);
+    expect(s.diagnostics.span.halfAngleXDeg).toBeGreaterThan(10);
+  });
+
+  it("sin objetivos medidos el diagnóstico queda en null", () => {
+    const s = buildSession(
+      input({
+        validation: {
+          results: [target(null), target(null)],
+          stream: { fps: 30, validRatio: 0, inferenceMsMedian: null, frames: 0 },
+          durationMs: 1,
+        },
+      }),
+    );
+    expect(s.diagnostics.x.gain).toBeNull();
+    expect(s.diagnostics.normalizedErrorX).toBeNull();
+    expect(s.diagnostics.normalizedErrorY).toBeNull();
+  });
+
+  it("un código vacío cae a «sin-codigo» y una cobertura baja no pasa", () => {
+    const s = buildSession(
+      input({
+        participant: "   ",
+        validation: {
+          results: [target(50), target(null), target(null), target(null)],
+          stream: { fps: 30, validRatio: 1, inferenceMsMedian: null, frames: 1 },
+          durationMs: 1,
+        },
+      }),
+    );
+    expect(s.participant).toBe("sin-codigo");
+    expect(s.verdict.pass).toBe(false);
+  });
+});
+
+describe("parseExportedSession", () => {
+  it("acepta una sesión exportada tal cual", () => {
+    const exported = JSON.parse(JSON.stringify(buildSession(input())));
+    const parsed = parseExportedSession(exported);
+    expect(parsed).not.toBeNull();
+    expect(parsed?.device).toBe("laptop");
+    expect(parsed?.verdict.pass).toBe(true);
+  });
+
+  it("acepta error mediano null (sesión sin objetivos medidos)", () => {
+    const exported = JSON.parse(
+      JSON.stringify(
+        buildSession(
+          input({
+            validation: {
+              results: [target(null)],
+              stream: { fps: 30, validRatio: 0, inferenceMsMedian: null, frames: 0 },
+              durationMs: 1,
+            },
+          }),
+        ),
+      ),
+    );
+    expect(parseExportedSession(exported)?.summary.medianErrorDeg).toBeNull();
+  });
+
+  it.each([
+    ["no objeto", 5],
+    ["null", null],
+    ["dispositivo inválido", { device: "tv", fps: 1, summary: {}, verdict: { pass: true } }],
+    ["fps no numérico", { device: "laptop", fps: "30", summary: {}, verdict: { pass: true } }],
+    ["sin resumen", { device: "laptop", fps: 30, verdict: { pass: true } }],
+    ["grados no numéricos", { device: "laptop", fps: 30, summary: { medianErrorDeg: "2" }, verdict: { pass: true } }],
+    ["veredicto sin pass", { device: "laptop", fps: 30, summary: { medianErrorDeg: 2 }, verdict: {} }],
+  ])("rechaza %s", (_name, raw) => {
+    expect(parseExportedSession(raw)).toBeNull();
+  });
+});

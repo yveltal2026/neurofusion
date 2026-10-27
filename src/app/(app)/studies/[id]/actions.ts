@@ -55,7 +55,12 @@ export async function regenerateLink(formData: FormData) {
   const id = idSchema.safeParse(formData.get("id"));
   if (!id.success) return;
   const { supabase } = await requireUser();
-  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data).in("tool_type", ["iat", "survey", "iat_variant"]);
+  const { data: study } = await supabase.from("studies").select("tool_type, config").eq("id", id.data).maybeSingle();
+  if (!study) return;
+  const eye = study.tool_type === "visual" && typeof study.config === "object" && study.config !== null
+    && "mode" in study.config && study.config.mode === "pieces" && "eyeTracking" in study.config && Boolean(study.config.eyeTracking);
+  if (!["iat", "survey", "iat_variant"].includes(study.tool_type) && !eye) return;
+  await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data);
   revalidatePath(`/studies/${id.data}`);
 }
 

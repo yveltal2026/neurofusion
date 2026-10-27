@@ -281,7 +281,7 @@ describe("SurveyBuilder", () => {
     ).toBeTruthy();
     expect(
       (
-        screen.getByRole("button", {
+        await screen.findByRole("button", {
           name: "Crear encuesta y generar liga",
         }) as HTMLButtonElement
       ).disabled,

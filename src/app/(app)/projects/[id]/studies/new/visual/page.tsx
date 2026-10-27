@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { NewVisualStudyForm } from "@/tools/visual/ui/new-study-form";
 
 export const metadata = { title: "Nuevo análisis visual · NeuroFusion" };
 
-export default async function NewVisualStudyPage({ params }: PageProps<"/projects/[id]/studies/new/visual">) {
+export default async function NewVisualStudyPage({ params, searchParams }: PageProps<"/projects/[id]/studies/new/visual">) {
   const { id } = await params;
+  if ((await searchParams).mode === "eyetracking") redirect(`/projects/${id}/studies/new/eyetracking`);
   const { supabase } = await requireUser();
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).maybeSingle();
   if (!project) notFound();

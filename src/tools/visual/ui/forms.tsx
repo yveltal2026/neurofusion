@@ -32,7 +32,7 @@ export function AnalyzeAssetForm({ studyId, assetId, hasAnalysis }: { studyId: s
   );
 }
 
-export function AssetMetaForm({ studyId, assetId, title, placement }: { studyId: string; assetId: string; title: string; placement: string | null }) {
+export function AssetMetaForm({ studyId, assetId, title, placement, withPlacement = true }: { studyId: string; assetId: string; title: string; placement: string | null; withPlacement?: boolean }) {
   const [state, action, pending] = useActionState(updateAssetMeta, initial);
   return (
     <form action={action} className="space-y-3">
@@ -41,7 +41,7 @@ export function AssetMetaForm({ studyId, assetId, title, placement }: { studyId:
       <Field label="Título">
         <Input name="title" defaultValue={title} maxLength={160} required />
       </Field>
-      <Field label="Formato / colocación" hint="Activa la revisión de tamaño, proporción y peso.">
+      {withPlacement ? <Field label="Formato / colocación" hint="Activa la revisión de tamaño, proporción y peso.">
         <select name="placement" defaultValue={placement ?? ""} className={select}>
           <option value="">Sin especificar</option>
           {PLACEMENTS.map((p) => (
@@ -50,7 +50,7 @@ export function AssetMetaForm({ studyId, assetId, title, placement }: { studyId:
             </option>
           ))}
         </select>
-      </Field>
+      </Field> : null}
       <State state={state} okText="Guardado." />
       <Button type="submit" variant="secondary" disabled={pending}>
         {pending ? "Guardando…" : "Guardar"}
@@ -64,7 +64,7 @@ export function VisualContextForm({ studyId, config }: { studyId: string; config
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="studyId" value={studyId} />
-      <Field label="Objetivo" hint="La IA evalúa cada pieza contra este objetivo.">
+      <Field label="Objetivo" hint={config.mode === "pieces" && config.eyeTracking ? "Qué quieres investigar sobre la atención de tus participantes." : "La IA evalúa cada pieza contra este objetivo."}>
         <Textarea name="objective" defaultValue={config.objective} required maxLength={600} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">

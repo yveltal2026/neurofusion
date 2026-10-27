@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
@@ -51,6 +52,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
     );
   }
   const config = parsed.data;
+  if (config.mode === "pieces" && config.eyeTracking) notFound();
   const assets = await loadAssets(supabase, study.id);
   const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "thumb");
 

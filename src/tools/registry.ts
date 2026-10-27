@@ -4,7 +4,7 @@
  */
 import type { IconName } from "@/components/brand/icon";
 
-export type ToolType = "iat" | "seo" | "visual" | "survey" | "iat_variant";
+export type ToolType = "iat" | "seo" | "visual" | "survey" | "iat_variant" | "eyetracking";
 
 export interface ToolDefinition {
   type: ToolType;
@@ -61,8 +61,24 @@ export const TOOLS: ToolDefinition[] = [
       "Mide una sola marca sin comparación (SC-IAT) o con una o dos marcas por Go/No-Go y priming evaluativo. El servidor valida los tiempos y puntúa; los resultados traen advertencias de calidad.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/variants`,
   },
+  {
+    type: "eyetracking",
+    name: "Eye tracking con webcam",
+    shortName: "Eye tracking",
+    icon: "eye",
+    description: "Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención medidos con webcam.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/eyetracking`,
+  },
 ];
 
 export function getTool(type: string): ToolDefinition | undefined {
   return TOOLS.find((t) => t.type === type);
+}
+
+/** Los estudios de webcam existentes comparten almacenamiento de imágenes con Visual. */
+export function getStudyTool(study: { tool_type: string; config: unknown }): ToolDefinition | undefined {
+  const config = study.config;
+  const eye = study.tool_type === "visual" && typeof config === "object" && config !== null
+    && "mode" in config && config.mode === "pieces" && "eyeTracking" in config && Boolean(config.eyeTracking);
+  return getTool(eye ? "eyetracking" : study.tool_type);
 }

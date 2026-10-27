@@ -20,13 +20,36 @@ export const maxDuration = 120;
 export default async function AssetPage({ params }: PageProps<"/studies/[id]/assets/[assetId]">) {
   const { id, assetId } = await params;
   const { supabase } = await requireUser();
-  const { study, config, projectName } = await loadVisualStudyPage(supabase, id);
+  const { study, config, projectName } = await loadVisualStudyPage(supabase, id, undefined, true);
   const { data: row } = await supabase.from("visual_assets").select("*").eq("id", assetId).eq("study_id", id).maybeSingle<VisualAssetRow>();
   if (!row) notFound();
   const asset = toVisualAsset(row);
   const url = (await assetUrls(supabase, [row.storage_path], "view"))[row.storage_path];
   const site = config.mode === "journey" ? config.sites.find((s) => s.key === row.site_key) : null;
   const task = config.mode === "journey" ? config.tasks.find((t) => t.id === row.task_id) : null;
+  if (config.mode === "pieces" && config.eyeTracking) {
+    return (
+      <div className="space-y-6">
+        <StudyHeader study={study} projectName={projectName} active="overview" variant="eye" subtitle={row.title} />
+        <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">← Volver a las imágenes del estudio</Link>
+        <h2 className="text-lg font-medium">{row.title}</h2>
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- URL firmada de Storage
+          <img src={url} alt={row.title} className="mx-auto max-h-[70vh] max-w-full rounded border border-border object-contain" />
+        ) : <Alert tone="error">No se pudo obtener la imagen del almacenamiento.</Alert>}
+        <Link href={`/studies/${id}/eye`} className="inline-block text-sm font-medium text-heading underline underline-offset-4">Consultar miradas y mapas de atención</Link>
+        <Card className="max-w-xl space-y-3">
+          <AssetMetaForm studyId={id} assetId={assetId} title={row.title} placement={null} withPlacement={false} />
+          <p className="text-xs text-muted">{row.file_name} · {row.width}×{row.height} · {(row.bytes / 1024).toFixed(0)} KB</p>
+          <form action={deleteAsset}>
+            <input type="hidden" name="studyId" value={id} />
+            <input type="hidden" name="assetId" value={assetId} />
+            <Button type="submit" variant="ghost" className="text-danger">Eliminar imagen</Button>
+          </form>
+        </Card>
+      </div>
+    );
+  }
   const variant = config.mode === "journey" ? "journey" : "pieces";
 
   return (

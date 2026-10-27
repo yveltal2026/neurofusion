@@ -20,7 +20,7 @@ export interface StudyRow {
   name: string;
   status: StudyStatus;
   config: unknown;
-  /** Sólo las herramientas con participantes (IAT y encuesta) tienen liga mágica. */
+  /** Las herramientas con participantes (IAT, variantes, encuesta y webcam) tienen liga mágica. */
   access_token: string | null;
   max_responses: number | null;
   closes_at: string | null;
@@ -109,6 +109,14 @@ export interface VisualAssetRow {
   aois: unknown;
   aois_source: "none" | "ai" | "analyst";
   aois_reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface EyeTrackingRunRow {
+  session_id: string;
+  study_id: string;
+  validation: unknown;
+  observations: unknown;
   created_at: string;
 }
 
