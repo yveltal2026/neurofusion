@@ -24,7 +24,7 @@ export function AnalysisView({ result }: { result: AnalysisResult }) {
         <div className="grid gap-3 md:grid-cols-2">
           {result.findings.map((f) => (
             <Card key={f.dimension} className="space-y-1.5">
-              <p className="text-xs uppercase tracking-wide text-muted">{f.dimension}</p>
+              <p className="font-display text-xs font-semibold text-muted">{f.dimension}</p>
               <h4 className="font-medium">{f.headline}</h4>
               <p className="text-sm leading-relaxed">{f.interpretation}</p>
             </Card>

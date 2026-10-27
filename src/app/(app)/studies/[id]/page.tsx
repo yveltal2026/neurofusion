@@ -125,7 +125,7 @@ async function IatOverview({
             </Link>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
             <p className="mt-2 flex items-center gap-2 text-xs text-muted">
-              <span className="uppercase">IAT</span>
+              <span>IAT</span>
               <StatusBadge tone={study.status === "published" ? "success" : study.status === "closed" ? "warning" : "neutral"}>
                 {STATUS_LABEL[study.status]}
               </StatusBadge>

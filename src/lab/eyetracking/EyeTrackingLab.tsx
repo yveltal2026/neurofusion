@@ -679,7 +679,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "setup" || stage === "loading" ? (
         <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted uppercase">{study ? "Estudio de eye tracking" : "Laboratorio · interno"}</p>
+            <p className="font-display text-xs font-semibold text-muted">{study ? "Estudio de eye tracking" : "Laboratorio · interno"}</p>
             <h1 className="text-2xl font-semibold">{study ? study.title : "Prueba de eye tracking con webcam"}</h1>
             <p className="text-sm text-muted">
               {study
@@ -730,7 +730,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </div>
 
             <Field label="Formato de pantalla" hint="Selecciona ultrawide si corresponde. El modo automático usa la proporción de la pantalla completa.">
-              <select className="w-full rounded-md border border-border bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
+              <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
                 <option value="auto">Detectar formato de la pantalla</option>
                 <option value="16:9">Estándar 16:9</option>
                 <option value="16:10">Estándar 16:10</option>
@@ -883,7 +883,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "results" && session ? (
         <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted uppercase">
+            <p className="font-display text-xs font-semibold text-muted">
               {session.participant} · {session.device} · {session.engineId}
             </p>
             <h1 className="text-2xl font-semibold">{study ? "Calibración terminada" : "Resultados de la validación"}</h1>

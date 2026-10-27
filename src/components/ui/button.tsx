@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes } from "react";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "md" | "sm";
 
-// Principal: menta con texto teal (una sola vez por pantalla). Secundario: contorno. Píldora completa.
+// Principal: Neuro (morado en claro, lila en profundo) con texto de contraste, una sola vez por pantalla. Secundario: contorno. Píldora completa.
 const styles: Record<Variant, string> = {
   primary: "border-2 border-transparent bg-primary text-primary-foreground hover:-translate-y-0.5",
   secondary: "border-2 border-heading text-heading hover:bg-heading/10",

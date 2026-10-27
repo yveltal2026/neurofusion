@@ -187,8 +187,8 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
     [session, finishDimension],
   );
 
-  // Modo neutro: el acento es el color de texto de la marca (teal / crema), no la menta. BlockRunner pinta con
-  // `text-primary` los estímulos de concepto y la menta sobre crema no se lee (contraste ~1.4:1).
+  // Modo neutro: el acento es el color de texto de la marca (teal / crema), no el morado de acción (la pantalla del participante es la más calmada). BlockRunner pinta con
+  // `text-primary` los estímulos de concepto; el acento por defecto no debe competir con ellos.
   const theme: CSSProperties =
     config.theme.mode === "custom" && config.theme.accent
       ? ({ "--primary": config.theme.accent, "--primary-foreground": readableOn(config.theme.accent) } as CSSProperties)

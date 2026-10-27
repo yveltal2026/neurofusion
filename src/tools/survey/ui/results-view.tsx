@@ -69,7 +69,7 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-muted">{label}</dt>
+      <dt className="font-display text-xs font-semibold text-muted">{label}</dt>
       <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
       {hint ? <p className="text-xs text-muted">{hint}</p> : null}
     </div>
@@ -376,7 +376,7 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
           {agg.result.points.length ? <GgChart points={agg.result.points} currency={agg.currency} /> : null}
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-muted">
+              <thead className="font-display text-xs font-semibold text-muted">
                 <tr>
                   <th className="px-3 py-2">Precio</th>
                   <th className="px-3 py-2">Compraría</th>

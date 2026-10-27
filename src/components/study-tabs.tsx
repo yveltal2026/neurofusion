@@ -55,8 +55,8 @@ export function StudyTabs({ id, active, variant = "iat" }: { id: string; active:
           key={tab.key}
           href={tab.href(id)}
           aria-current={tab.key === active ? "page" : undefined}
-          className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-[3px] px-4 py-2.5 font-display text-sm font-semibold ${
-            tab.key === active ? "border-primary text-heading" : "border-transparent text-muted hover:text-heading"
+          className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap rounded-t-lg border-b-[3px] px-4 py-2.5 font-display text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+            tab.key === active ? "border-primary bg-neuro/10 text-neuro-ink" : "border-transparent text-muted hover:bg-neuro/5 hover:text-neuro-ink"
           }`}
         >
           <Icon name={tab.icon} className="size-5" />

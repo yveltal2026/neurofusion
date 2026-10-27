@@ -1,10 +1,17 @@
 @import "tailwindcss";
 
 /*
- * Tokens de marca: FRSKO · familia Neuro (Manual de marca v3.7).
+ * Tokens de marca: FRSKO · familia Neuro (Manual de marca v4.1, octubre de 2026).
  * Dos modos de fondo: claro (crema, letras teal) y profundo (teal, letras crema).
- * Proporción por pantalla: 60% fondo, 30% teal, 10% menta. La menta es acento: botones,
- * burbujas y un dato destacado; nunca texto sobre fondo claro (para eso existe --heading).
+ * NeuroFusion es un producto de la división Neuro: el morado de la familia es el color de acción
+ * (botones, enlaces activos, selección, foco, series de datos) y sus tonos suaves tiñen superficies;
+ * el teal sigue siendo el ancla de títulos y fondos profundos, y la menta queda como acento (≤10%).
+ * Reglas del manual que no cambian: las letras del logo nunca se tiñen, el texto va siempre en color
+ * sólido y sobre un degradado de Neuro no se escribe (el texto va sobre teal con resplandor).
+ *
+ * Contrastes verificados (WCAG 2.x), claro: crema sobre morado 6.5:1; morado sobre crema 6.5:1 y sobre
+ * blanco 7.2:1. Profundo: teal oscuro sobre morado claro 4.9:1; morado claro sobre #062E30 4.9:1;
+ * lila sobre teal #0A4A4C 6.3:1 y sobre #062E30 9.1:1.
  *
  * --primary / --primary-foreground los sobrescribe el corredor del IAT cuando un estudio
  * define un color propio (src/tools/iat/runner/Runner.tsx); por eso el botón principal sigue usándolos.
@@ -12,14 +19,25 @@
 :root {
   --background: #f6f4ec; /* crema */
   --foreground: #17363a; /* tinta: texto corrido */
-  --heading: #0a4a4c; /* teal profundo: títulos, enlaces, bordes activos */
+  --heading: #0a4a4c; /* teal profundo: títulos y letras */
   --surface: #ffffff;
   --muted: #54706f; /* gris teal */
   --border: #d9d5c6; /* línea */
-  --primary: #2ee0be; /* menta */
-  --primary-foreground: #0a4a4c;
+  --mint: #2ee0be; /* menta: acento (burbujas, avisos de novedad); nunca texto sobre claro */
+  --espuma: #d9f7ef;
+  --primary: #8511c9; /* acción: morado Neuro */
+  --primary-foreground: #f6f4ec;
   --neuro: #8511c9; /* familia Neuro: burbuja grande */
   --neuro-soft: #b57bea; /* familia Neuro: burbuja pequeña */
+  --neuro-ink: #8511c9; /* morado como texto o borde sobre fondo claro */
+  --neuro-deep: #4a0a73; /* morado hondo: énfasis fuerte, 12:1 sobre crema */
+  --control: #a755d4; /* borde de campos y controles: 3.9:1 sobre crema (WCAG 1.4.11 pide 3:1) */
+  /* Fondo profundo (encabezado, portada, acceso): teal con el resplandor de la familia por la esquina superior derecha. */
+  --deep: #0a4a4c;
+  --deep-2: #052b2e;
+  --on-deep: #f6f4ec;
+  --on-deep-muted: #b4cdc8; /* 6.0:1 sobre #0A4A4C */
+  --neuro-on-deep: #ddc2f7; /* lila: texto de acento sobre teal, 6.3:1 */
   --success: #0b7a5b;
   --warning: #9a6400;
   --danger: #c2412d;
@@ -28,14 +46,14 @@
    * Paleta categórica de gráficas (un matiz fijo por posición: el sitio principal siempre es
    * el 1). Validada con el método dataviz contra la superficie de cada modo: en claro pasa
    * todo (3:1 incluido); en oscuro el contraste queda < 3:1 sobre el teal, así que las
-   * gráficas llevan valores visibles y tabla de datos.
+   * gráficas llevan valores visibles y tabla de datos. La serie 1 es el morado de la familia.
    */
-  --chart-1: #2a78d6;
+  --chart-1: #8511c9;
   --chart-2: #c4501f;
   --chart-3: #12825a;
   --chart-4: #a86f00;
   --chart-5: #c2457a;
-  --chart-6: #6250d6;
+  --chart-6: #2a78d6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -46,19 +64,25 @@
     --surface: #0a4a4c;
     --muted: #9dbdb8;
     --border: #1b6164;
+    --primary: #b57bea;
     --primary-foreground: #062e30;
     --neuro: #b57bea; /* sobre fondo profundo, la familia usa sus tonos claros */
     --neuro-soft: #ddc2f7;
+    --neuro-ink: #ddc2f7;
+    --neuro-deep: #ddc2f7;
+    --control: #9a7fba; /* 4.2:1 sobre #062E30 */
+    --deep: #041f21;
+    --deep-2: #031516;
     --success: #5be0b4;
     --warning: #f8c766;
     --danger: #ff9a85;
     --danger-foreground: #062e30;
-    --chart-1: #3987e5;
+    --chart-1: #b57bea;
     --chart-2: #d95926;
     --chart-3: #199e70;
     --chart-4: #c98500;
     --chart-5: #d55181;
-    --chart-6: #9085e9;
+    --chart-6: #3987e5;
   }
 }
 
@@ -71,8 +95,20 @@
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-mint: var(--mint);
+  --color-espuma: var(--espuma);
   --color-neuro: var(--neuro);
   --color-neuro-soft: var(--neuro-soft);
+  --color-neuro-ink: var(--neuro-ink);
+  --color-neuro-deep: var(--neuro-deep);
+  --color-control: var(--control);
+  --color-neuro-wash: color-mix(in srgb, var(--neuro) 7%, var(--background));
+  --color-neuro-tint: color-mix(in srgb, var(--neuro) 14%, var(--background));
+  --color-deep: var(--deep);
+  --color-deep-2: var(--deep-2);
+  --color-on-deep: var(--on-deep);
+  --color-on-deep-muted: var(--on-deep-muted);
+  --color-neuro-on-deep: var(--neuro-on-deep);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -92,12 +128,30 @@
 }
 
 @layer base {
+  :root {
+    /* Color del anillo de foco: morado sobre claro, lila sobre profundo (3:1 mínimo en ambos). */
+    --focus: var(--neuro-ink);
+  }
+
   body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
     font-size: 16px;
     line-height: 1.6;
+  }
+
+  /* Líquido de la familia Neuro (manual cap. 6): manchas difusas en las esquinas y centro casi sólido.
+     Va fijo detrás de todo para que no se corte con el alto de la página. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--neuro-soft) 16%, transparent) 0, transparent 36%),
+      radial-gradient(circle at 100% 62%, color-mix(in srgb, var(--neuro) 9%, transparent) 0, transparent 34%);
   }
 
   h1,
@@ -117,9 +171,71 @@
   }
 
   :focus-visible {
-    outline: 3px solid var(--heading);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
   }
+
+  ::selection {
+    background: color-mix(in srgb, var(--neuro) 26%, transparent);
+  }
+}
+
+/*
+ * Modo profundo (manual cap. 1) dentro de una pantalla clara: fondo teal, letras crema y la familia
+ * Neuro en sus tonos claros. Reescribe los tokens para que todo lo de adentro (títulos, texto, botones,
+ * foco) se lea sin cambiar clases.
+ */
+@utility modo-profundo {
+  --heading: #f6f4ec;
+  --foreground: #dce9e4;
+  --muted: var(--on-deep-muted);
+  --border: #1b6164;
+  --primary: #b57bea;
+  --primary-foreground: #062e30;
+  --neuro: #b57bea;
+  --neuro-soft: #ddc2f7;
+  --neuro-ink: #ddc2f7;
+  --focus: #ddc2f7;
+  color: var(--on-deep);
+}
+
+/*
+ * Fondo profundo de la familia (manual cap. 6, «resplandor»): teal sólido y el color de Neuro entrando
+ * por la esquina superior derecha. El texto queda sobre teal, lejos del resplandor (9:1 o más).
+ */
+@utility bg-resplandor {
+  --heading: #f6f4ec;
+  --foreground: #dce9e4;
+  --muted: var(--on-deep-muted);
+  --border: #1b6164;
+  --primary: #b57bea;
+  --primary-foreground: #062e30;
+  --neuro: #b57bea;
+  --neuro-soft: #ddc2f7;
+  --neuro-ink: #ddc2f7;
+  --focus: #ddc2f7;
+  color: var(--on-deep);
+  background:
+    linear-gradient(to bottom, transparent 60%, var(--deep)),
+    radial-gradient(circle min(80vw, 640px) at 100% 0%, #b57bea99 0, transparent 100%),
+    radial-gradient(circle min(60vw, 440px) at 80% -12%, #8511c9dd 0, transparent 100%),
+    var(--deep);
+}
+
+/* Banda profunda sólida (sin resplandor): encabezados de trabajo. */
+@utility bg-profundo {
+  --heading: #f6f4ec;
+  --foreground: #dce9e4;
+  --muted: var(--on-deep-muted);
+  --border: #1b6164;
+  --primary: #b57bea;
+  --primary-foreground: #062e30;
+  --neuro: #b57bea;
+  --neuro-soft: #ddc2f7;
+  --neuro-ink: #ddc2f7;
+  --focus: #ddc2f7;
+  color: var(--on-deep);
+  background: var(--deep);
 }
 
 /* Entrada de la portada: sube 26 px y aparece; una sola vez. */
@@ -155,6 +271,9 @@
     margin: 14mm;
   }
   header {
+    display: none;
+  }
+  body::before {
     display: none;
   }
   body {

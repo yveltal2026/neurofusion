@@ -17,7 +17,11 @@ export function Bubbles({ className = "" }: { className?: string }) {
  * Patrón «Resonancia» de la familia Neuro (anillos de burbujas que se abren desde un centro).
  * Solo como protagonista de una portada, con espacio libre alrededor: nunca detrás de texto.
  */
-export function ResonanceMotif({ className = "" }: { className?: string }) {
+export function ResonanceMotif({ className = "", tone = "auto" }: { className?: string; tone?: "auto" | "deep" }) {
+  if (tone === "deep") {
+    // eslint-disable-next-line @next/next/no-img-element -- SVG estático decorativo
+    return <img src="/brand/motivo_profundo.svg" alt="" aria-hidden="true" className={className} />;
+  }
   return (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element -- SVG estático decorativo */}

@@ -30,7 +30,7 @@ const POINTS = Array.from(
 const PLAIN_INPUT =
   "min-w-0 flex-1 border-b-2 border-transparent bg-transparent py-2 text-sm outline-none transition hover:border-border focus:border-heading focus-visible:outline-none";
 const BOXED_CONTROL =
-  "rounded-md border border-border bg-background px-3.5 text-sm outline-none transition focus:border-heading focus:ring-2 focus:ring-primary";
+  "rounded-md border border-control bg-background px-3.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40";
 
 // ------------------------------------------------------------------ vista previa
 

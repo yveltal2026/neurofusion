@@ -27,7 +27,7 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-foreground/5 text-xs uppercase text-muted">
+        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
           <tr>
             <th className="px-3 py-2">Dimensión</th>
             <th className="px-3 py-2">n</th>
@@ -80,7 +80,7 @@ function Breakdown({ title, data, dimNames }: { title: string; data: SegmentBrea
       <h3 className="text-sm font-medium">{title}</h3>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-foreground/5 text-xs uppercase text-muted">
+          <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
             <tr>
               <th className="px-3 py-2">Grupo</th>
               <th className="px-3 py-2">Sesiones</th>

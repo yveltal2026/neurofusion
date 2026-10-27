@@ -169,7 +169,7 @@ export function RatingItemForm({
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <input type="range" min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="h-6 flex-1" aria-label={item.label} />
-            <input name="value" type="number" aria-label={`${item.label}: valor numérico`} min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-20 rounded border border-border bg-background px-2 py-1 text-sm tabular-nums" />
+            <input name="value" type="number" aria-label={`${item.label}: valor numérico`} min={min} max={max} step={0.01} value={value} onChange={(e) => setValue(Number(e.target.value))} className="w-20 rounded border border-control bg-background px-2 py-1 text-sm tabular-nums" />
           </div>
           <p className="text-xs text-muted">Ancla más cercana: {nearest.value} · {nearest.label}</p>
         </div>

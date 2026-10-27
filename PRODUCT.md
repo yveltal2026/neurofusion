@@ -11,7 +11,7 @@ Investigadores de mercado, docentes y estudiantes de neuromarketing que diseñan
 Plataforma de FRSKO Neuro para diseñar, aplicar y analizar estudios de neuromarketing. Éxito: un investigador sin formación técnica crea un estudio válido en minutos, recolecta datos confiables y entiende los resultados sin hojas de cálculo.
 
 ## Brand Personality
-La identidad la define el Manual de marca FRSKO v3.7 (resumen en `docs/BRAND.md`): cercana, directa, con datos. Moderna y vibrante dentro de la paleta crema, teal y menta; la menta es acento.
+La identidad la define el Manual de marca FRSKO v4.1 (resumen en `docs/BRAND.md`): cercana, directa, con datos. Moderna y vibrante dentro de la paleta crema, teal y menta, con el morado de la familia Neuro como color de acción; la menta es acento.
 
 ## Anti-references
 Mezclar familias de iconos o usar emojis como iconos; paletas ajenas a la marca; decoración que no comunica estado; burbujas en pantallas de trabajo.

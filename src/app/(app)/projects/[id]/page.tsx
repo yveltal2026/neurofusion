@@ -87,7 +87,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                       <IconTile name={getStudyTool(s)?.icon ?? "layers"} size="sm" />
                       <span className="truncate font-medium">{s.name}</span>
                     </span>
-                    <span className="text-xs uppercase text-muted">
+                    <span className="font-display text-xs font-semibold text-muted">
                       {getStudyTool(s)?.shortName ?? s.tool_type}
                       {s.tool_type === "iat" ? ` · ${STATUS_LABEL[s.status]}` : ""}
                     </span>
@@ -115,7 +115,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
                 <Link href={`/batteries/${b.id}`} className="block">
                   <Card className="flex items-center justify-between transition hover:border-primary">
                     <span className="font-medium">{b.name}</span>
-                    <span className="text-xs uppercase text-muted">Batería · {STATUS_LABEL[b.status]}</span>
+                    <span className="font-display text-xs font-semibold text-muted">Batería · {STATUS_LABEL[b.status]}</span>
                   </Card>
                 </Link>
               </li>

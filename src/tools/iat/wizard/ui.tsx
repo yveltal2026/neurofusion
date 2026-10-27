@@ -25,7 +25,7 @@ export function StepShell({
   return (
     <section className="space-y-5">
       <header className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">{title}</p>
+        <p className="font-display text-xs font-semibold text-muted">{title}</p>
         <h2 className="text-xl font-semibold tracking-tight">{question}</h2>
       </header>
       {children}
@@ -112,7 +112,7 @@ export function WordsInput({
           onChange(parseWordList(e.target.value));
         }}
         rows={rows}
-        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-heading focus:ring-2 focus:ring-primary"
+        className="w-full rounded-md border border-control bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/40"
         placeholder="Una palabra por línea"
       />
       <p className={`text-xs ${status}`}>

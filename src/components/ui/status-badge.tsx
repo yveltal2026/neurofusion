@@ -11,9 +11,10 @@ const tones = {
   warning: "border-warning/45 bg-warning/12 text-foreground",
   success: "border-success/40 bg-success/10 text-foreground",
   neutral: "border-border bg-foreground/5 text-foreground",
+  neuro: "border-neuro/40 bg-neuro/10 text-foreground",
 } as const;
 
-const dots = { strong: "bg-danger-foreground", danger: "bg-danger", warning: "bg-warning", success: "bg-success", neutral: "bg-muted" } as const;
+const dots = { strong: "bg-danger-foreground", danger: "bg-danger", warning: "bg-warning", success: "bg-success", neutral: "bg-muted", neuro: "bg-neuro" } as const;
 
 export type StatusTone = keyof typeof tones;
 

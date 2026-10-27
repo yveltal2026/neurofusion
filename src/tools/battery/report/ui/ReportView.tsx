@@ -101,7 +101,7 @@ export function ReportView({
       <Card>
         <dl className="grid gap-4 sm:grid-cols-3">
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">
+            <dt className="font-display text-xs font-semibold text-muted">
               Participantes que terminaron
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -109,7 +109,7 @@ export function ReportView({
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">
+            <dt className="font-display text-xs font-semibold text-muted">
               En el análisis
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -117,7 +117,7 @@ export function ReportView({
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">
+            <dt className="font-display text-xs font-semibold text-muted">
               Excluidos
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -149,7 +149,7 @@ export function ReportView({
         <Section title="Medidas implícitas (IAT)" evidence="medido">
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted">
+              <thead className="font-display text-xs font-semibold text-muted">
                 <tr>
                   <Th>Dimensión</Th>
                   <Th>n</Th>
@@ -198,7 +198,7 @@ export function ReportView({
         <Section title="Variantes del IAT" evidence="medido">
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted">
+              <thead className="font-display text-xs font-semibold text-muted">
                 <tr>
                   <Th>Prueba</Th>
                   <Th>n</Th>
@@ -270,7 +270,7 @@ export function ReportView({
               </div>
               <Card className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wide text-muted">
+                  <thead className="font-display text-xs font-semibold text-muted">
                     <tr>
                       <Th>Imagen</Th>
                       {(e.pieces.find((p) => p.criteria)?.criteria ?? []).map(
@@ -336,7 +336,7 @@ export function ReportView({
         {report.correlations.length ? (
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted">
+              <thead className="font-display text-xs font-semibold text-muted">
                 <tr>
                   <Th>Par</Th>
                   <Th>n</Th>
@@ -393,7 +393,7 @@ export function ReportView({
           </p>
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted">
+              <thead className="font-display text-xs font-semibold text-muted">
                 <tr>
                   <Th>Código</Th>
                   {report.iat.map((d) => (
