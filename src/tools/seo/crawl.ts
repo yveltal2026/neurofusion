@@ -11,6 +11,7 @@ import {
   auditRobots,
   auditSitemaps,
   auditSite,
+  auditTechnical,
   consolidate,
   ENGINE_VERSION,
   extractPageData,
@@ -33,9 +34,10 @@ import {
   type PerformanceResult,
 } from "./engine";
 import { assertPublicUrl, BlockedUrlError, type Lookup } from "./net-guard";
-import type { SeoConfig } from "./config";
+import { targetForUrl, type PageTarget, type SeoConfig } from "./config";
 
-export const USER_AGENT = "NeuroFusion-SEO-Audit/1.0 (+auditoría solicitada por el propietario del sitio)";
+export const USER_AGENT =
+  "NeuroFusion-SEO-Audit/1.0 (+auditoría solicitada por el propietario del sitio)";
 const MAX_BODY = 3 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
@@ -64,8 +66,15 @@ interface Downloaded {
   body: string | null;
 }
 
-async function readLimited(res: Response, max: number): Promise<{ buf: Uint8Array; truncated: boolean }> {
-  if (!res.body) return { buf: new Uint8Array(await res.arrayBuffer()).slice(0, max), truncated: false };
+async function readLimited(
+  res: Response,
+  max: number,
+): Promise<{ buf: Uint8Array; truncated: boolean }> {
+  if (!res.body)
+    return {
+      buf: new Uint8Array(await res.arrayBuffer()).slice(0, max),
+      truncated: false,
+    };
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -93,7 +102,8 @@ async function readLimited(res: Response, max: number): Promise<{ buf: Uint8Arra
 }
 
 function decode(buf: Uint8Array, contentType: string | null): string {
-  const charset = /charset=([\w-]+)/i.exec(contentType ?? "")?.[1]?.toLowerCase() ?? "utf-8";
+  const charset =
+    /charset=([\w-]+)/i.exec(contentType ?? "")?.[1]?.toLowerCase() ?? "utf-8";
   try {
     return new TextDecoder(charset).decode(buf);
   } catch {
@@ -102,27 +112,66 @@ function decode(buf: Uint8Array, contentType: string | null): string {
 }
 
 /** GET siguiendo redirecciones a mano (cada salto pasa por la protección SSRF). */
-export async function download(url: string, deps: CrawlDeps, timeoutMs: number, wantBody = true): Promise<Downloaded> {
+export async function download(
+  url: string,
+  deps: CrawlDeps,
+  timeoutMs: number,
+  wantBody = true,
+): Promise<Downloaded> {
   const redirects: string[] = [];
   const started = deps.now();
   let current = url;
-  const base: FetchRecord = { url, finalUrl: url, status: null, redirects, timeMs: null, contentType: null, xRobotsTag: null, error: null };
+  const base: FetchRecord = {
+    url,
+    finalUrl: url,
+    status: null,
+    redirects,
+    timeMs: null,
+    contentType: null,
+    xRobotsTag: null,
+    error: null,
+  };
   try {
     for (let hop = 0; ; hop++) {
       await assertPublicUrl(current, deps.lookup);
       const res = await deps.fetch(current, {
         method: "GET",
         redirect: "manual",
-        headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" },
+        headers: {
+          "user-agent": USER_AGENT,
+          accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
         signal: AbortSignal.timeout(timeoutMs),
       });
       const location = res.headers.get("location");
       if (res.status >= 300 && res.status < 400 && location) {
-        if (hop >= MAX_REDIRECTS) return { rec: { ...base, finalUrl: current, status: res.status, error: "demasiadas redirecciones" }, body: null };
+        if (hop >= MAX_REDIRECTS)
+          return {
+            rec: {
+              ...base,
+              finalUrl: current,
+              status: res.status,
+              error: "demasiadas redirecciones",
+            },
+            body: null,
+          };
         const next = normalizeUrl(location, current);
-        if (!next) return { rec: { ...base, status: res.status, error: "redirección inválida" }, body: null };
+        if (!next)
+          return {
+            rec: { ...base, status: res.status, error: "redirección inválida" },
+            body: null,
+          };
         if (next === url || redirects.includes(next))
-          return { rec: { ...base, finalUrl: next, status: res.status, error: `bucle de redirecciones (${current} → ${next})` }, body: null };
+          return {
+            rec: {
+              ...base,
+              finalUrl: next,
+              status: res.status,
+              error: `bucle de redirecciones (${current} → ${next})`,
+            },
+            body: null,
+          };
         redirects.push(next);
         await res.body?.cancel();
         current = next;
@@ -143,16 +192,26 @@ export async function download(url: string, deps: CrawlDeps, timeoutMs: number, 
       }
       const { buf } = await readLimited(res, MAX_BODY);
       const isGzip = /gzip/i.test(contentType ?? "") || current.endsWith(".gz");
-      if (isGzip && buf[0] === 0x1f && buf[1] === 0x8b) return { rec, body: gunzipSync(buf).toString("utf-8") };
+      if (isGzip && buf[0] === 0x1f && buf[1] === 0x8b)
+        return { rec, body: gunzipSync(buf).toString("utf-8") };
       return { rec, body: decode(buf, contentType) };
     }
   } catch (e) {
-    const msg = e instanceof BlockedUrlError ? e.message : e instanceof Error && e.name === "TimeoutError" ? "tiempo de espera agotado" : "error de red";
+    const msg =
+      e instanceof BlockedUrlError
+        ? e.message
+        : e instanceof Error && e.name === "TimeoutError"
+          ? "tiempo de espera agotado"
+          : "error de red";
     return { rec: { ...base, finalUrl: current, error: msg }, body: null };
   }
 }
 
-async function runPool<T>(items: T[], limit: number, fn: (x: T) => Promise<void>) {
+async function runPool<T>(
+  items: T[],
+  limit: number,
+  fn: (x: T) => Promise<void>,
+) {
   let i = 0;
   await Promise.all(
     Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -165,7 +224,8 @@ async function runPool<T>(items: T[], limit: number, fn: (x: T) => Promise<void>
 async function googleErrorMessage(res: Response): Promise<string | null> {
   try {
     const body = (await res.json()) as { error?: { message?: unknown } };
-    const msg = typeof body.error?.message === "string" ? body.error.message : null;
+    const msg =
+      typeof body.error?.message === "string" ? body.error.message : null;
     return msg ? msg.replace(/key=[^&\s]+/gi, "key=…").slice(0, 200) : null;
   } catch {
     return null;
@@ -176,34 +236,60 @@ async function googleErrorMessage(res: Response): Promise<string | null> {
  * Nota legible sobre por qué no hubo datos de rendimiento. Distingue si el servidor tenía
  * clave: sin clave, un 429 es la cuota compartida de Google; con clave, el problema es la clave.
  */
-export function psiErrorNote(status: number, hasKey: boolean, googleMessage: string | null): string {
+export function psiErrorNote(
+  status: number,
+  hasKey: boolean,
+  googleMessage: string | null,
+): string {
   const detail = googleMessage ? ` Google: «${googleMessage}»` : "";
   if (!hasKey) {
     return status === 429
       ? "PageSpeed Insights respondió 429: se agotó la cuota compartida sin clave. Configura PAGESPEED_API_KEY en Vercel y vuelve a desplegar."
       : `PageSpeed Insights respondió ${status} (consulta sin clave).${detail}`;
   }
-  if (status === 429) return `PageSpeed Insights respondió 429 con la clave configurada: se agotó su cuota.${detail}`;
+  if (status === 429)
+    return `PageSpeed Insights respondió 429 con la clave configurada: se agotó su cuota.${detail}`;
   if (status === 400 || status === 403)
     return `PageSpeed Insights rechazó la clave configurada (${status}). Revisa que la PageSpeed Insights API esté habilitada en ese proyecto de Google Cloud y que la clave la permita.${detail}`;
   return `PageSpeed Insights respondió ${status} con la clave configurada.${detail}`;
 }
 
-async function fetchPerformance(url: string, strategy: "mobile" | "desktop", deps: CrawlDeps): Promise<PerformanceResult | string> {
-  const q = new URLSearchParams({ url, strategy, category: "performance", locale: "es" });
+async function fetchPerformance(
+  url: string,
+  strategy: "mobile" | "desktop",
+  deps: CrawlDeps,
+): Promise<PerformanceResult | string> {
+  const q = new URLSearchParams({
+    url,
+    strategy,
+    category: "performance",
+    locale: "es",
+  });
   // La categoría SEO de Lighthouse se muestra junto a la nuestra para explicar la diferencia.
   q.append("category", "seo");
   if (deps.psiKey) q.set("key", deps.psiKey);
   try {
-    const res = await deps.fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`, { signal: AbortSignal.timeout(75_000) });
-    if (!res.ok) return psiErrorNote(res.status, Boolean(deps.psiKey), await googleErrorMessage(res));
+    const res = await deps.fetch(
+      `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${q}`,
+      { signal: AbortSignal.timeout(75_000) },
+    );
+    if (!res.ok)
+      return psiErrorNote(
+        res.status,
+        Boolean(deps.psiKey),
+        await googleErrorMessage(res),
+      );
     return parsePsi(await res.json(), strategy);
   } catch {
     return "No se pudo consultar PageSpeed Insights (tiempo agotado o error de red).";
   }
 }
 
-function pageSummary(rec: FetchRecord, page: PageData | null, source: "live" | "upload"): PageSummary {
+function pageSummary(
+  rec: FetchRecord,
+  page: PageData | null,
+  source: "live" | "upload",
+): PageSummary {
   return {
     url: rec.url,
     finalUrl: rec.finalUrl,
@@ -227,13 +313,28 @@ function finish(
   notes: string[],
   started: number,
   now: number,
+  context?: Pick<SeoConfig, "targetKeyword" | "pageTargets">,
+  coverage?: AuditSummary["coverage"],
+  strategy: SeoConfig["strategy"] | null = null,
 ): AuditOutcome {
   const findings = sortFindings(consolidate(raw));
   return {
     mode,
     siteUrl,
     engineVersion: ENGINE_VERSION,
-    summary: summarize(findings, pages.length),
+    summary: {
+      ...summarize(findings, pages.filter((p) => p.wordCount !== null).length),
+      ...(context
+        ? {
+            scope: {
+              targetKeyword: context.targetKeyword,
+              pageTargets: context.pageTargets,
+              strategy,
+            },
+          }
+        : {}),
+      ...(coverage ? { coverage } : {}),
+    },
     pages,
     findings,
     performance,
@@ -243,7 +344,11 @@ function finish(
 }
 
 /** Auditoría en vivo: robots → sitemaps → rastreo acotado → enlaces → rendimiento. */
-export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs = 85_000): Promise<AuditOutcome> {
+export async function runLiveAudit(
+  config: SeoConfig,
+  deps: CrawlDeps,
+  budgetMs = 85_000,
+): Promise<AuditOutcome> {
   const started = deps.now();
   const deadline = started + budgetMs;
   const left = () => deadline - deps.now();
@@ -254,7 +359,9 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
 
   await assertPublicUrl(siteUrl, deps.lookup);
 
-  const perfPromise = config.checkPerformance ? fetchPerformance(siteUrl, config.strategy, deps) : Promise.resolve(null);
+  const perfPromise = config.checkPerformance
+    ? fetchPerformance(siteUrl, config.strategy, deps)
+    : Promise.resolve(null);
 
   // robots.txt
   const robotsDl = await download(`${origin}/robots.txt`, deps, 15_000);
@@ -265,14 +372,40 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
 
   // http → https
   if (siteUrl.startsWith("https://")) {
-    const httpDl = await download(siteUrl.replace(/^https:/, "http:"), deps, 15_000, false);
-    if (httpDl.rec.error) notes.push(`No se pudo verificar la redirección http→https (${httpDl.rec.error}).`);
-    else if (httpDl.rec.finalUrl.startsWith("https://")) raw.push(finding("https.redirect", "ok", "La versión http:// redirige a https://.", null));
-    else raw.push(finding("https.redirect", "high", `La versión http:// responde ${httpDl.rec.status} sin redirigir a https://.`, null));
+    const httpDl = await download(
+      siteUrl.replace(/^https:/, "http:"),
+      deps,
+      15_000,
+      false,
+    );
+    if (httpDl.rec.error)
+      notes.push(
+        `No se pudo verificar la redirección http→https (${httpDl.rec.error}).`,
+      );
+    else if (httpDl.rec.finalUrl.startsWith("https://"))
+      raw.push(
+        finding(
+          "https.redirect",
+          "ok",
+          "La versión http:// redirige a https://.",
+          null,
+        ),
+      );
+    else
+      raw.push(
+        finding(
+          "https.redirect",
+          "high",
+          `La versión http:// responde ${httpDl.rec.status} sin redirigir a https://.`,
+          null,
+        ),
+      );
   }
 
   // sitemaps (máx. 3; si es índice, se siguen hasta 3 hijos)
-  const declared = robots?.sitemaps.length ? robots.sitemaps : [`${origin}/sitemap.xml`];
+  const declared = robots?.sitemaps.length
+    ? robots.sitemaps
+    : [`${origin}/sitemap.xml`];
   const sitemaps: FetchedSitemap[] = [];
   for (const sm of declared.slice(0, 3)) {
     const dl = await download(sm, deps, 20_000);
@@ -284,36 +417,72 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
         for (const child of parsed.entries.slice(0, 3)) {
           const c = await download(child.loc, deps, 20_000);
           const cok = c.body !== null && c.rec.status === 200;
-          sitemaps.push({ url: child.loc, xml: cok ? c.body : null, status: c.rec.status });
+          sitemaps.push({
+            url: child.loc,
+            xml: cok ? c.body : null,
+            status: c.rec.status,
+          });
         }
       }
     }
   }
-  if (!robots?.sitemaps.length) notes.push("robots.txt no declara sitemaps; se probó /sitemap.xml.");
+  if (!robots?.sitemaps.length)
+    notes.push("robots.txt no declara sitemaps; se probó /sitemap.xml.");
   const sm = auditSitemaps(sitemaps, new Date(deps.now()));
   raw.push(...sm.findings);
 
   // Rastreo acotado por número de páginas y por tiempo.
-  const seeds = [siteUrl, ...config.extraUrls.map((u) => normalizeUrl(u)).filter((u): u is string => !!u)];
+  const seeds = [
+    siteUrl,
+    ...config.pageTargets
+      .map((t) => normalizeUrl(t.url))
+      .filter((u): u is string => !!u),
+    ...config.extraUrls
+      .map((u) => normalizeUrl(u))
+      .filter((u): u is string => !!u),
+  ];
   const queue: string[] = [];
   const seen = new Set<string>();
+  const blockedUrls = new Set<string>();
   const enqueue = (u: string) => {
     if (seen.has(u) || !isSameSite(u, siteUrl)) return;
     const { pathname, search } = new URL(u);
-    if (robots && !isAllowed(robots, pathname + search, USER_AGENT)) return;
+    if (
+      robots &&
+      new URL(u).origin === origin &&
+      !isAllowed(robots, pathname + search, USER_AGENT)
+    ) {
+      blockedUrls.add(u);
+      return;
+    }
     seen.add(u);
     queue.push(u);
   };
   seeds.forEach(enqueue);
   // Si el rastreo no alcanza, completa con URLs del sitemap.
-  const fromSitemap = sm.urls.map((u) => normalizeUrl(u)).filter((u): u is string => !!u);
+  const sitemapUrls = sm.urls
+    .map((u) => normalizeUrl(u))
+    .filter((u): u is string => !!u);
+  const fromSitemap = sm.urls
+    .map((u) => normalizeUrl(u))
+    .filter((u): u is string => !!u);
+
+  const fillFromSitemap = () => {
+    while (!queue.length && fromSitemap.length)
+      fromSitemap.splice(0, 10).forEach(enqueue);
+  };
+  fillFromSitemap();
 
   const pages: PageData[] = [];
   const fetches: FetchRecord[] = [];
   const summaries: PageSummary[] = [];
   let skippedForTime = false;
   // Tope de descargas: evita que un sitio con muchos enlaces rotos consuma todo el tiempo.
-  while (queue.length && pages.length < config.maxPages && fetches.length < config.maxPages * 2) {
+  while (
+    queue.length &&
+    pages.length < config.maxPages &&
+    fetches.length < config.maxPages * 2
+  ) {
     if (left() < 20_000) {
       skippedForTime = true;
       break;
@@ -322,31 +491,47 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
     await runPool(batch, 4, async (u) => {
       const dl = await download(u, deps, 15_000);
       fetches.push(dl.rec);
-      raw.push(...auditFetch(dl.rec));
+      const target = targetForUrl(config, u);
+      const options = {
+        targetKeyword: target.keyword,
+        indexable: target.indexable,
+        xRobotsTag: dl.rec.xRobotsTag,
+      };
+      raw.push(...auditFetch(dl.rec, options));
       const isHtml = /html/i.test(dl.rec.contentType ?? "");
       if (dl.body !== null && isHtml) {
         const page = extractPageData(dl.rec.finalUrl, dl.body);
         // El hallazgo se reporta con la URL pedida para que cuadre con auditFetch.
         page.url = dl.rec.url;
+        page.expectedIndexable = target.indexable;
         pages.push(page);
-        raw.push(...auditPage(page, { targetKeyword: config.targetKeyword }));
-        summaries.push(pageSummary(dl.rec, page, "live"));
+        raw.push(...auditPage(page, options));
+        summaries.push({ ...pageSummary(dl.rec, page, "live"), target });
         for (const l of page.links.internal) enqueue(l);
       } else {
-        summaries.push(pageSummary(dl.rec, null, "live"));
+        summaries.push({ ...pageSummary(dl.rec, null, "live"), target });
       }
     });
-    if (!queue.length) for (const u of fromSitemap.splice(0, 10)) enqueue(u);
+    fillFromSitemap();
   }
-  if (skippedForTime) notes.push("El rastreo se detuvo antes del límite de páginas para no exceder el tiempo máximo.");
+  if (skippedForTime)
+    notes.push(
+      "El rastreo se detuvo antes del límite de páginas para no exceder el tiempo máximo.",
+    );
 
   // Verifica destinos internos enlazados que no se rastrearon (máx. 30, sin cuerpo).
   const crawled = new Set(fetches.map((f) => f.url));
   const allowed = (u: string) => {
     const { pathname, search } = new URL(u);
-    return !robots || isAllowed(robots, pathname + search, USER_AGENT);
+    return (
+      !robots ||
+      new URL(u).origin !== origin ||
+      isAllowed(robots, pathname + search, USER_AGENT)
+    );
   };
-  const targets = [...new Set(pages.flatMap((p) => p.links.internal))].filter((u) => !crawled.has(u) && allowed(u)).slice(0, 30);
+  const targets = [...new Set(pages.flatMap((p) => p.links.internal))]
+    .filter((u) => !crawled.has(u) && allowed(u))
+    .slice(0, 30);
   if (targets.length && left() > 15_000) {
     await runPool(targets, 6, async (u) => {
       if (left() < 10_000) return;
@@ -354,6 +539,7 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
     });
   }
   raw.push(...auditSite(pages, fetches));
+  raw.push(...auditTechnical(pages, fetches, sitemapUrls, robots, origin));
 
   let performance: PerformanceResult | null = null;
   const perf = await perfPromise;
@@ -362,15 +548,53 @@ export async function runLiveAudit(config: SeoConfig, deps: CrawlDeps, budgetMs 
     performance = perf;
     raw.push(...auditPerformance(perf));
   }
-  const shells = pages.filter((p) => p.wordCount < 50 && p.links.internal.length === 0).length;
+  const shells = pages.filter(
+    (p) => p.wordCount < 50 && p.links.internal.length === 0,
+  ).length;
   if (shells)
     notes.push(
       `${shells} página(s) entregan casi nada en el HTML (menos de 50 palabras y ningún enlace interno): el sitio parece construirse con JavaScript en el navegador. Google lo renderiza, pero después y no siempre completo; otros buscadores y los asistentes de IA suelen leer sólo el HTML. Por eso aquí pueden faltar H1, texto o enlaces que sí ves en el navegador.`,
     );
-  if (pages.length === 0) notes.push("No se pudo descargar ningún HTML. Si el sitio bloquea rastreadores, usa el modo asistido (subir HTML).");
-  notes.push("Se analiza el HTML tal como lo entrega el servidor, sin ejecutar JavaScript.");
+  if (pages.length === 0)
+    notes.push(
+      "No se pudo descargar ningún HTML. Si el sitio bloquea rastreadores, usa el modo asistido (subir HTML).",
+    );
+  notes.push(
+    "Se analiza el HTML tal como lo entrega el servidor, sin ejecutar JavaScript.",
+  );
 
-  return finish("live", siteUrl, raw, summaries, performance, notes, started, deps.now());
+  return finish(
+    "live",
+    siteUrl,
+    raw,
+    summaries,
+    performance,
+    notes,
+    started,
+    deps.now(),
+    config,
+    {
+      requestedPages: config.maxPages,
+      htmlPages: pages.length,
+      httpChecks: fetches.length,
+      sitemapUrls: new Set(sitemapUrls).size,
+      sitemapChecked: new Set(
+        raw.filter((f) => f.rule === "sitemap.indexability").map((f) => f.url),
+      ).size,
+      blockedUrls: blockedUrls.size,
+      stopReason: skippedForTime
+        ? "time_limit"
+        : pages.length >= config.maxPages &&
+            (queue.length > 0 || fromSitemap.length > 0)
+          ? "page_limit"
+          : fetches.length >= config.maxPages * 2 && queue.length > 0
+            ? "fetch_limit"
+            : "complete",
+      performanceRequested: config.checkPerformance,
+      performanceMeasured: performance !== null,
+    },
+    config.checkPerformance ? config.strategy : null,
+  );
 }
 
 export interface UploadedPage {
@@ -379,7 +603,13 @@ export interface UploadedPage {
 }
 
 /** Modo asistido: el analista sube el HTML guardado desde su navegador. Sin red. */
-export function runUploadAudit(config: Pick<SeoConfig, "siteUrl" | "targetKeyword">, files: UploadedPage[], now: () => number): AuditOutcome {
+export function runUploadAudit(
+  config: Pick<SeoConfig, "siteUrl" | "targetKeyword"> & {
+    pageTargets?: PageTarget[];
+  },
+  files: UploadedPage[],
+  now: () => number,
+): AuditOutcome {
   const started = now();
   const raw: Finding[] = [];
   const pages: PageData[] = [];
@@ -388,14 +618,60 @@ export function runUploadAudit(config: Pick<SeoConfig, "siteUrl" | "targetKeywor
     const url = normalizeUrl(f.url) ?? f.url;
     const page = extractPageData(url, f.html);
     pages.push(page);
-    raw.push(...auditPage(page, { targetKeyword: config.targetKeyword }));
-    summaries.push(
-      pageSummary({ url, finalUrl: url, status: null, redirects: [], timeMs: null, contentType: "text/html", xRobotsTag: null, error: null }, page, "upload"),
+    const target = targetForUrl(config, url);
+    page.expectedIndexable = target.indexable;
+    raw.push(
+      ...auditPage(page, {
+        targetKeyword: target.keyword,
+        indexable: target.indexable,
+      }),
     );
+    summaries.push({
+      ...pageSummary(
+        {
+          url,
+          finalUrl: url,
+          status: null,
+          redirects: [],
+          timeMs: null,
+          contentType: "text/html",
+          xRobotsTag: null,
+          error: null,
+        },
+        page,
+        "upload",
+      ),
+      target,
+    });
   }
   raw.push(...auditSite(pages, []));
+  raw.push(...auditTechnical(pages, []));
   const notes = [
     "Modo asistido: se auditó el HTML subido por el analista. No se revisaron robots.txt, sitemaps, códigos HTTP, enlaces rotos ni rendimiento.",
   ];
-  return finish("upload", normalizeUrl(config.siteUrl) ?? config.siteUrl, raw, summaries, null, notes, started, now());
+  return finish(
+    "upload",
+    normalizeUrl(config.siteUrl) ?? config.siteUrl,
+    raw,
+    summaries,
+    null,
+    notes,
+    started,
+    now(),
+    {
+      targetKeyword: config.targetKeyword,
+      pageTargets: config.pageTargets ?? [],
+    },
+    {
+      requestedPages: files.length,
+      htmlPages: pages.length,
+      httpChecks: 0,
+      sitemapUrls: 0,
+      sitemapChecked: 0,
+      blockedUrls: 0,
+      stopReason: "upload",
+      performanceRequested: false,
+      performanceMeasured: false,
+    },
+  );
 }

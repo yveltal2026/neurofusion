@@ -18,6 +18,8 @@ Origen: el módulo **FRSKO NeuroSEO v1.0** (pipeline CLI en Python, desarrollado
 
 ## Auditoría SEO
 
+La ampliación actual usa `nf-seo-1.1` / `seo-score-1.1`: añade objetivos y diagnóstico por URL, cruces técnicos, cobertura y comparación histórica conservadora. Las observaciones contextuales no restan puntos. Ver [detalle y límites](SEO-DIAGNOSTICO.md); las auditorías anteriores conservan su versión y puntuación originales.
+
 **Flujo:** el analista define el sitio una vez (URL, URLs adicionales, páginas a rastrear, palabra clave, dispositivo) y lo audita cuantas veces quiera. Cada auditoría queda guardada (gráfica de evolución de la puntuación).
 
 **Modo en vivo** (`src/tools/seo/crawl.ts`): robots.txt → http→https → sitemaps (índices y `.xml.gz`, máx. 3+3) → rastreo acotado (≤ 25 páginas, respeta robots.txt, ~85 s de presupuesto) → verificación de hasta 30 destinos internos enlazados → PageSpeed Insights (en paralelo).

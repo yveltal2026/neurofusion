@@ -2,53 +2,98 @@ import { finding } from "./rules";
 import type { FetchRecord, Finding, PageData } from "./types";
 import { normalizeUrl } from "./url";
 
-const list = (xs: string[], max = 5) => xs.slice(0, max).join(", ") + (xs.length > max ? ` y ${xs.length - max} más` : "");
+const list = (xs: string[], max = 5) =>
+  xs.slice(0, max).join(", ") +
+  (xs.length > max ? ` y ${xs.length - max} más` : "");
 
-/** Reglas que comparan páginas entre sí (duplicados, enlaces rotos o redirigidos). */
-export function auditSite(pages: PageData[], fetches: FetchRecord[]): Finding[] {
+/** Hallazgos por URL; la ausencia de duplicados se limita a la muestra revisada. */
+export function auditSite(
+  pages: PageData[],
+  fetches: FetchRecord[],
+): Finding[] {
   const out: Finding[] = [];
-
-  const dup = (pick: (p: PageData) => string | null) => {
-    const by = new Map<string, string[]>();
-    for (const p of pages) {
-      const v = pick(p);
-      if (!v) continue;
-      by.set(v, [...(by.get(v) ?? []), p.url]);
+  const htmlPages = pages.filter((p) => {
+    const rec = fetches.find((f) => f.url === p.url);
+    return !rec || (rec.status === 200 && !rec.error);
+  });
+  if (htmlPages.length > 1) {
+    for (const page of htmlPages) {
+      for (const [rule, value, pick] of [
+        ["site.duplicate_titles", page.title, (p: PageData) => p.title],
+        [
+          "site.duplicate_descriptions",
+          page.metaDescription,
+          (p: PageData) => p.metaDescription,
+        ],
+      ] as const) {
+        if (!value) continue;
+        const others = htmlPages
+          .filter((p) => p.url !== page.url && pick(p) === value)
+          .map((p) => p.url);
+        out.push(
+          finding(
+            rule,
+            others.length ? "medium" : "ok",
+            others.length
+              ? `«${value}» también aparece en: ${list(others)}.`
+              : "Sin duplicados de este texto en las otras páginas de la muestra.",
+            page.url,
+          ),
+        );
+      }
     }
-    return [...by.entries()].filter(([, urls]) => urls.length > 1);
-  };
-
-  if (pages.length > 1) {
-    const t = dup((p) => p.title);
-    if (t.length) out.push(finding("site.duplicate_titles", "medium", t.map(([v, u]) => `«${v}» en ${u.length} páginas (${list(u, 3)})`).join(" · "), null));
-    else out.push(finding("site.duplicate_titles", "ok", "Sin títulos duplicados entre las páginas revisadas.", null));
-    const d = dup((p) => p.metaDescription);
-    if (d.length) out.push(finding("site.duplicate_descriptions", "medium", `${d.length} descripción(es) repetida(s) en varias páginas.`, null));
-    else out.push(finding("site.duplicate_descriptions", "ok", "Sin descripciones duplicadas entre las páginas revisadas.", null));
   }
-
-  // Enlaces internos hacia URLs cuyo estado conocemos.
-  const status = new Map<string, FetchRecord>();
-  for (const f of fetches) {
-    const k = normalizeUrl(f.url);
-    if (k) status.set(k, f);
-  }
-  const broken = new Set<string>();
-  const redirected = new Set<string>();
-  let checked = 0;
-  for (const p of pages) {
-    for (const l of p.links.internal) {
-      const rec = status.get(l);
+  const responses = new Map(fetches.map((f) => [normalizeUrl(f.url), f]));
+  for (const page of pages) {
+    const broken: string[] = [];
+    const redirected: string[] = [];
+    let checked = 0;
+    let unverified = 0;
+    for (const url of page.links.internal) {
+      const rec = responses.get(url);
       if (!rec) continue;
+      if (rec.error || rec.status === null) {
+        unverified++;
+        continue;
+      }
       checked++;
-      if (rec.error || rec.status === null || rec.status >= 400) broken.add(`${l} (${rec.status ?? "error"})`);
-      else if (rec.redirects.length > 0) redirected.add(l);
+      if (rec.status >= 400) broken.push(`${url} (${rec.status})`);
+      else if (rec.redirects.length) redirected.push(url);
     }
-  }
-  if (checked > 0) {
-    if (broken.size) out.push(finding("site.broken_links", "high", `${broken.size} destino(s) roto(s): ${list([...broken])}.`, null));
-    else out.push(finding("site.broken_links", "ok", "No se encontraron enlaces internos rotos entre los destinos verificados.", null));
-    if (redirected.size) out.push(finding("site.redirected_links", "medium", `${redirected.size} enlace(s) interno(s) pasan por una redirección: ${list([...redirected])}.`, null));
+    if (checked > 0 || page.links.internal.length === 0) {
+      out.push(
+        finding(
+          "site.broken_links",
+          broken.length ? "high" : "ok",
+          broken.length
+            ? `Destinos internos con error: ${list(broken)}.`
+            : `Sin enlaces internos rotos entre los ${checked} destinos con estado verificado.`,
+          page.url,
+          !broken.length && checked < page.links.internal.length,
+        ),
+      );
+      out.push(
+        finding(
+          "site.redirected_links",
+          redirected.length ? "medium" : "ok",
+          redirected.length
+            ? `Enlaces que redirigen: ${list(redirected)}.`
+            : `Sin redirecciones entre los ${checked} destinos con estado verificado.`,
+          page.url,
+          !redirected.length && checked < page.links.internal.length,
+        ),
+      );
+    }
+    if (unverified)
+      out.push(
+        finding(
+          "site.broken_links",
+          "medium",
+          `${unverified} destino(s) no pudieron comprobarse por error de red. No se confirma que estén rotos.`,
+          page.url,
+          true,
+        ),
+      );
   }
   return out;
 }
