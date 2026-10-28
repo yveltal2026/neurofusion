@@ -78,7 +78,7 @@ export function unitOf(variant: VariantConfig["variant"]): Unit {
   return variant === "sc_iat" ? "d" : variant === "gnat" ? "d_prime" : "ms";
 }
 
-const f = (n: number | null, d = 0) => (n === null ? "—" : n.toFixed(d));
+const f = (n: number | null, d = 0) => (n === null ? "sin dato" : n.toFixed(d));
 
 export function computeVariantAggregates(config: VariantConfig, records: readonly VariantRecord[]): VariantAggregates {
   const unit = unitOf(config.variant);

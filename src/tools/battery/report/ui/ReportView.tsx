@@ -11,11 +11,11 @@ const nf = (d: number) =>
     maximumFractionDigits: d,
     minimumFractionDigits: d,
   });
-const num = (n: number | null, d = 2) => (n === null ? "—" : nf(d).format(n));
+const num = (n: number | null, d = 2) => (n === null ? "sin dato" : nf(d).format(n));
 const range = (r: [number, number] | null, d = 2) =>
-  r ? `${num(r[0], d)} a ${num(r[1], d)}` : "—";
+  r ? `${num(r[0], d)} a ${num(r[1], d)}` : "sin dato";
 const pValue = (p: number | null) =>
-  p === null ? "—" : p < 0.001 ? "< 0,001" : nf(3).format(p);
+  p === null ? "sin dato" : p < 0.001 ? "< 0,001" : nf(3).format(p);
 
 /** Etiqueta de evidencia: qué tan directamente sale del participante. */
 function EvidenceBadge({ kind }: { kind: "medido" | "estimado" }) {
@@ -185,7 +185,7 @@ export function ReportView({
                       {range(d.ci95)}
                     </td>
                     <td className="py-1.5 pr-4 tabular-nums">{pValue(d.p)}</td>
-                    <td className="py-1.5 pr-4">{d.reading ?? "—"}</td>
+                    <td className="py-1.5 pr-4">{d.reading ?? "sin dato"}</td>
                   </tr>
                 ))}
               </tbody>

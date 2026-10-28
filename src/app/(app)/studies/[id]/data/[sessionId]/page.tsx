@@ -36,15 +36,15 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
 
   const demo = view.demographics ?? {};
   const explicitLabel =
-    view.explicit_preference === "A" ? config.conceptA.label : view.explicit_preference === "B" ? config.conceptB.label : view.explicit_preference === "neutral" ? "Ninguna / me da igual" : "—";
+    view.explicit_preference === "A" ? config.conceptA.label : view.explicit_preference === "B" ? config.conceptB.label : view.explicit_preference === "neutral" ? "Ninguna / me da igual" : "sin dato";
   const fields: [string, string][] = [
     ["Estado", STATUS_LABEL[view.status]],
     ["Inicio", new Date(view.started_at).toLocaleString("es-MX")],
-    ["Fin", view.completed_at ? new Date(view.completed_at).toLocaleString("es-MX") : "—"],
+    ["Fin", view.completed_at ? new Date(view.completed_at).toLocaleString("es-MX") : "sin dato"],
     ["Dispositivo", `${DEVICE_LABEL[view.device_type]} · ${view.input_mode === "touch" ? "táctil" : "teclado"} · ${view.screen_width ?? "?"}×${view.screen_height ?? "?"}`],
     ["Preferencia explícita", explicitLabel],
-    ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "—")]] as [string, string][]) : []),
-    ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "—")]] as [string, string][]) : []),
+    ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "sin dato")]] as [string, string][]) : []),
+    ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "sin dato")]] as [string, string][]) : []),
     ...config.participant.extraFields.map((f): [string, string] => [f.label, formatExtraAnswer(f, demo[f.id])]),
   ];
 
@@ -97,15 +97,15 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
                 return (
                   <tr key={d.id}>
                     <td className="py-2 pr-4">{d.name}</td>
-                    <td className="py-2 pr-4 tabular-nums">{r?.d_score != null ? r.d_score.toFixed(3) : "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r?.d_score != null ? r.d_score.toFixed(3) : "sin dato"}</td>
                     <td className="py-2 pr-4">{interpretationText(config, i, r)}</td>
                     <td className="py-2 pr-4">
-                      {r ? validityText(r.valid) : "—"}
+                      {r ? validityText(r.valid) : "sin dato"}
                       {r && r.flags.length ? <div className="text-xs text-muted">{r.flags.map((f) => FLAG_LABEL[f] ?? f).join("; ")}</div> : null}
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.error_rate * 100).toFixed(1)} %` : "—"}</td>
-                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.fast_fraction * 100).toFixed(1)} %` : "—"}</td>
-                    <td className="py-2 tabular-nums">{r ? `${r.n_used} / ${r.n_trials}` : "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.error_rate * 100).toFixed(1)} %` : "sin dato"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.fast_fraction * 100).toFixed(1)} %` : "sin dato"}</td>
+                    <td className="py-2 tabular-nums">{r ? `${r.n_used} / ${r.n_trials}` : "sin dato"}</td>
                   </tr>
                 );
               })}

@@ -56,15 +56,15 @@ export function CategoryChart({ summary }: { summary: AuditSummary }) {
   return <CategoryScoreChart rows={summary.byCategory.map((c) => ({ label: CATEGORY_LABEL[c.category], score: c.score }))} />;
 }
 
-const sec = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`);
+const sec = (ms: number | null) => (ms === null ? "sin dato" : `${(ms / 1000).toFixed(1)} s`);
 
 export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
   const rows: [string, string, string][] = [
-    ["LCP", perf.field?.lcpMs != null ? sec(perf.field.lcpMs) : "—", sec(perf.lab.lcpMs)],
-    ["CLS", perf.field?.cls != null ? perf.field.cls.toFixed(2) : "—", perf.lab.cls != null ? perf.lab.cls.toFixed(2) : "—"],
-    ["INP", perf.field?.inpMs != null ? `${Math.round(perf.field.inpMs)} ms` : "—", "— (sólo campo)"],
-    ["TBT", "—", perf.lab.tbtMs != null ? `${Math.round(perf.lab.tbtMs)} ms` : "—"],
-    ["FCP", "—", sec(perf.lab.fcpMs)],
+    ["LCP", perf.field?.lcpMs != null ? sec(perf.field.lcpMs) : "sin dato", sec(perf.lab.lcpMs)],
+    ["CLS", perf.field?.cls != null ? perf.field.cls.toFixed(2) : "sin dato", perf.lab.cls != null ? perf.lab.cls.toFixed(2) : "sin dato"],
+    ["INP", perf.field?.inpMs != null ? `${Math.round(perf.field.inpMs)} ms` : "sin dato", "sin dato (sólo campo)"],
+    ["TBT", "sin dato", perf.lab.tbtMs != null ? `${Math.round(perf.lab.tbtMs)} ms` : "sin dato"],
+    ["FCP", "sin dato", sec(perf.lab.fcpMs)],
   ];
   return (
     <Card className="space-y-3 break-inside-avoid">
@@ -134,10 +134,10 @@ export function PagesTable({ pages }: { pages: PageSummary[] }) {
                 {p.finalUrl !== p.url ? <span className="block text-muted">→ {p.finalUrl}</span> : null}
               </td>
               <td className="px-3 py-2 tabular-nums">{p.status ?? (p.source === "upload" ? "subido" : "error")}</td>
-              <td className="px-3 py-2 tabular-nums">{p.timeMs === null ? "—" : `${p.timeMs} ms`}</td>
-              <td className="px-3 py-2">{p.title ?? "—"}</td>
-              <td className="px-3 py-2 tabular-nums">{p.wordCount ?? "—"}</td>
-              <td className="px-3 py-2 tabular-nums">{p.internalLinks ?? "—"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.timeMs === null ? "sin dato" : `${p.timeMs} ms`}</td>
+              <td className="px-3 py-2">{p.title ?? "sin dato"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.wordCount ?? "sin dato"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.internalLinks ?? "sin dato"}</td>
             </tr>
           ))}
         </tbody>
@@ -206,7 +206,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
                   <tr key={`${r.url}-${r.field}`}>
                     <td className="max-w-48 break-all py-1.5 pr-3 text-xs text-muted">{r.url}</td>
                     <td className="py-1.5 pr-3">{FIELD_LABEL[r.field]}</td>
-                    <td className="py-1.5 pr-3 text-muted">{r.current ?? "—"}</td>
+                    <td className="py-1.5 pr-3 text-muted">{r.current ?? "sin dato"}</td>
                     <td className="py-1.5 pr-3">
                       {r.proposal}
                       <span className="block text-xs text-muted">{r.reason}</span>

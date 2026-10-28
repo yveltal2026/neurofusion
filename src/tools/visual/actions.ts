@@ -489,7 +489,7 @@ export async function suggestRatings(_prev: VisualFormState, fd: FormData): Prom
     const { parts: tiles } = await imageForVision(buf);
     parts.push(tiles[0]);
     const t = cfg.tasks.find((x) => x.id === a.task_id);
-    described.push({ index: described.length, task: t ? `${t.id} ${t.name}` : "—", title: a.title, assetId: a.id });
+    described.push({ index: described.length, task: t ? `${t.id} ${t.name}` : "sin dato", title: a.title, assetId: a.id });
   }
   const items = rubricItems(cfg.tasks);
   parts.push({ type: "text", text: buildSuggestText({ site: siteDef.name, url: siteDef.url, productTarget: cfg.productTarget, items, images: described }) });

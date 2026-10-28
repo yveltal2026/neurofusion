@@ -93,7 +93,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   const qualityBadges = (s: (typeof all)[number], compact = false) => (
     <>
       {s.allValid === null ? (
-        "—"
+        "sin dato"
       ) : (
         <StatusBadge tone={s.allValid ? "success" : "warning"}>{compact ? (s.allValid ? "Válidos" : "Revisar") : validityText(s.allValid)}</StatusBadge>
       )}
@@ -236,7 +236,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
                   </td>
                   {s.dimensions.map((r, i) => (
                     <td key={i} className="px-3 py-3 tabular-nums">
-                      {r?.d_score !== null && r?.d_score !== undefined ? r.d_score.toFixed(2) : "—"}
+                      {r?.d_score !== null && r?.d_score !== undefined ? r.d_score.toFixed(2) : "sin dato"}
                     </td>
                   ))}
                 </tr>

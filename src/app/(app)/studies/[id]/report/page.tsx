@@ -133,12 +133,12 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
                   return (
                     <tr key={it.key}>
                       <td className="px-3 py-2 font-medium">{it.label}</td>
-                      <td className="px-3 py-2 tabular-nums">{r ? (it.kind === "boolean" ? (r.value >= 0.5 ? "Sí" : "No") : Number(r.value).toFixed(2)) : "—"}</td>
+                      <td className="px-3 py-2 tabular-nums">{r ? (it.kind === "boolean" ? (r.value >= 0.5 ? "Sí" : "No") : Number(r.value).toFixed(2)) : "sin dato"}</td>
                       <td className="px-3 py-2">
                         {r?.justification ?? "Sin calificar"}
                         {r?.source === "ai_assisted" ? <span className="block text-xs text-muted">Partió de una sugerencia de IA confirmada por el analista.</span> : null}
                       </td>
-                      <td className="px-3 py-2 text-xs text-muted">{r?.evidence_asset_id ? (assetTitle.get(r.evidence_asset_id) ?? "—") : "—"}</td>
+                      <td className="px-3 py-2 text-xs text-muted">{r?.evidence_asset_id ? (assetTitle.get(r.evidence_asset_id) ?? "sin dato") : "sin dato"}</td>
                     </tr>
                   );
                 })}

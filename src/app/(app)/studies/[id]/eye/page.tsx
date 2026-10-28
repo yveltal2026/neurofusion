@@ -72,10 +72,10 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                   <tr key={run.id} className="border-t border-border">
                     <td className="whitespace-nowrap py-2 pr-4 text-sm font-semibold tabular-nums">{run.session.participant_ref}</td>
                     <td className="pr-4">{run.session.device_type}</td>
-                    <td className="pr-4">{run.quality.medianErrorDeg?.toFixed(1) ?? "—"}°</td>
+                    <td className="pr-4">{run.quality.medianErrorDeg?.toFixed(1) ?? "sin dato"}°</td>
                     <td className="pr-4">{run.quality.driftChecks?.length
                       ? `${Math.max(...run.quality.driftChecks.map((c) => c.maxErrorDeg ?? 0)).toFixed(1)}° · ${run.quality.driftChecks.length} controles`
-                      : "—"}</td>
+                      : "sin dato"}</td>
                     <td className="pr-4">
                       {run.session.excluded ? "Excluida" : run.quality.measurementStatus === "limited" ? "Precisión limitada · fuera de resultados" : run.quality.passed ? "Aceptable" : "Baja"}{run.session.duplicate_flag ? " · posible duplicado" : ""}
                       {run.quality.recovery ? <p className="text-xs text-muted">

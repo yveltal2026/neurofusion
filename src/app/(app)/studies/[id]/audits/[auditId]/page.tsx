@@ -74,7 +74,7 @@ export default async function AuditPage({ params }: PageProps<"/studies/[id]/aud
         {audit.ai ? (
           <>
             <p className="text-xs text-muted">
-              Generado el {audit.ai.generatedAt ? new Date(audit.ai.generatedAt).toLocaleString("es-MX") : "—"} · {audit.ai.provider} ·{" "}
+              Generado el {audit.ai.generatedAt ? new Date(audit.ai.generatedAt).toLocaleString("es-MX") : "sin dato"} · {audit.ai.provider} ·{" "}
               {audit.ai.model}
             </p>
             <SeoPlanView plan={audit.ai.result} />

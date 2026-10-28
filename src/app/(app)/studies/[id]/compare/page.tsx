@@ -60,17 +60,17 @@ export default async function ComparePage({ params }: PageProps<"/studies/[id]/c
                         <span className="font-medium">{a.row.title}</span>
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 tabular-nums">{score === null ? "—" : score.toFixed(1)}</td>
+                    <td className="whitespace-nowrap px-3 py-2 tabular-nums">{score === null ? "sin dato" : score.toFixed(1)}</td>
                     {KEYS.map((k) => (
                       <td key={k} className="px-3 py-2">
-                        {a.result ? <ScoreDots score={a.result.criteria[k].score} /> : "—"}
+                        {a.result ? <ScoreDots score={a.result.criteria[k].score} /> : "sin dato"}
                       </td>
                     ))}
-                    <td className="px-3 py-2 tabular-nums">{a.aois.length ? blindZones(a.aois).length : "—"}</td>
-                    <td className="px-3 py-2 tabular-nums">{a.result ? a.result.issues.filter((i) => i.severity === "high").length : "—"}</td>
-                    <td className="px-3 py-2">{a.metrics ? describeMetrics(a.metrics).clutter : "—"}</td>
-                    <td className="px-3 py-2 tabular-nums">{a.metrics ? `${Math.round(a.metrics.negativeSpace * 100)} %` : "—"}</td>
-                    <td className="px-3 py-2">{spec ? (fails ? `${fails} incumplimiento(s)` : "Cumple") : "—"}</td>
+                    <td className="px-3 py-2 tabular-nums">{a.aois.length ? blindZones(a.aois).length : "sin dato"}</td>
+                    <td className="px-3 py-2 tabular-nums">{a.result ? a.result.issues.filter((i) => i.severity === "high").length : "sin dato"}</td>
+                    <td className="px-3 py-2">{a.metrics ? describeMetrics(a.metrics).clutter : "sin dato"}</td>
+                    <td className="px-3 py-2 tabular-nums">{a.metrics ? `${Math.round(a.metrics.negativeSpace * 100)} %` : "sin dato"}</td>
+                    <td className="px-3 py-2">{spec ? (fails ? `${fails} incumplimiento(s)` : "Cumple") : "sin dato"}</td>
                   </tr>
                 );
               })}

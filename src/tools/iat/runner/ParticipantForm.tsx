@@ -106,7 +106,7 @@ export function ParticipantForm({
         <div>
           <Field label="Género (opcional)">
             <select className={SELECT_CLASS} value={str(values.gender)} onChange={(e) => set("gender", e.target.value)}>
-              <option value="">—</option>
+              <option value="">Elige una opción</option>
               {GENDER_OPTIONS.map((g) => (
                 <option key={g} value={g}>
                   {g}
@@ -177,7 +177,7 @@ export function ParticipantForm({
             <Field label={label}>
               {f.type === "select" ? (
                 <select className={SELECT_CLASS} value={str(values[f.id])} onChange={(e) => set(f.id, e.target.value)}>
-                  <option value="">—</option>
+                  <option value="">Elige una opción</option>
                   {f.options.map((o) => (
                     <option key={o} value={o}>
                       {o}

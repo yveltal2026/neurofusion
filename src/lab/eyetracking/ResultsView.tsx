@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import type { ExportedSession } from "./session";
 
 function fmt(v: number | null, digits = 1): string {
-  return v === null || !Number.isFinite(v) ? "—" : v.toFixed(digits);
+  return v === null || !Number.isFinite(v) ? "sin dato" : v.toFixed(digits);
 }
 
 const pct = (v: number | null) => (v === null ? null : v * 100);

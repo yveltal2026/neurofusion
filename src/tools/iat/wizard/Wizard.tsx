@@ -160,7 +160,7 @@ export function Wizard({ projectId, projectName, aiAvailable = false }: { projec
         <Card className="space-y-5">
           {aiNotes && ["product", "concepts", "dimensions", "words"].includes(step.id) ? (
             <Alert tone="info">
-              <p className="font-medium">Propuesta generada por IA — revísala y edítala libremente.</p>
+              <p className="font-medium">Propuesta generada por IA: revísala y edítala libremente.</p>
               <p className="mt-1">{aiNotes}</p>
             </Alert>
           ) : null}
@@ -717,7 +717,7 @@ function LikertEditor({ field, onChange }: { field: Extract<ExtraField, { type: 
           ))}
         </div>
         <p className="text-xs text-muted">
-          1 = {field.minLabel || "—"} · {field.points} = {field.maxLabel || "—"}
+          1 = {field.minLabel || "sin dato"} · {field.points} = {field.maxLabel || "sin dato"}
         </p>
       </div>
     </div>

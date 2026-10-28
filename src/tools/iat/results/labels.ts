@@ -16,7 +16,7 @@ export const FLAG_LABEL: Record<string, string> = {
 
 /** "Moderada · Marca A más asociada a «Confiable»" (D > 0 ⇒ A con el polo positivo). */
 export function interpretationText(config: IatConfig, dimensionIdx: number, r: ResultRow | null): string {
-  if (!r || r.d_score === null || !r.strength) return "—";
+  if (!r || r.d_score === null || !r.strength) return "sin dato";
   if (r.strength === "none") return STRENGTH_LABEL.none;
   const d = config.dimensions[dimensionIdx];
   const who = r.direction === "A" ? config.conceptA.label : config.conceptB.label;
@@ -27,4 +27,4 @@ export function interpretationText(config: IatConfig, dimensionIdx: number, r: R
 export const validityText = (valid: boolean) => (valid ? "✓ Datos válidos" : "⚠️ Revisar calidad de datos");
 
 export const STATUS_LABEL = { started: "En curso", completed: "Completada", abandoned: "Abandonada" } as const;
-export const DEVICE_LABEL = { desktop: "Escritorio", mobile: "Celular", tablet: "Tableta", unknown: "—" } as const;
+export const DEVICE_LABEL = { desktop: "Escritorio", mobile: "Celular", tablet: "Tableta", unknown: "sin dato" } as const;

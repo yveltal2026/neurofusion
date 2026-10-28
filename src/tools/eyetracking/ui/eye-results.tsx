@@ -17,7 +17,7 @@ import {
 
 const fmt = (n: number | null, digits = 1) =>
   n === null
-    ? "—"
+    ? "sin dato"
     : n.toLocaleString("es-MX", { maximumFractionDigits: digits });
 const headers = [
   "AOI",
@@ -558,7 +558,7 @@ export function EyeResults({
             promediado sólo entre quienes fijaron esa AOI. FC, TFD, dwell,
             visitas y regresos: promedios por sesión, incluyendo ceros. FD:
             media de la duración de todas las fijaciones de esa AOI. Sin
-            fijaciones, TTFF y FD aparecen como «—».
+            fijaciones, TTFF y FD aparecen como «sin dato».
           </p>
           <p>
             Una visita reúne fijaciones consecutivas dentro de una AOI sin

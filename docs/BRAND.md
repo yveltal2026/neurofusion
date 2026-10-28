@@ -93,6 +93,25 @@ Poppins (títulos 700/800, etiquetas y botones 600, cifras) y Plus Jakarta Sans 
 Cercana, directa, con datos; sin promesas sin cifra. Frase de marca institucional: «Marketing que se nota.». Idea de la familia Neuro:
 «Evidencia sobre cómo decide la gente.».
 
+## Marco y listas de las pantallas internas
+
+Resultado de la crítica de diseño del 28 de octubre de 2026 (`.impeccable/critique/`):
+
+- **Encabezado de 56 px** con el logo sin palabra y el nombre del producto; sin onda ni filo (esos quedan para portada y acceso).
+- **Migas** (`Breadcrumbs`, `projectCrumbs`, `newStudyCrumbs`): Proyectos / proyecto / estudio. Sustituyen a los «← Proyecto» sueltos.
+- **Sin cajas por reflejo** (manual cap. 11): las listas son filas con filetes (`RowList` / `RowLink`), las cifras una franja (`StatStrip`), las
+  secciones bloques abiertos (`Block`) y la acción principal de la pantalla, un único panel tintado (`Panel`). `Card` queda para lo que
+  agrupa una acción.
+- **Tablas de datos**: la calidad va en la primera columna, con etiqueta de texto; encabezado fijo y orden por columna (`aria-sort`); en
+  celular se conservan sesión, calidad y D.
+- **Texto**: apoyo a 15 px (`text-sm`) y mínimo 13 px (`text-xs`); Poppins sólo en títulos, botones y números grandes, no en encabezados
+  de tabla ni etiquetas de datos.
+- **Datos que faltan**: «sin dato» (nunca un guion largo).
+- **Resultados**: `Glossary` («¿Qué significa?») bajo cada tabla técnica y `NoticeList`, que deja los errores y advertencias a la vista y pliega las notas.
+
+IAT y variantes usan el kit del participante en sus pantallas de texto (bienvenida, instrucciones, formulario, gracias) sin marca y con los
+tokens de Neuro neutralizados; los ensayos no cambian.
+
 ## Pantallas del participante (liga compartida)
 
 Quien recibe una liga ve una sola jerarquía, definida en `src/components/participant/index.tsx`. Cada cosa distinta se ve distinta:
@@ -110,8 +129,8 @@ Quien recibe una liga ve una sola jerarquía, definida en `src/components/partic
 | `StatusScreen` | Mensajes de una sola idea: gracias, liga no disponible, error, guardando |
 
 Reglas: el título de una parte nunca nombra el instrumento (SUS, NPS…) porque condicionaría la respuesta; el texto va a 16 px o más; la
-acción principal es una sola y va al final (pegada abajo en celular). **Fuera de este kit** quedan los estudios de IAT y sus variantes
-(`src/tools/iat/runner`, `src/tools/variants/runner`), que conservan su corredor propio.
+acción principal es una sola y va al final (pegada abajo en celular). Los estudios de IAT y sus variantes usan el mismo kit en sus pantallas de texto, con `brand={false}` (sin marca); sus pantallas de ensayos
+(`BlockRunner`, `VariantBlockRunner`) conservan su corredor propio.
 
 ## Fuera de alcance (a propósito)
 

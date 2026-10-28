@@ -122,7 +122,7 @@ function InstrumentCard({
           />
           <Stat
             label="Consistencia (α de Cronbach)"
-            value={agg.alpha === null ? "—" : num(agg.alpha, 2)}
+            value={agg.alpha === null ? "sin dato" : num(agg.alpha, 2)}
             hint={
               agg.alpha === null
                 ? "Se calcula con 2 o más respuestas"
@@ -193,7 +193,7 @@ function InstrumentCard({
           <dl className="grid gap-4 sm:grid-cols-2">
             <Stat
               label="Dos categorías superiores"
-              value={agg.topTwoBox ? pct(agg.topTwoBox.pct) : "—"}
+              value={agg.topTwoBox ? pct(agg.topTwoBox.pct) : "sin dato"}
               hint={
                 agg.topTwoBox
                   ? `${agg.topTwoBox.count} de ${agg.n} · IC95 % ${pct(agg.topTwoBox.ci95[0])} a ${pct(agg.topTwoBox.ci95[1])}`
@@ -208,7 +208,7 @@ function InstrumentCard({
                 key={d.value}
                 value={agg.n ? d.count / agg.n : 0}
                 label={def.scaleLabels?.[i] ?? String(d.value)}
-                detail={`${d.count} · ${agg.n ? pct(d.count / agg.n) : "—"}`}
+                detail={`${d.count} · ${agg.n ? pct(d.count / agg.n) : "sin dato"}`}
               />
             ))}
           </ul>
@@ -229,7 +229,7 @@ function InstrumentCard({
           />
           <Stat
             label="Consistencia (α de Cronbach)"
-            value={agg.alpha === null ? "—" : num(agg.alpha, 2)}
+            value={agg.alpha === null ? "sin dato" : num(agg.alpha, 2)}
             hint={
               agg.alpha === null
                 ? "Se calcula con 2 o más respuestas"
@@ -344,7 +344,7 @@ function ItemCard({ item }: { item: ItemAggregate }) {
 
 function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) {
   const { result } = agg;
-  const money = (v: number | null) => (v === null ? "—" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
+  const money = (v: number | null) => (v === null ? "sin dato" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
   return (
     <Card className="space-y-4">
       <div>

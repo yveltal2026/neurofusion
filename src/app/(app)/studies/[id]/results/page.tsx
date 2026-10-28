@@ -265,7 +265,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
                 {(history ?? []).map((h, i) => (
                   <tr key={`${h.study_id}-${h.site_url}-${i}`}>
                     <td className="px-3 py-2">{new Date(h.created_at).toLocaleDateString("es-MX")}</td>
-                    <td className="px-3 py-2">{studyName.get(h.study_id) ?? "—"}</td>
+                    <td className="px-3 py-2">{studyName.get(h.study_id) ?? "sin dato"}</td>
                     <td className="px-3 py-2">{h.site_name}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {h.ifd.toFixed(1)} · {h.reading}

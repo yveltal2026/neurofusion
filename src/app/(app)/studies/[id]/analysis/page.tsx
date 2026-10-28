@@ -46,7 +46,7 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
           {dims.map((d) => {
             const t = d.test;
             const idx = typeof d.index === "number" ? d.index : null;
-            let reading = "—";
+            let reading = "sin dato";
             if (t) {
               const i = interpretD(t.mean);
               const dim = idx !== null ? config.dimensions[idx] : null;
@@ -61,11 +61,11 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
               <tr key={String(d.index)}>
                 <td className="px-3 py-2 font-medium">{d.label}</td>
                 <td className="px-3 py-2 tabular-nums">{d.n}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "—"}</td>
+                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "sin dato"}</td>
+                <td className="px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "sin dato"}</td>
+                <td className="px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "sin dato"}</td>
+                <td className="px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "sin dato"}</td>
+                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "sin dato"}</td>
                 <td className="px-3 py-2">{reading}</td>
               </tr>
             );
@@ -102,10 +102,10 @@ function Breakdown({ title, data, dimNames }: { title: string; data: SegmentBrea
                 <td className="px-3 py-2 tabular-nums">{g.nSessions}</td>
                 {g.meanD.map((m, i) => (
                   <td key={i} className="px-3 py-2 tabular-nums">
-                    {m === null ? "—" : fmt(m)}
+                    {m === null ? "sin dato" : fmt(m)}
                   </td>
                 ))}
-                <td className="px-3 py-2 tabular-nums">{g.overallMeanD === null ? "—" : fmt(g.overallMeanD)}</td>
+                <td className="px-3 py-2 tabular-nums">{g.overallMeanD === null ? "sin dato" : fmt(g.overallMeanD)}</td>
               </tr>
             ))}
           </tbody>
