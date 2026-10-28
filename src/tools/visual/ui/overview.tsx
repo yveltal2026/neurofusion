@@ -117,7 +117,7 @@ export async function VisualOverview({ study, projectName, created }: { study: S
       {config.sites.map((site) => (
         <section key={site.key} className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="font-medium">
+            <h2 className="text-xl font-semibold">
               {site.name} <span className="text-sm font-normal text-muted">{site.competitor ? "· competidor" : "· principal"}</span>
             </h2>
             <a href={site.url} target="_blank" rel="noreferrer" className="inline-block break-all py-1 text-sm text-heading underline underline-offset-4">

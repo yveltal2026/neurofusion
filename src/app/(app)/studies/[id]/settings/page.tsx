@@ -30,23 +30,23 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
     <div className="space-y-8">
       <StudyHeader study={study} projectName={project?.name} active="settings" variant={variant} />
       <Block className="space-y-4">
-        <h2 className="font-medium">Nombre</h2>
+        <h2 className="text-xl font-semibold">Nombre</h2>
         <RenameStudyForm id={study.id} name={study.name} />
       </Block>
       {seo?.success ? (
         <Block className="space-y-4">
-          <h2 className="font-medium">Configuración de la auditoría</h2>
+          <h2 className="text-xl font-semibold">Configuración de la auditoría</h2>
           <SeoSettingsForm studyId={study.id} config={seo.data} />
         </Block>
       ) : null}
       {visual?.success ? (
         <Block className="space-y-4">
-          <h2 className="font-medium">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
+          <h2 className="text-xl font-semibold">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
           <VisualContextForm studyId={study.id} config={visual.data} />
         </Block>
       ) : null}
       <Block className="space-y-4 border-danger/30">
-        <h2 className="font-medium text-danger">Zona de riesgo</h2>
+        <h2 className="text-xl font-semibold text-danger">Zona de riesgo</h2>
         <form action={deleteStudy}>
           <input type="hidden" name="id" value={study.id} />
           <Button type="submit" variant="danger">

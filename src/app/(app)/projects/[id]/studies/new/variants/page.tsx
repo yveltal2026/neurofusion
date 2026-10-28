@@ -14,7 +14,7 @@ export default async function NewVariantStudyPage({ params }: PageProps<"/projec
   return (
     <div className="space-y-6">
       <Breadcrumbs items={newStudyCrumbs(id, project.name, "Variante del IAT")} />
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nueva variante del IAT</h1>
+      <h1 className="mt-1 text-3xl font-bold tracking-tight">Nueva variante del IAT</h1>
       <VariantBuilder projectId={project.id} projectName={project.name} />
     </div>
   );

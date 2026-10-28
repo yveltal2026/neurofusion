@@ -70,7 +70,7 @@ export function BatteryOverview({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Breadcrumbs items={projectCrumbs(battery.project_id, projectName)} />
-          <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
+          <h1 className="mt-1 break-words text-3xl font-bold tracking-tight">
             {battery.name}
           </h1>
           <p className="mt-1 text-xs text-muted">
@@ -105,7 +105,7 @@ export function BatteryOverview({
 
       <Panel className="space-y-3">
         <div>
-          <h2 className="font-medium">Liga mágica</h2>
+          <h2 className="text-xl font-semibold">Liga mágica</h2>
           <p className="text-sm text-muted">
             Una sola liga para toda la batería. No requiere cuenta ni
             contraseña.
@@ -133,7 +133,7 @@ export function BatteryOverview({
       </Panel>
 
       <section className="space-y-4" aria-label="Participantes">
-        <h2 className="text-lg font-semibold">Participantes</h2>
+        <h2 className="text-xl font-semibold">Participantes</h2>
         <Card>
           <dl className="grid gap-4 sm:grid-cols-4">
             {[
@@ -154,8 +154,8 @@ export function BatteryOverview({
 
         {summary.total > 0 ? (
           <>
-            <Card className="space-y-3">
-              <h3 className="font-medium">Avance por paso</h3>
+            <Block className="space-y-3">
+              <h3 className="text-lg font-semibold">Avance por paso</h3>
               <ul className="space-y-1 text-sm">
                 {summary.byStep.map((s) => (
                   <li
@@ -172,10 +172,10 @@ export function BatteryOverview({
                   </li>
                 ))}
               </ul>
-            </Card>
+            </Block>
 
-            <Card className="space-y-3 overflow-x-auto">
-              <h3 className="font-medium">Últimos participantes</h3>
+            <Block className="space-y-3 overflow-x-auto">
+              <h3 className="text-lg font-semibold">Últimos participantes</h3>
               <table className="w-full text-left text-sm">
                 <thead className="text-xs font-semibold text-muted">
                   <tr>
@@ -221,13 +221,13 @@ export function BatteryOverview({
                   Se muestran los 20 más recientes de {summary.total}.
                 </p>
               ) : null}
-            </Card>
+            </Block>
           </>
         ) : null}
       </section>
 
       <section className="space-y-3" aria-label="Pasos">
-        <h2 className="text-lg font-semibold">Pasos</h2>
+        <h2 className="text-xl font-semibold">Pasos</h2>
         {locked ? (
           <Alert tone="info">
             Esta batería ya tiene participantes, así que sus pasos no se pueden
@@ -256,7 +256,7 @@ export function BatteryOverview({
       </section>
 
       <Block className="space-y-4">
-        <h2 className="font-medium">Ajustes</h2>
+        <h2 className="text-xl font-semibold">Ajustes</h2>
         <StudySettingsForm
           id={battery.id}
           status={battery.status}
@@ -268,7 +268,7 @@ export function BatteryOverview({
       </Block>
 
       <Block className="space-y-4 border-danger/30">
-        <h2 className="font-medium text-danger">Zona de riesgo</h2>
+        <h2 className="text-xl font-semibold text-danger">Zona de riesgo</h2>
         <div className="flex flex-wrap gap-3">
           <form action={duplicateBattery}>
             <input type="hidden" name="id" value={battery.id} />

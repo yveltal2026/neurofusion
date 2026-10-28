@@ -438,7 +438,7 @@ function WordsStep({ config, update, version, bump }: StepProps & { version: num
         return (
           <div key={d.id} className="space-y-3 rounded-lg border border-border p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-medium">{d.name || `Dimensión ${i + 1}`}</h3>
+              <h3 className="text-lg font-semibold">{d.name || `Dimensión ${i + 1}`}</h3>
               {suggestion ? (
                 <Button
                   type="button"
@@ -809,7 +809,7 @@ function ConfirmStep({
       </dl>
 
       <div className="space-y-4">
-        <h3 className="font-medium">Ajustes finales</h3>
+        <h3 className="text-lg font-semibold">Ajustes finales</h3>
         <Field label="Nombre del estudio">
           <Input value={studyName} maxLength={160} onChange={(e) => setStudyName(e.target.value)} />
         </Field>

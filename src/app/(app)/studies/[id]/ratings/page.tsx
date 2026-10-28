@@ -2,7 +2,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow } from "@/lib/db/types";
 import { loadVisualStudyPage } from "@/tools/visual/load";
@@ -82,9 +82,9 @@ export default async function RatingsPage({ params, searchParams }: PageProps<"/
         })}
       </nav>
 
-      <Card className="space-y-3">
+      <Block className="space-y-3">
         <div>
-          <h2 className="font-medium">Sugerencias de IA para {site.name}</h2>
+          <h2 className="text-xl font-semibold">Sugerencias de IA para {site.name}</h2>
           <p className="text-sm text-muted">
             La IA revisa hasta 8 capturas de este sitio y propone valores con justificación. Tú decides: cada sugerencia se revisa y se guarda a mano.
           </p>
@@ -97,7 +97,7 @@ export default async function RatingsPage({ params, searchParams }: PageProps<"/
             {sug.data.notObservable.length ? ` · No observable: ${sug.data.notObservable.join("; ")}` : ""}
           </p>
         ) : null}
-      </Card>
+      </Block>
 
       <div className="space-y-3">
         {items.map((item) => {

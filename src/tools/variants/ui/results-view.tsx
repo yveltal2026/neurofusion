@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { VariantHistogram } from "@/components/charts/variant-charts";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/section-title";
 import { Glossary } from "@/components/ui/glossary";
@@ -105,7 +105,7 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
         </Alert>
       ) : null}
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <SectionTitle icon="results">Resultado principal · {info.short}</SectionTitle>
         {a.primary.test ? (
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[200px_1fr]">
@@ -138,11 +138,11 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
             ))}
           </dl>
         ) : null}
-      </Card>
+      </Block>
 
       {a.histogram.length > 0 ? <VariantHistogram rows={a.histogram} unitLabel={unit} /> : null}
 
-      <Card className="space-y-3">
+      <Block className="space-y-3">
         <SectionTitle icon="alert">Calidad de los datos</SectionTitle>
         {a.nFlagged === 0 ? (
           <p className="text-sm">
@@ -171,7 +171,7 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
         {a.devices.length > 0 ? (
           <p className="text-xs text-muted">Dispositivos: {a.devices.map((d) => `${d.deviceType} (${d.count})`).join(" · ")}</p>
         ) : null}
-      </Card>
+      </Block>
 
       <Alert tone="info">
         Los parámetros de la tarea y las reglas de puntuación siguen lo descrito en la literatura, pero no se han cotejado contra los datos de las publicaciones originales (ver Metodología). Una sola variante no basta para una conclusión sobre una marca: contrástala con otras mediciones.

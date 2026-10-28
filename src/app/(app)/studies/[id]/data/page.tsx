@@ -108,7 +108,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 

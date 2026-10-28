@@ -45,7 +45,7 @@ function Section({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-xl font-semibold">{title}</h2>
         {evidence ? <EvidenceBadge kind={evidence} /> : null}
       </div>
       {children}
@@ -265,7 +265,7 @@ export function ReportView({
           {e.pieces.some((p) => p.criteria) ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-medium">Lectura de la IA de cada imagen</h3>
+                <h3 className="text-lg font-semibold">Lectura de la IA de cada imagen</h3>
                 <EvidenceBadge kind="estimado" />
               </div>
               <Card className="overflow-x-auto">

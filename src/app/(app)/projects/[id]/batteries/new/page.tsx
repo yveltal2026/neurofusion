@@ -26,7 +26,7 @@ export default async function NewBatteryPage({
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={newStudyCrumbs(id, project.name, "Batería")} />
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nueva batería</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nueva batería</h1>
       </div>
       {available.length === 0 ? (
         <Card className="space-y-2">

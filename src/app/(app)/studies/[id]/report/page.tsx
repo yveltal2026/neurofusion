@@ -53,7 +53,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
         </Card>
         {assets.map((a, i) => (
           <section key={a.row.id} className={`space-y-4 ${i ? "break-before-page" : ""}`}>
-            <h2 className="text-lg font-medium">
+            <h2 className="text-xl font-semibold">
               {i + 1}. {a.row.title}
             </h2>
             {urls[a.row.storage_path] ? (
@@ -98,7 +98,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
 
       {latest.length ? (
         <section className="space-y-4">
-          <h2 className="text-lg font-medium">Índice de Fricción Digital</h2>
+          <h2 className="text-xl font-semibold">Índice de Fricción Digital</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <IfdChart rows={latest.map((m) => ({ site: m.site_name, ifd: m.ifd, reading: m.reading, colorIndex: colorOf(m.site_key) }))} />
             <TaskSuccessChart
@@ -116,7 +116,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
 
       {config.sites.map((site) => (
         <section key={site.key} className="space-y-3 break-before-page">
-          <h2 className="text-lg font-medium">Calificaciones · {site.name}</h2>
+          <h2 className="text-xl font-semibold">Calificaciones · {site.name}</h2>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-neuro-wash text-xs font-semibold text-muted">

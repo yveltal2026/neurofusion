@@ -64,7 +64,7 @@ export default async function AuditPage({ params }: PageProps<"/studies/[id]/aud
 
       <section className="space-y-3 break-before-page">
         <div>
-          <h2 className="font-medium">Plan de acción con IA</h2>
+          <h2 className="text-xl font-semibold">Plan de acción con IA</h2>
           <p className="text-sm text-muted">
             La IA prioriza y redacta a partir de los hallazgos de abajo; no ve el HTML ni inventa cifras. Revisa sus propuestas antes de
             aplicarlas.
@@ -83,12 +83,12 @@ export default async function AuditPage({ params }: PageProps<"/studies/[id]/aud
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Hallazgos</h2>
+        <h2 className="text-xl font-semibold">Hallazgos</h2>
         <FindingsTable findings={audit.findings} />
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-medium">Páginas revisadas</h2>
+        <h2 className="text-xl font-semibold">Páginas revisadas</h2>
         <PagesTable pages={audit.pages} />
       </section>
 

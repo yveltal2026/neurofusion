@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { GgChart, VwChart } from "@/components/charts/price-charts";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import {
   getInstrument,
@@ -242,9 +242,9 @@ function InstrumentCard({
   }
 
   return (
-    <Card className="space-y-4">
+    <Block className="space-y-4">
       <div>
-        <h3 className="font-medium">
+        <h3 className="text-lg font-semibold">
           {def.name}
           {subject ? (
             <span className="font-normal text-muted"> · {subject}</span>
@@ -264,7 +264,7 @@ function InstrumentCard({
         <p className="mt-1">{def.notes}</p>
         <p className="mt-1">Versión del instrumento: {def.version}</p>
       </details>
-    </Card>
+    </Block>
   );
 }
 
@@ -330,15 +330,15 @@ function ItemCard({ item }: { item: ItemAggregate }) {
     );
   }
   return (
-    <Card className="space-y-3">
+    <Block className="space-y-3">
       <div>
-        <h3 className="font-medium">{item.label}</h3>
+        <h3 className="text-lg font-semibold">{item.label}</h3>
         <p className="text-xs text-muted">
           {item.n} {item.n === 1 ? "respuesta" : "respuestas"}
         </p>
       </div>
       {body}
-    </Card>
+    </Block>
   );
 }
 
@@ -346,9 +346,9 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
   const { result } = agg;
   const money = (v: number | null) => (v === null ? "sin dato" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
   return (
-    <Card className="space-y-4">
+    <Block className="space-y-4">
       <div>
-        <h3 className="font-medium">
+        <h3 className="text-lg font-semibold">
           {agg.method === "van_westendorp" ? "Sensibilidad al precio (Van Westendorp)" : "Curva de demanda (Gabor-Granger)"}
         </h3>
         <p className="text-xs text-muted">
@@ -414,7 +414,7 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
           ))}
         </ul>
       ) : null}
-    </Card>
+    </Block>
   );
 }
 
@@ -467,7 +467,7 @@ export function SurveyResultsView({
 
       {aggregates.instruments.length ? (
         <section className="space-y-4" aria-label="Instrumentos">
-          <h2 className="text-lg font-semibold">Instrumentos</h2>
+          <h2 className="text-xl font-semibold">Instrumentos</h2>
           {aggregates.instruments.map((agg) => (
             <InstrumentCard
               key={agg.blockId}
@@ -491,7 +491,7 @@ export function SurveyResultsView({
 
       {aggregates.items.length ? (
         <section className="space-y-4" aria-label="Preguntas">
-          <h2 className="text-lg font-semibold">Preguntas</h2>
+          <h2 className="text-xl font-semibold">Preguntas</h2>
           {aggregates.items.map((item) => (
             <ItemCard key={item.id} item={item} />
           ))}

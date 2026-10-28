@@ -3,7 +3,7 @@ import { StudyHeader } from "@/components/study-header";
 import { setSessionExcluded } from "@/app/(app)/studies/[id]/data/actions";
 import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { EyeTrackingRunRow, StudyRow } from "@/lib/db/types";
 import { visualConfigSchema } from "@/tools/visual/config";
@@ -45,13 +45,13 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
   return (
     <div className="space-y-8">
       <StudyHeader study={study} projectName={project?.name} active="results" variant="eye" subtitle="Miradas medidas con webcam" />
-      <Card className="space-y-2">
-        <h2 className="font-medium">Calidad de las sesiones</h2>
+      <Block className="space-y-2">
+        <h2 className="text-xl font-semibold">Calidad de las sesiones</h2>
         <p className="text-sm">{runs.length} sesiones consultadas · {good.length} incluidas en resultados · {runs.filter((r) => !r.quality.passed).length} con baja calidad · {runs.filter((r) => r.session.excluded).length} excluidas.</p>
         <p className="text-xs text-muted">Los resultados incluyen sólo sesiones que cumplieron los umbrales de calibración y no están excluidas. Los posibles duplicados se marcan abajo para revisión. Las métricas se estiman a partir de lecturas de webcam.</p>
         <a href={`/api/studies/${id}/eye/export`} className={buttonClass("secondary", "inline-flex")}>Descargar lecturas CSV</a>
         {(stored?.length ?? 0) === 100 ? <Alert tone="warning">Se muestran las 100 sesiones más recientes.</Alert> : null}
-      </Card>
+      </Block>
       {assets.length === 0 ? <Alert tone="warning">Aún no hay piezas para medir.</Alert> : assets.map((asset) => {
         const participants = good.flatMap((run) => run.observations.filter((o) => o.assetId === asset.row.id).map((observation) => ({
           sessionId: run.id, participant: run.session.participant_ref, observation,
@@ -62,8 +62,8 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
         </Card>;
       })}
       {runs.length ? (
-        <Card className="space-y-3">
-          <h2 className="font-medium">Sesiones</h2>
+        <Block className="space-y-3">
+          <h2 className="text-xl font-semibold">Sesiones</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead><tr><th className="pr-4">Código</th><th className="pr-4">Dispositivo</th><th className="pr-4">Error mediano</th><th className="pr-4">Deriva máxima</th><th className="pr-4">Calidad</th><th>Acción</th></tr></thead>
@@ -95,7 +95,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               </tbody>
             </table>
           </div>
-        </Card>
+        </Block>
       ) : null}
     </div>
   );

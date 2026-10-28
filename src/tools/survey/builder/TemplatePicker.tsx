@@ -66,7 +66,7 @@ export function TemplatePicker({
     <div className="space-y-8">
       <header className="space-y-1">
         <p className="text-sm text-muted">Proyecto: {projectName}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight">
           Nueva encuesta
         </h1>
         <p className="text-sm text-muted">

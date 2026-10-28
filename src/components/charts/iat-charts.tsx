@@ -34,9 +34,9 @@ const tooltipStyle = { background: "var(--background)", border: "1px solid var(-
 
 function ChartFrame({ title, caption, children }: { title: string; caption?: string; children: React.ReactNode }) {
   return (
-    <figure className="space-y-2 rounded-lg border border-border p-4">
+    <figure className="space-y-2">
       <figcaption>
-        <p className="text-sm font-medium">{title}</p>
+        <p className="text-base font-semibold text-heading">{title}</p>
         {caption ? <p className="text-xs text-muted">{caption}</p> : null}
       </figcaption>
       <div className="text-muted" style={{ height: 260 }}>
@@ -103,9 +103,9 @@ function StackedPercent({
 }) {
   const height = Math.max(180, rows.length * 56 + 70);
   return (
-    <figure className="space-y-2 rounded-lg border border-border p-4">
+    <figure className="space-y-2">
       <figcaption>
-        <p className="text-sm font-medium">{title}</p>
+        <p className="text-base font-semibold text-heading">{title}</p>
         <p className="text-xs text-muted">{caption}</p>
       </figcaption>
       <div className="text-muted" style={{ height }}>

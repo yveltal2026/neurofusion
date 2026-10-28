@@ -29,7 +29,7 @@ export function StudyHeader({
           <IconTile name={tool?.icon ?? "neuro"} size="lg" className="mt-1 hidden sm:inline-flex" />
           <div>
             <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
-            <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>
+            <h1 className="mt-1 break-words text-3xl font-bold tracking-tight">{study.name}</h1>
             <p className="mt-1 text-xs text-muted">
               <Tag>{tool?.name ?? study.tool_type}</Tag>
               {subtitle ? <> · {subtitle}</> : null}

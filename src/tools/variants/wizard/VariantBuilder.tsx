@@ -167,7 +167,7 @@ function DesignStep({
         </Recommendation>
       ) : null}
 
-      <h3 className="pt-2 font-medium">Variante</h3>
+      <h3 className="pt-2 text-lg font-semibold">Variante</h3>
       <div className="space-y-3">
         {offered.map((v) => (
           <RadioCard
@@ -307,12 +307,12 @@ function TextsStep({ config, update }: { config: VariantConfig; update: Update }
         <Textarea rows={3} value={config.texts.thankYou || DEFAULT_THANK_YOU} maxLength={1000} onChange={(e) => update({ texts: { ...config.texts, thankYou: e.target.value } })} />
       </Field>
       <div className="space-y-2">
-        <h3 className="text-sm font-medium">Si el participante usa celular o tableta</h3>
+        <h3 className="text-base font-semibold">Si el participante usa celular o tableta</h3>
         <RadioCard name="device" checked={config.deviceNotice === "inform"} onChange={() => update({ deviceNotice: "inform" })} title="Avisar y dejar continuar" />
         <RadioCard name="device" checked={config.deviceNotice === "suggest_desktop"} onChange={() => update({ deviceNotice: "suggest_desktop" })} title="Sugerir con insistencia una computadora" />
       </div>
       <div className="space-y-2">
-        <h3 className="text-sm font-medium">Color de acento</h3>
+        <h3 className="text-base font-semibold">Color de acento</h3>
         <RadioCard name="theme" checked={config.theme.mode === "neutral"} onChange={() => update({ theme: { mode: "neutral" } })} title="Neutro (marca FRSKO)" />
         <RadioCard name="theme" checked={config.theme.mode === "custom"} onChange={() => update({ theme: { mode: "custom", accent: config.theme.accent ?? "#0a4a4c" } })} title="Color propio">
           {config.theme.mode === "custom" ? (

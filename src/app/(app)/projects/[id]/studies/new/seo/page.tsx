@@ -15,7 +15,7 @@ export default async function NewSeoStudyPage({ params }: PageProps<"/projects/[
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={newStudyCrumbs(id, project.name, "Auditoría SEO")} />
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nueva auditoría SEO</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nueva auditoría SEO</h1>
         <p className="mt-1 text-sm text-muted">
           Define el sitio una vez y audítalo cuantas veces quieras para seguir su evolución.
         </p>

@@ -44,7 +44,7 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
         {config.audience ? <p className="text-sm text-muted">Público: {config.audience}</p> : null}
       </Card>
       <Block className="space-y-4">
-        <h2 className="font-medium">Participantes con webcam</h2>
+        <h2 className="text-xl font-semibold">Participantes con webcam</h2>
         <p className="text-sm text-muted">
           Cada persona calibra su mirada y observa las imágenes durante {config.eyeTracking.durationSeconds} segundos cada una.
           Se guardan coordenadas y calidad de medición; nunca video. Respuestas guardadas: {runs ?? 0}.
@@ -63,7 +63,7 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
         </form>
       </Block>
       <Block className="space-y-3">
-        <h2 className="font-medium">Imágenes del estudio</h2>
+        <h2 className="text-xl font-semibold">Imágenes del estudio</h2>
         <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. Máximo 5 imágenes; quedan fijadas tras la primera respuesta.</p>
         {runs || active ? <Alert tone="info">Las imágenes ya no se pueden cambiar porque hay respuestas o sesiones en curso.</Alert> : <AssetUploader studyId={study.id} withPlacement={false} />}
       </Block>

@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import { CONSISTENCY_LABEL, type AnalysisResult } from "@/tools/iat/analysis/schema";
 
 function List({ items }: { items: string[] }) {
@@ -15,10 +15,10 @@ function List({ items }: { items: string[] }) {
 export function AnalysisView({ result }: { result: AnalysisResult }) {
   return (
     <div className="space-y-4">
-      <Card className="space-y-2">
-        <h3 className="font-medium">Resumen ejecutivo</h3>
+      <Block className="space-y-2">
+        <h3 className="text-lg font-semibold">Resumen ejecutivo</h3>
         <p className="text-sm leading-relaxed">{result.executiveSummary}</p>
-      </Card>
+      </Block>
 
       {result.findings.length ? (
         <div className="grid gap-3 md:grid-cols-2">
@@ -32,17 +32,17 @@ export function AnalysisView({ result }: { result: AnalysisResult }) {
         </div>
       ) : null}
 
-      <Card className="space-y-2">
+      <Block className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-medium">Implícito vs. explícito</h3>
+          <h3 className="text-lg font-semibold">Implícito vs. explícito</h3>
           <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-heading">{CONSISTENCY_LABEL[result.implicitVsExplicit.consistency]}</span>
         </div>
         <p className="text-sm leading-relaxed">{result.implicitVsExplicit.summary}</p>
-      </Card>
+      </Block>
 
       {result.segments.length ? (
-        <Card className="space-y-2">
-          <h3 className="font-medium">Segmentos</h3>
+        <Block className="space-y-2">
+          <h3 className="text-lg font-semibold">Segmentos</h3>
           <ul className="space-y-2 text-sm">
             {result.segments.map((s) => (
               <li key={s.variable}>
@@ -50,25 +50,25 @@ export function AnalysisView({ result }: { result: AnalysisResult }) {
               </li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
 
       {result.deviceNote ? (
-        <Card className="space-y-1">
-          <h3 className="font-medium">Dispositivos</h3>
+        <Block className="space-y-1">
+          <h3 className="text-lg font-semibold">Dispositivos</h3>
           <p className="text-sm leading-relaxed">{result.deviceNote}</p>
-        </Card>
+        </Block>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Card className="space-y-2">
-          <h3 className="font-medium">Limitaciones</h3>
+        <Block className="space-y-2">
+          <h3 className="text-lg font-semibold">Limitaciones</h3>
           <List items={result.limitations} />
-        </Card>
-        <Card className="space-y-2">
-          <h3 className="font-medium">Recomendaciones</h3>
+        </Block>
+        <Block className="space-y-2">
+          <h3 className="text-lg font-semibold">Recomendaciones</h3>
           <List items={result.recommendations} />
-        </Card>
+        </Block>
       </div>
     </div>
   );

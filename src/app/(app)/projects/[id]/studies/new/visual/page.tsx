@@ -16,7 +16,7 @@ export default async function NewVisualStudyPage({ params, searchParams }: PageP
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={newStudyCrumbs(id, project.name, "Análisis visual")} />
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nuevo análisis visual con IA</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nuevo análisis visual con IA</h1>
         <p className="mt-1 text-sm text-muted">Evalúa piezas gráficas o el recorrido de compra de uno o varios sitios.</p>
       </div>
       <Card>

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { StudyTabs } from "@/components/study-tabs";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { fetchAll, loadStudyForResearcher } from "@/lib/studies";
 import { DEVICE_LABEL, FLAG_LABEL, STATUS_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
@@ -58,12 +58,12 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             { label: "Datos", href: `/studies/${id}/data` },
           ]}
         />
-        <h1 className="mt-1 font-display text-xl font-semibold tabular-nums">{view.participant_ref}</h1>
+        <h1 className="mt-1 font-display text-3xl font-bold tabular-nums">{view.participant_ref}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Participante</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Participante</h2>
         <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[180px_1fr]">
           {fields.map(([k, v]) => (
             <div key={k} className="contents">
@@ -73,10 +73,10 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
           ))}
         </dl>
         {view.duplicate_flag ? <p className="text-sm text-warning">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
-      </Card>
+      </Block>
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Resultados por dimensión</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Resultados por dimensión</h2>
         {view.status !== "completed" ? <p className="text-sm text-muted">Esta sesión no se completó, por lo que no tiene resultados.</p> : null}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -112,10 +112,10 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             </tbody>
           </table>
         </div>
-      </Card>
+      </Block>
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Excluir del análisis</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Excluir del análisis</h2>
         <form action={setSessionExcluded} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="studyId" value={id} />
           <input type="hidden" name="sessionId" value={sessionId} />
@@ -132,7 +132,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             {view.excluded ? "Reincorporar al análisis" : "Excluir del análisis"}
           </Button>
         </form>
-      </Card>
+      </Block>
 
       <details className="rounded-lg border border-border p-4">
         <summary className="cursor-pointer text-sm font-medium">Ensayos ({trials.length})</summary>

@@ -145,7 +145,7 @@ export function RatingItemForm({
       <input type="hidden" name="source" value={source} />
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="font-medium">{item.label}</h3>
+          <h3 className="text-lg font-semibold">{item.label}</h3>
           <p className="text-sm text-muted">{item.question}</p>
           <p className="text-xs text-muted">Afecta: {item.affects}</p>
         </div>

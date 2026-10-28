@@ -82,7 +82,7 @@ export function EyeAoiEditor({
     >
       <fieldset disabled={saving} className="space-y-3">
         <legend className="sr-only">Editar y guardar áreas de interés</legend>
-        <h3 className="font-medium">Áreas de interés (AOI)</h3>
+        <h3 className="text-lg font-semibold">Áreas de interés (AOI)</h3>
         <p className="text-sm text-muted">
           Dibuja un rectángulo para delimitar un logotipo, precio, producto o
           CTA. También puedes agregar un área y ajustar sus límites en

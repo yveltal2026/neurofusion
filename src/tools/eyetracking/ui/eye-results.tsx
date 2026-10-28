@@ -112,7 +112,7 @@ export function EyeResults({
     <section className="space-y-4" aria-label={`Resultados de ${title}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-medium">{title}</h2>
+          <h2 className="text-xl font-semibold">{title}</h2>
           <p className="text-xs text-muted">
             {aggregate.count} sesiones con lecturas ·{" "}
             {aggregate.withoutFixations} sin fijaciones detectadas ·{" "}
@@ -357,7 +357,7 @@ export function EyeResults({
           </dd>
         </div>
       </dl>
-      <h3 className="font-medium">
+      <h3 className="text-lg font-semibold">
         KPIs por AOI ·{" "}
         {selected
           ? selected.participant

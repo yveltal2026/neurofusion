@@ -20,7 +20,7 @@ export default async function ProjectsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Proyectos de investigación</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Proyectos de investigación</h1>
         <p className="mt-1 text-sm text-muted">Un proyecto agrupa las herramientas (estudios) de una misma investigación.</p>
       </div>
 

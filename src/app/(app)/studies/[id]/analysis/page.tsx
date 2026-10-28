@@ -61,11 +61,11 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
               <tr key={String(d.index)}>
                 <td className="px-3 py-2 font-medium">{d.label}</td>
                 <td className="px-3 py-2 tabular-nums">{d.n}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "sin dato"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "sin dato"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "sin dato"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "sin dato"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "sin dato"}</td>
                 <td className="px-3 py-2">{reading}</td>
               </tr>
             );
@@ -80,7 +80,7 @@ function Breakdown({ title, data, dimNames }: { title: string; data: SegmentBrea
   if (data.groups.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      <h3 className="text-sm font-medium">{title}</h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-left text-sm">
           <thead className="bg-neuro-wash text-xs font-semibold text-muted">
@@ -162,7 +162,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="analysis" />
 
@@ -181,7 +181,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
       {aggregates.nWithUsableData > 0 ? (
         <>
           <section className="space-y-3">
-            <h2 className="font-medium">Estadísticos por dimensión</h2>
+            <h2 className="text-xl font-semibold">Estadísticos por dimensión</h2>
             <StatsTable dims={[...aggregates.dimensions, aggregates.overall]} config={config} />
             <Glossary
               terms={[
@@ -195,7 +195,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-medium">Gráficas</h2>
+            <h2 className="text-xl font-semibold">Gráficas</h2>
             <div className="grid gap-4 lg:grid-cols-2">
               {meanRows.length ? <MeanDChart rows={meanRows} /> : null}
               {directionRows.length ? <DirectionChart rows={directionRows} labelA={config.conceptA.label} labelB={config.conceptB.label} /> : null}
@@ -207,7 +207,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
           </section>
 
           <section className="space-y-4">
-            <h2 className="font-medium">Desgloses</h2>
+            <h2 className="text-xl font-semibold">Desgloses</h2>
             <Breakdown
               title="Por dispositivo"
               data={{ ...aggregates.byDevice, groups: aggregates.byDevice.groups.map((g) => ({ ...g, group: DEVICE_NAMES[g.group] ?? g.group })) }}
@@ -222,7 +222,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-medium">Conclusiones con IA</h2>
+          <h2 className="text-xl font-semibold">Conclusiones con IA</h2>
           <p className="text-sm text-muted">
             La IA redacta la interpretación a partir de los estadísticos de arriba; nunca recibe respuestas individuales ni datos
             personales. Las cifras oficiales son las de las tablas y gráficas.

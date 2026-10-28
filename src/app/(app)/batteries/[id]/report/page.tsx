@@ -32,7 +32,7 @@ export default async function BatteryReportPage({
               { label: detail.battery.name, href: `/batteries/${id}` },
             ]}
           />
-          <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
+          <h1 className="mt-1 break-words text-3xl font-bold tracking-tight">
             Informe integrado
           </h1>
           <p className="mt-1 text-xs text-muted">

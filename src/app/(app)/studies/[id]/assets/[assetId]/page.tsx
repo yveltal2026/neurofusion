@@ -33,7 +33,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
       <div className="space-y-6">
         <StudyHeader study={study} projectName={projectName} active="overview" variant="eye" subtitle={row.title} />
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">← Volver a las imágenes del estudio</Link>
-        <h2 className="text-lg font-medium">{row.title}</h2>
+        <h2 className="text-xl font-semibold">{row.title}</h2>
         {url ? (
           <EyeAoiEditor studyId={id} assetId={assetId} imageUrl={url} width={row.width} height={row.height} initial={asset.aois} />
         ) : <Alert tone="error">No se pudo obtener la imagen del almacenamiento.</Alert>}
@@ -56,7 +56,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
     <div className="space-y-6">
       <StudyHeader study={study} projectName={projectName} active="overview" variant={variant} subtitle={site && task ? `${site.name} · ${task.id} ${task.name}` : row.title} />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-medium">{row.title}</h2>
+        <h2 className="text-xl font-semibold">{row.title}</h2>
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Volver
         </Link>
