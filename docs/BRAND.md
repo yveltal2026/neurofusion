@@ -93,6 +93,26 @@ Poppins (títulos 700/800, etiquetas y botones 600, cifras) y Plus Jakarta Sans 
 Cercana, directa, con datos; sin promesas sin cifra. Frase de marca institucional: «Marketing que se nota.». Idea de la familia Neuro:
 «Evidencia sobre cómo decide la gente.».
 
+## Pantallas del participante (liga compartida)
+
+Quien recibe una liga ve una sola jerarquía, definida en `src/components/participant/index.tsx`. Cada cosa distinta se ve distinta:
+
+| Pieza | Para qué |
+| --- | --- |
+| `ParticipantScreen` | Marco de pantalla: marca discreta arriba (decorativa) y una columna legible (36 rem; 48 rem con imágenes) |
+| `ScreenHeader` | Icono, etiqueta de contexto («Parte 2 de 3», con burbuja Neuro), título de 30–36 px y frase de apoyo de 18 px |
+| `Section` | Bloque con su propio encabezado (Poppins 20 px): «Antes de empezar», «Consentimiento informado», «Tu privacidad»… |
+| `Prose` / `ReadingPanel` | Textos largos (consentimiento) en párrafos separados, sobre una superficie propia |
+| `FactList` | Qué esperar, una línea con icono por dato |
+| `Callout` | Indicaciones para responder («Cómo responder»), con fondo Neuro y título |
+| `QuestionCard` | Una pregunta = una tarjeta: número, enunciado (Poppins 18 px) y respuestas; opciones de 56 px de alto |
+| `ConsentCheck` | Casilla de aceptación en tarjeta completa, y botón principal grande (`Button size="lg"`, 56 px) |
+| `StatusScreen` | Mensajes de una sola idea: gracias, liga no disponible, error, guardando |
+
+Reglas: el título de una parte nunca nombra el instrumento (SUS, NPS…) porque condicionaría la respuesta; el texto va a 16 px o más; la
+acción principal es una sola y va al final (pegada abajo en celular). **Fuera de este kit** quedan los estudios de IAT y sus variantes
+(`src/tools/iat/runner`, `src/tools/variants/runner`), que conservan su corredor propio.
+
 ## Fuera de alcance (a propósito)
 
 - **Gráficas del análisis IAT** (`src/components/charts/iat-charts.tsx`): usan una paleta basada en Okabe-Ito, apta para daltonismo. La marca A

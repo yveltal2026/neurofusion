@@ -3,11 +3,14 @@
 import { Input, Textarea } from "@/components/ui/field";
 import { MAX_TEXT_ANSWER, type SurveyItem } from "../engine";
 
+// Cada respuesta posible es una opción grande (objetivo de toque cómodo); la elegida cambia de borde, fondo y peso.
 const OPTION_CLASS =
-  "flex cursor-pointer items-center min-h-12 gap-3 rounded-md border border-border px-4 py-3 text-sm transition-colors duration-150 motion-reduce:transition-none hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-primary/10 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
-// Escala numérica: una sola fila con columnas iguales (nunca se parte en dos renglones), con relleno teal al elegir.
+  "flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 border-border bg-surface px-4 py-3 text-base transition-colors duration-150 motion-reduce:transition-none hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:font-medium has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
+// Escala numérica: una sola fila con columnas iguales (nunca se parte en dos renglones); el punto elegido se llena.
 const POINT_CLASS =
-  "flex h-11 min-w-0 cursor-pointer items-center justify-center rounded-md border border-border text-sm transition-colors duration-150 hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-heading has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-heading motion-reduce:transition-none";
+  "flex h-12 min-w-0 cursor-pointer items-center justify-center rounded-lg border-2 border-border bg-surface font-display text-base font-semibold transition-colors duration-150 hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 motion-reduce:transition-none";
+// El enunciado de cada pregunta es lo más grande de su tarjeta; la ayuda va debajo, más chica y en gris.
+const LEGEND = "mb-3 font-display text-lg font-semibold leading-snug text-heading";
 
 function numberHint(min?: number, max?: number): string {
   if (min !== undefined && max !== undefined)
@@ -44,10 +47,10 @@ export function ItemField({
     const picked = Array.isArray(value) ? (value as string[]) : [];
     return (
       <fieldset
-        className="space-y-2"
+        className="space-y-3"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-base font-medium">{label}</legend>
+        <legend className={LEGEND}>{label}</legend>
         <p className="text-sm text-muted">Puedes elegir varias opciones.</p>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
@@ -73,10 +76,10 @@ export function ItemField({
   if (item.type === "select") {
     return (
       <fieldset
-        className="space-y-2"
+        className="space-y-3"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-base font-medium">{label}</legend>
+        <legend className={LEGEND}>{label}</legend>
         <p className="text-sm text-muted">Elige una opción.</p>
         {item.options.map((o) => (
           <label key={o} className={OPTION_CLASS}>
@@ -99,10 +102,10 @@ export function ItemField({
     if (item.labels) {
       return (
         <fieldset
-          className="space-y-2"
+          className="space-y-3"
           aria-describedby={error ? errorId : undefined}
         >
-          <legend className="text-base font-medium">{label}</legend>
+          <legend className={LEGEND}>{label}</legend>
           {item.labels.map((text, i) => {
             const n = item.min + i;
             return (
@@ -127,10 +130,10 @@ export function ItemField({
     );
     return (
       <fieldset
-        className="space-y-2"
+        className="space-y-3"
         aria-describedby={error ? errorId : undefined}
       >
-        <legend className="text-base font-medium">{label}</legend>
+        <legend className={LEGEND}>{label}</legend>
         {/* Los ítems de un instrumento ya traen su propia indicación al inicio de la parte. */}
         {!item.instrument && !(item.minLabel || item.maxLabel) ? (
           <p className="text-sm text-muted">
@@ -175,9 +178,9 @@ export function ItemField({
 
   if (item.type === "number") {
     return (
-      <div className="space-y-1.5">
-        <label className="block space-y-1.5">
-          <span className="text-base font-medium text-heading">{label}</span>
+      <div className="space-y-2">
+        <label className="block space-y-2.5">
+          <span className="block font-display text-lg font-semibold leading-snug text-heading">{label}</span>
           {!item.unit ? (
             <span className="block text-sm text-muted">
               {numberHint(item.min, item.max)}
@@ -212,9 +215,9 @@ export function ItemField({
 
   // text
   return (
-    <div className="space-y-1.5">
-      <label className="block space-y-1.5">
-        <span className="text-base font-medium text-heading">{label}</span>
+    <div className="space-y-2">
+      <label className="block space-y-2.5">
+        <span className="block font-display text-lg font-semibold leading-snug text-heading">{label}</span>
         <Textarea
           placeholder="Escribe tu respuesta aquí"
           maxLength={MAX_TEXT_ANSWER}
@@ -251,7 +254,7 @@ export function BipolarGroup({
   const label = `${first.label}${first.required ? "" : " (opcional)"}`;
   return (
     <fieldset className="space-y-4">
-      <legend className="text-base font-medium">{label}</legend>
+      <legend className={LEGEND}>{label}</legend>
       {items.map((item) => {
         const points = Array.from(
           { length: item.max - item.min + 1 },
@@ -264,7 +267,7 @@ export function BipolarGroup({
             role="radiogroup"
             aria-label={`${item.minLabel} a ${item.maxLabel}`}
             aria-describedby={errors[item.id] ? errorId : undefined}
-            className="space-y-2 rounded-md border border-border bg-surface p-3"
+            className="space-y-3 rounded-lg bg-background p-3"
           >
             <div className="flex justify-between gap-4 text-sm font-semibold text-heading">
               <span>{item.minLabel}</span>
@@ -279,7 +282,7 @@ export function BipolarGroup({
               {points.map((n) => (
                 <label
                   key={n}
-                  className="flex h-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm transition-colors duration-150 hover:border-heading/50 has-[:checked]:border-heading has-[:checked]:bg-heading has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-heading motion-reduce:transition-none"
+                  className={POINT_CLASS}
                 >
                   <input
                     type="radio"

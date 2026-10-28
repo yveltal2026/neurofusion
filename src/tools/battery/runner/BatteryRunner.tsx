@@ -1,6 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import {
+  ConsentCheck,
+  FactList,
+  ParticipantScreen,
+  Prose,
+  ReadingPanel,
+  ScreenHeader,
+  Section,
+  StatusScreen,
+} from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { withRetry } from "@/tools/iat/runner/api";
@@ -36,11 +46,7 @@ const BLOCKING = [
 ];
 
 function Screen({ children }: { children: ReactNode }) {
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 py-10">
-      {children}
-    </main>
-  );
+  return <ParticipantScreen>{children}</ParticipantScreen>;
 }
 
 /**
@@ -173,29 +179,31 @@ export function BatteryRunner({
   if (stage.kind === "welcome") {
     body = (
       <Screen>
-        <div className="space-y-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {config.title}
-          </h1>
-          {config.intro ? (
-            <p className="whitespace-pre-line text-sm leading-relaxed">
-              {config.intro}
-            </p>
-          ) : null}
-          <div className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
-            {config.texts.consent}
-          </div>
+        <ScreenHeader
+          icon="layers"
+          title={config.title}
+          lead={config.intro ? <Prose text={config.intro} size="lg" /> : undefined}
+        />
+        <Section title="Antes de empezar">
+          <FactList
+            items={[
+              { icon: "layers", text: "Harás varias actividades, una tras otra. Te avisamos en cuál vas." },
+              { icon: "refresh", text: "Si recargas la página, retomas donde ibas." },
+            ]}
+          />
+        </Section>
+        <Section icon="lock" title="Consentimiento informado">
+          <ReadingPanel>
+            <Prose text={config.texts.consent} />
+          </ReadingPanel>
+        </Section>
+        <div className="space-y-4">
           {startError ? <Alert tone="error">{startError}</Alert> : null}
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
+          <ConsentCheck checked={consent} onChange={setConsent}>
             He leído la información y acepto participar de forma voluntaria.
-          </label>
+          </ConsentCheck>
           <Button
+            size="lg"
             className="w-full"
             disabled={!consent || starting}
             onClick={() => void start()}
@@ -212,12 +220,12 @@ export function BatteryRunner({
       : undefined;
     if (!current || !step || !sessionId) {
       body = (
-        <Screen>
+        <StatusScreen icon="alert" title="No pudimos preparar el siguiente paso" role="alert">
           <Alert tone="error">
             No pudimos preparar el siguiente paso. Recarga la página para
             continuar.
           </Alert>
-        </Screen>
+        </StatusScreen>
       );
     } else {
       const embedded = {
@@ -268,7 +276,7 @@ export function BatteryRunner({
               role="status"
               aria-label={`Paso ${position} de ${steps.length}`}
             >
-              <span className="rounded-full border border-border bg-surface/90 px-3 py-1 text-xs text-muted shadow-sm">
+              <span className="rounded-full border border-border bg-surface/95 px-4 py-1.5 font-display text-sm font-semibold text-heading shadow-sm">
                 Paso {position} de {steps.length}
               </span>
             </div>
@@ -277,52 +285,44 @@ export function BatteryRunner({
       );
     }
   } else if (stage.kind === "syncing") {
-    body = (
-      <Screen>
-        <div className="space-y-4 text-center">
-          {syncError ? (
-            <>
-              <Alert tone="error">{syncError}</Alert>
-              <p className="text-sm text-muted">
-                Tus respuestas ya se guardaron; sólo falta continuar.
-              </p>
-              <Button
-                onClick={() => {
-                  const current = nextStep(progress);
-                  if (sessionId && (!current || isBatteryComplete(progress)))
-                    void finish(sessionId);
-                  else if (sessionId) void advance(current?.studyId ?? "");
-                }}
-              >
-                Reintentar
-              </Button>
-            </>
-          ) : (
-            <p className="text-sm text-muted" role="status">
-              Guardando…
-            </p>
-          )}
-        </div>
-      </Screen>
+    body = syncError ? (
+      <StatusScreen
+        icon="alert"
+        title="No pudimos continuar"
+        role="alert"
+        actions={
+          <Button
+            size="lg"
+            onClick={() => {
+              const current = nextStep(progress);
+              if (sessionId && (!current || isBatteryComplete(progress)))
+                void finish(sessionId);
+              else if (sessionId) void advance(current?.studyId ?? "");
+            }}
+          >
+            Reintentar
+          </Button>
+        }
+      >
+        <Alert tone="error">{syncError}</Alert>
+        <p className="text-muted">
+          Tus respuestas ya se guardaron; sólo falta continuar.
+        </p>
+      </StatusScreen>
+    ) : (
+      <StatusScreen icon="refresh" title="Guardando…" role="status" />
     );
   } else if (stage.kind === "thanks") {
     body = (
-      <Screen>
-        <div className="space-y-4 text-center" data-testid="thanks">
-          <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
-          <p className="whitespace-pre-line text-sm leading-relaxed">
-            {config.texts.thankYou}
-          </p>
-        </div>
-      </Screen>
+      <StatusScreen icon="check" title="¡Gracias!" testId="thanks">
+        <Prose text={config.texts.thankYou} />
+      </StatusScreen>
     );
   } else if (stage.kind === "blocked") {
     body = (
-      <Screen>
-        <div className="space-y-4 text-center" data-testid="blocked">
-          <p className="text-base">{stage.message}</p>
-        </div>
-      </Screen>
+      <StatusScreen icon="ban" title="No podemos abrir este estudio">
+        <p data-testid="blocked">{stage.message}</p>
+      </StatusScreen>
     );
   }
 

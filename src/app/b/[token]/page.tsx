@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StatusScreen } from "@/components/participant";
 import {
   apiMessage,
   availabilityError,
@@ -16,9 +17,9 @@ export const metadata: Metadata = {
 
 function Unavailable({ message }: { message: string }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md items-center justify-center px-6 text-center">
+    <StatusScreen icon="ban" title="No podemos abrir este estudio">
       <p>{message}</p>
-    </main>
+    </StatusScreen>
   );
 }
 
