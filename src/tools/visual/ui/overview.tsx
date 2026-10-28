@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { StudyRow } from "@/lib/db/types";
@@ -73,13 +73,13 @@ export async function VisualOverview({ study, projectName, created }: { study: S
             </p>
           ) : null}
         </Card>
-        <Card className="space-y-3">
+        <Block className="space-y-3">
           <div>
             <SectionTitle icon="image">Subir piezas</SectionTitle>
             <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. Elige el formato para revisar tamaño, proporción y peso.</p>
           </div>
           <AssetUploader studyId={study.id} withPlacement />
-        </Card>
+        </Block>
         {assets.length === 0 ? (
           <EmptyState icon="image" title="Aún no hay piezas">
             Sube una pieza gráfica, un anuncio o una captura para estimar su mapa de atención.

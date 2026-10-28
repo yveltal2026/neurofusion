@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { StudyTabs } from "@/components/study-tabs";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -18,7 +18,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
   const { id, sessionId } = await params;
   if (!z.string().uuid().safeParse(sessionId).success) notFound();
   const { supabase } = await requireUser();
-  const { config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
   const view = (await loadSessionViews(supabase, id, config)).find((v) => v.id === sessionId);
   if (!view) notFound();
 
@@ -51,9 +51,13 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/studies/${id}/data`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Datos
-        </Link>
+        <Breadcrumbs
+          items={[
+            ...projectCrumbs(study.project_id, projectName),
+            { label: study.name, href: `/studies/${id}` },
+            { label: "Datos", href: `/studies/${id}/data` },
+          ]}
+        />
         <h1 className="mt-1 font-display text-xl font-semibold tabular-nums">{view.participant_ref}</h1>
       </div>
       <StudyTabs id={id} active="data" />

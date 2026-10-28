@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { ScoreTrendChart } from "@/components/charts/seo-charts";
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
+import { RowLink, RowList } from "@/components/ui/rows";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { SeoAuditRow, StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +36,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
 
       {config.success ? (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card className="min-w-0 space-y-3">
+          <Block className="min-w-0 space-y-3">
             <div>
               <SectionTitle icon="search">Auditoría en vivo</SectionTitle>
               <p className="text-sm text-muted">
@@ -46,8 +46,8 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
               </p>
             </div>
             <LiveAuditForm studyId={study.id} />
-          </Card>
-          <Card className="min-w-0 space-y-3">
+          </Block>
+          <Block className="min-w-0 space-y-3">
             <div>
               <SectionTitle icon="settings">Modo asistido</SectionTitle>
               <p className="text-sm text-muted">
@@ -55,7 +55,7 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
               </p>
             </div>
             <UploadAuditForm studyId={study.id} />
-          </Card>
+          </Block>
         </div>
       ) : null}
 
@@ -67,38 +67,36 @@ export async function SeoOverview({ study, projectName, created }: { study: Stud
             Lanza la primera auditoría con la URL del sitio para ver indexación, on-page y Core Web Vitals.
           </EmptyState>
         ) : (
-          <ul className="space-y-2">
+          <RowList>
             {audits.map((a) => {
               const s = a.summary as AuditSummary;
               return (
-                <li key={a.id}>
-                  <Link href={`/studies/${study.id}/audits/${a.id}`} className="block">
-                    <Card className="flex flex-wrap items-center justify-between gap-3 transition hover:border-primary">
-                      <div>
-                        <p className="break-all font-medium">
-                          {s.score}/100 · {a.site_url}
-                        </p>
-                        <p className="text-xs text-muted">
-                          {date(a.created_at)} · {a.mode === "live" ? "En vivo" : "Asistido"} · {s.pagesAudited} página(s)
-                          {a.ai_generated_at ? " · con plan de IA" : ""}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 text-xs">
-                        {(["critical", "high", "medium"] as const).map((k) =>
-                          s.counts[k] ? (
-                            <span key={k} className="flex items-center gap-1">
-                              <SeverityBadge severity={k} /> {s.counts[k]}
-                            </span>
-                          ) : null,
-                        )}
-                        {!s.counts.critical && !s.counts.high && !s.counts.medium ? <span>{SEVERITY_LABEL.ok}</span> : null}
-                      </div>
-                    </Card>
-                  </Link>
-                </li>
+                <RowLink
+                  key={a.id}
+                  href={`/studies/${study.id}/audits/${a.id}`}
+                  icon="search"
+                  title={
+                    <span className="tabular-nums">
+                      {s.score}/100 · <span className="break-all font-normal">{a.site_url}</span>
+                    </span>
+                  }
+                  description={`${date(a.created_at)} · ${a.mode === "live" ? "En vivo" : "Asistido"} · ${s.pagesAudited} página(s)${a.ai_generated_at ? " · con plan de IA" : ""}`}
+                  meta={
+                    <>
+                      {(["critical", "high", "medium"] as const).map((k) =>
+                        s.counts[k] ? (
+                          <span key={k} className="flex items-center gap-1">
+                            <SeverityBadge severity={k} /> {s.counts[k]}
+                          </span>
+                        ) : null,
+                      )}
+                      {!s.counts.critical && !s.counts.high && !s.counts.medium ? <span>{SEVERITY_LABEL.ok}</span> : null}
+                    </>
+                  }
+                />
               );
             })}
-          </ul>
+          </RowList>
         )}
       </section>
     </div>

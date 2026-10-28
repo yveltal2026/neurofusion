@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { StudyTabs } from "@/components/study-tabs";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/ui/stat-tile";
+import { StatStrip } from "@/components/ui/stat-strip";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { loadSessionViews } from "@/tools/iat/results/load";
@@ -22,7 +23,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   const { id } = await params;
   const sp = await searchParams;
   const { supabase } = await requireUser();
-  const { study, config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
   const all = await loadSessionViews(supabase, id, config);
 
   const filters: ViewFilters = {
@@ -62,22 +63,22 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Proyecto
-        </Link>
+        <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon="check" label="Completadas" value={stats.completed} />
-        <StatTile icon="clock" label="En curso" value={stats.started} />
-        <StatTile icon="inbox" label="Abandonadas" value={stats.abandoned} />
-        <StatTile icon="alert" label="Datos a revisar" value={stats.invalid} />
-        <StatTile icon="copy" label="Posibles duplicados" value={stats.dup} />
-        <StatTile icon="ban" label="Excluidas del análisis" value={stats.excluded} />
-        <StatTile icon="device" label="Desde celular/tableta" value={stats.mobile} />
-      </div>
+      <StatStrip
+        items={[
+          { icon: "check", label: "Completadas", value: stats.completed },
+          { icon: "clock", label: "En curso", value: stats.started },
+          { icon: "inbox", label: "Abandonadas", value: stats.abandoned },
+          { icon: "alert", label: "Datos a revisar", value: stats.invalid, attention: true },
+          { icon: "copy", label: "Posibles duplicados", value: stats.dup, attention: true },
+          { icon: "ban", label: "Excluidas del análisis", value: stats.excluded },
+          { icon: "device", label: "Desde celular o tableta", value: stats.mobile },
+        ]}
+      />
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <form method="get" className="flex flex-wrap items-end gap-3">

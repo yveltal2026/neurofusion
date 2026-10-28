@@ -5,7 +5,7 @@ import { StudyHeader } from "@/components/study-header";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block, Panel } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { StudyRow } from "@/lib/db/types";
 import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
@@ -41,7 +41,7 @@ export function VariantOverview({
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
       {blocked ? <Alert tone="warning">{BATTERY_BLOCK_MESSAGE}</Alert> : null}
 
-      <Card className="space-y-3">
+      <Panel className="space-y-3">
         <div>
           <SectionTitle icon="link">Liga mágica</SectionTitle>
           <p className="text-sm text-muted">Comparte esta liga con tantos participantes como necesites. No requiere cuenta ni contraseña.</p>
@@ -53,10 +53,10 @@ export function VariantOverview({
         {study.status !== "published" ? (
           <Alert tone="warning">La liga está inactiva porque el estudio está en estado «{STATUS_LABEL[study.status].toLowerCase()}».</Alert>
         ) : null}
-      </Card>
+      </Panel>
 
       {config.success ? (
-        <Card className="space-y-3">
+        <Block className="space-y-3">
           <SectionTitle icon="bolt">Diseño de la tarea</SectionTitle>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[160px_1fr]">
             <dt className="text-muted">Variante</dt>
@@ -74,19 +74,19 @@ export function VariantOverview({
               {totalTrials(buildPlan(config.data, "overview"))} ensayos · unos {estimateVariantMinutes(config.data)} min
             </dd>
           </dl>
-        </Card>
+        </Block>
       ) : (
         <Alert tone="warning">La configuración guardada de este estudio no es válida.</Alert>
       )}
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <SectionTitle icon="settings">Ajustes</SectionTitle>
         <StudySettingsForm id={study.id} status={study.status} maxResponses={study.max_responses} closesAt={study.closes_at} duplicatePolicy={study.duplicate_policy} />
-      </Card>
+      </Block>
 
       <DuplicateStudyForm studyId={study.id} projectId={study.project_id} />
 
-      <Card className="space-y-4 border-danger/30">
+      <Block className="space-y-4 border-danger/30">
         <SectionTitle icon="alert" className="text-danger">
           Zona de riesgo
         </SectionTitle>
@@ -104,7 +104,7 @@ export function VariantOverview({
             </Button>
           </form>
         </div>
-      </Card>
+      </Block>
     </div>
   );
 }

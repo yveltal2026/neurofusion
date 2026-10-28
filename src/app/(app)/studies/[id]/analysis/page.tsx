@@ -4,6 +4,7 @@ import { ConcordanceChart, DirectionChart, HistogramChart, MeanDChart } from "@/
 import { RunAnalysisForm } from "@/components/run-analysis-form";
 import { StudyTabs } from "@/components/study-tabs";
 import { Alert } from "@/components/ui/alert";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { concordanceChart, directionChart, histogramChart, meanDChart } from "@/tools/iat/analysis/charts";
@@ -124,7 +125,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const includeInvalid = sp.invalid === "1";
   const { supabase } = await requireUser();
-  const { study, config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
 
   const views = await loadSessionViews(supabase, id, config);
   const aggregates = computeStudyAggregates(toStatsSessions(config, views), {
@@ -158,9 +159,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Proyecto
-        </Link>
+        <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="analysis" />

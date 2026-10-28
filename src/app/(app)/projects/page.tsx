@@ -1,8 +1,7 @@
-import Link from "next/link";
 import { NewProjectForm } from "@/components/new-project-form";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconTile } from "@/components/ui/icon-tile";
+import { RowLink, RowList } from "@/components/ui/rows";
 import { SectionTitle } from "@/components/ui/section-title";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow } from "@/lib/db/types";
@@ -30,30 +29,26 @@ export default async function ProjectsPage() {
           Un proyecto agrupa los estudios de una misma investigación. Crea el primero con el formulario de abajo.
         </EmptyState>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <RowList>
           {projects.map((p) => (
-            <li key={p.id}>
-              <Link href={`/projects/${p.id}`} className="block h-full">
-                <Card className="flex h-full gap-4 transition hover:border-primary">
-                  <IconTile name="folder" />
-                  <div className="min-w-0">
-                    <h2 className="font-medium">{p.name}</h2>
-                    {p.description ? <p className="mt-1 line-clamp-2 text-sm text-muted">{p.description}</p> : null}
-                    <p className="mt-3 text-xs text-muted">Creado el {new Date(p.created_at).toLocaleDateString("es-MX")}</p>
-                  </div>
-                </Card>
-              </Link>
-            </li>
+            <RowLink
+              key={p.id}
+              href={`/projects/${p.id}`}
+              icon="folder"
+              title={p.name}
+              description={p.description ? <span className="line-clamp-1">{p.description}</span> : undefined}
+              meta={`Creado el ${new Date(p.created_at).toLocaleDateString("es-MX")}`}
+            />
           ))}
-        </ul>
+        </RowList>
       )}
 
-      <Card className="max-w-lg">
+      <Block className="max-w-lg">
         <SectionTitle icon="plus" className="mb-4">
           Nuevo proyecto
         </SectionTitle>
         <NewProjectForm />
-      </Card>
+      </Block>
     </div>
   );
 }

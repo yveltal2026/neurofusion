@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Tag } from "@/components/ui/tag";
 import { getTool } from "@/tools/registry";
@@ -28,9 +28,7 @@ export function StudyHeader({
         <div className="flex items-start gap-4">
           <IconTile name={tool?.icon ?? "neuro"} size="lg" className="mt-1 hidden sm:inline-flex" />
           <div>
-            <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline print:hidden">
-              ← {projectName ?? "Proyecto"}
-            </Link>
+            <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
             <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">{study.name}</h1>
             <p className="mt-1 text-xs text-muted">
               <Tag>{tool?.name ?? study.tool_type}</Tag>

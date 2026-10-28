@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/section-title";
-import { StatTile } from "@/components/ui/stat-tile";
+import { StatStrip } from "@/components/ui/stat-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { OneSampleTest } from "@/tools/iat/engine/math";
 import { VARIANT_INFO, type VariantConfig } from "../config";
@@ -80,12 +80,14 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon="user" label="Completaron" value={a.nCompleted} />
-        <StatTile icon="check" label="Entran al promedio" value={a.nIncluded} />
-        <StatTile icon="alert" label="Con advertencias de calidad" value={a.nFlagged} />
-        <StatTile icon="ban" label="Excluidos a mano" value={a.nManuallyExcluded} />
-      </div>
+      <StatStrip
+        items={[
+          { icon: "user", label: "Completaron", value: a.nCompleted },
+          { icon: "check", label: "Entran al promedio", value: a.nIncluded },
+          { icon: "alert", label: "Con advertencias de calidad", value: a.nFlagged, attention: true },
+          { icon: "ban", label: "Excluidos a mano", value: a.nManuallyExcluded },
+        ]}
+      />
 
       {a.nIncluded > 0 && a.nIncluded < SMALL_SAMPLE ? (
         <Alert tone="info">

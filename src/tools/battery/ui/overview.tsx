@@ -1,9 +1,10 @@
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import Link from "next/link";
 import { CopyLink } from "@/components/copy-link";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonClass } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block, Card, Panel } from "@/components/ui/card";
 import {
   deleteBattery,
   duplicateBattery,
@@ -68,12 +69,7 @@ export function BatteryOverview({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link
-            href={`/projects/${battery.project_id}`}
-            className="inline-block py-1 text-sm text-muted hover:underline"
-          >
-            ← {projectName ?? "Proyecto"}
-          </Link>
+          <Breadcrumbs items={projectCrumbs(battery.project_id, projectName)} />
           <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
             {battery.name}
           </h1>
@@ -107,7 +103,7 @@ export function BatteryOverview({
         </Alert>
       ) : null}
 
-      <Card className="space-y-3">
+      <Panel className="space-y-3">
         <div>
           <h2 className="font-medium">Liga mágica</h2>
           <p className="text-sm text-muted">
@@ -134,7 +130,7 @@ export function BatteryOverview({
           Las ligas individuales de cada paso siguen funcionando por separado,
           pero sus respuestas no cuentan como parte de esta batería.
         </p>
-      </Card>
+      </Panel>
 
       <section className="space-y-4" aria-label="Participantes">
         <h2 className="text-lg font-semibold">Participantes</h2>
@@ -259,7 +255,7 @@ export function BatteryOverview({
         ))}
       </section>
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <h2 className="font-medium">Ajustes</h2>
         <StudySettingsForm
           id={battery.id}
@@ -269,9 +265,9 @@ export function BatteryOverview({
           duplicatePolicy={battery.duplicate_policy}
           action={updateBatterySettings}
         />
-      </Card>
+      </Block>
 
-      <Card className="space-y-4 border-danger/30">
+      <Block className="space-y-4 border-danger/30">
         <h2 className="font-medium text-danger">Zona de riesgo</h2>
         <div className="flex flex-wrap gap-3">
           <form action={duplicateBattery}>
@@ -297,7 +293,7 @@ export function BatteryOverview({
           Eliminar la batería borra sus participantes y las respuestas de los
           pasos ligadas a ellos. Los estudios de los pasos no se borran.
         </p>
-      </Card>
+      </Block>
     </div>
   );
 }

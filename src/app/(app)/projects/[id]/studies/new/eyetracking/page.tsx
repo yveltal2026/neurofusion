@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -9,12 +9,12 @@ export const metadata = { title: "Nuevo estudio de eye tracking · NeuroFusion" 
 export default async function NewEyeTrackingStudyPage({ params }: PageProps<"/projects/[id]/studies/new/eyetracking">) {
   const { id } = await params;
   const { supabase } = await requireUser();
-  const { data: project } = await supabase.from("projects").select("id").eq("id", id).maybeSingle();
+  const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).maybeSingle();
   if (!project) notFound();
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${id}/studies/new`} className="inline-block py-1 text-sm text-muted hover:underline">← Elegir herramienta</Link>
+        <Breadcrumbs items={newStudyCrumbs(id, project.name, "Eye tracking")} />
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nuevo estudio de eye tracking</h1>
         <p className="mt-1 text-sm text-muted">Mide dónde miran tus participantes mientras observan tus imágenes con webcam.</p>
       </div>

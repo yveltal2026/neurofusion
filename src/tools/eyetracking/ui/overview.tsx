@@ -5,7 +5,7 @@ import { StudyHeader } from "@/components/study-header";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import type { StudyRow } from "@/lib/db/types";
 import { publicEnv } from "@/lib/env";
 import { magicLinkUrl } from "@/lib/magic-link";
@@ -43,7 +43,7 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
         {config.brand ? <p className="text-sm text-muted">Marca: {config.brand}</p> : null}
         {config.audience ? <p className="text-sm text-muted">Público: {config.audience}</p> : null}
       </Card>
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <h2 className="font-medium">Participantes con webcam</h2>
         <p className="text-sm text-muted">
           Cada persona calibra su mirada y observa las imágenes durante {config.eyeTracking.durationSeconds} segundos cada una.
@@ -61,12 +61,12 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
           <input type="hidden" name="id" value={study.id} />
           <Button type="submit" variant="secondary">Regenerar liga (invalida la actual)</Button>
         </form>
-      </Card>
-      <Card className="space-y-3">
+      </Block>
+      <Block className="space-y-3">
         <h2 className="font-medium">Imágenes del estudio</h2>
         <p className="text-sm text-muted">PNG, JPEG o WebP de hasta 10 MB. Máximo 5 imágenes; quedan fijadas tras la primera respuesta.</p>
         {runs || active ? <Alert tone="info">Las imágenes ya no se pueden cambiar porque hay respuestas o sesiones en curso.</Alert> : <AssetUploader studyId={study.id} withPlacement={false} />}
-      </Card>
+      </Block>
       {assets.length ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {assets.map(({ row }, i) => (
