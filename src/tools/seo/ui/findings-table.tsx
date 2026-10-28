@@ -63,6 +63,7 @@ export function FindingsTable({ findings }: { findings: Finding[] }) {
               <tr key={`${f.rule}-${f.url}-${i}`} className="align-top">
                 <td className="px-3 py-2">
                   <SeverityBadge severity={f.severity} />
+                  {f.advisory && <p className="mt-1 text-xs text-muted">Contextual · no resta puntos</p>}
                 </td>
                 <td className="px-3 py-2">
                   <p className="font-medium">{f.element}</p>

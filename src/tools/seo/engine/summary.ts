@@ -1,10 +1,26 @@
 import { RULES, ruleDef } from "./rules-catalog";
-import type { AuditSummary, Category, Finding, Severity, SeverityCounts } from "./types";
+import type {
+  AuditSummary,
+  Category,
+  Finding,
+  Severity,
+  SeverityCounts,
+} from "./types";
 
-export const SCORE_VERSION = "seo-score-1.0";
+export const SCORE_VERSION = "seo-score-1.1";
 
-const RANK: Record<Severity, number> = { critical: 3, high: 2, medium: 1, ok: 0 };
-const CREDIT: Record<Severity, number> = { ok: 1, medium: 0.5, high: 0.25, critical: 0 };
+const RANK: Record<Severity, number> = {
+  critical: 3,
+  high: 2,
+  medium: 1,
+  ok: 0,
+};
+const CREDIT: Record<Severity, number> = {
+  ok: 1,
+  medium: 0.5,
+  high: 0.25,
+  critical: 0,
+};
 
 /**
  * Una regla por URL: si dos fuentes evalúan lo mismo (p. ej. noindex en meta y en cabecera),
@@ -19,7 +35,7 @@ export function consolidate(findings: Finding[]): Finding[] {
       out.push(f);
       continue;
     }
-    const key = `${f.rule}|${f.url}`;
+    const key = `${f.rule}|${f.url}|${Boolean(f.advisory)}`;
     const i = index.get(key);
     if (i === undefined) {
       index.set(key, out.length);
@@ -40,17 +56,32 @@ export function countBySeverity(findings: Finding[]): SeverityCounts {
  * (CORRECTO 1 · MEJORABLE 0.5 · GRAVE 0.25 · CRÍTICO 0). Es una heurística para seguir la
  * evolución de un mismo sitio, no una métrica de Google.
  */
-export function summarize(findings: Finding[], pagesAudited: number): AuditSummary {
+export function summarize(
+  findings: Finding[],
+  pagesAudited: number,
+): AuditSummary {
   // Evaluaciones: (regla, url). Para reglas de sitio repetidas, la peor.
-  const evals = new Map<string, { rule: string; category: Category; severity: Severity }>();
+  const evals = new Map<
+    string,
+    { rule: string; category: Category; severity: Severity }
+  >();
   for (const f of findings) {
+    if (f.advisory) continue;
     const key = `${f.rule}|${f.url ?? "*"}`;
     const prev = evals.get(key);
-    if (!prev || RANK[f.severity] > RANK[prev.severity]) evals.set(key, { rule: f.rule, category: f.category, severity: f.severity });
+    if (!prev || RANK[f.severity] > RANK[prev.severity])
+      evals.set(key, {
+        rule: f.rule,
+        category: f.category,
+        severity: f.severity,
+      });
   }
   let num = 0;
   let den = 0;
-  const cat = new Map<Category, { num: number; den: number; failing: number }>();
+  const cat = new Map<
+    Category,
+    { num: number; den: number; failing: number }
+  >();
   for (const e of evals.values()) {
     const w = ruleDef(e.rule)?.weight ?? 1;
     num += w * CREDIT[e.severity];
@@ -66,9 +97,15 @@ export function summarize(findings: Finding[], pagesAudited: number): AuditSumma
     score: den ? Math.round((100 * num) / den) : 0,
     scoreVersion: SCORE_VERSION,
     byCategory: [...cat.entries()]
-      .map(([category, c]) => ({ category, score: Math.round((100 * c.num) / c.den), failing: c.failing }))
+      .map(([category, c]) => ({
+        category,
+        score: Math.round((100 * c.num) / c.den),
+        failing: c.failing,
+      }))
       .sort((a, b) => a.score - b.score),
     pagesAudited,
+    advisoryCount: findings.filter((f) => f.advisory).length,
+    scoredChecks: evals.size,
   };
 }
 

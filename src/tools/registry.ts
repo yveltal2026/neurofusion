@@ -4,10 +4,27 @@
  */
 import type { IconName } from "@/components/brand/icon";
 
-export type ToolType = "iat" | "seo" | "visual" | "survey" | "iat_variant" | "eyetracking";
+export type ToolType =
+  "iat" | "seo" | "visual" | "survey" | "iat_variant" | "eyetracking";
+
+export const TOOL_CATEGORIES = [
+  { id: "attention", name: "Atención visual", question: "¿Qué miran?" },
+  {
+    id: "association",
+    name: "Asociaciones implícitas",
+    question: "¿Qué asocian?",
+  },
+  { id: "perception", name: "Percepción y opinión", question: "¿Qué opinan?" },
+  {
+    id: "digital",
+    name: "Diagnóstico digital",
+    question: "¿Cómo funciona tu sitio?",
+  },
+] as const;
 
 export interface ToolDefinition {
   type: ToolType;
+  category: (typeof TOOL_CATEGORIES)[number]["id"];
   name: string;
   shortName: string;
   icon: IconName;
@@ -18,6 +35,7 @@ export interface ToolDefinition {
 export const TOOLS: ToolDefinition[] = [
   {
     type: "iat",
+    category: "association",
     name: "Test de Asociación Implícita (IAT)",
     shortName: "IAT",
     icon: "neuro",
@@ -27,6 +45,7 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     type: "seo",
+    category: "digital",
     name: "Auditoría SEO",
     shortName: "SEO",
     icon: "search",
@@ -36,6 +55,7 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     type: "visual",
+    category: "attention",
     name: "Análisis visual con IA",
     shortName: "Visual",
     icon: "eye",
@@ -45,6 +65,7 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     type: "survey",
+    category: "perception",
     name: "Encuesta",
     shortName: "Encuesta",
     icon: "survey",
@@ -54,6 +75,7 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     type: "iat_variant",
+    category: "association",
     name: "Variantes del IAT (SC-IAT, Go/No-Go, priming)",
     shortName: "Variantes IAT",
     icon: "bolt",
@@ -63,11 +85,14 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     type: "eyetracking",
+    category: "attention",
     name: "Eye tracking con webcam",
     shortName: "Eye tracking",
     icon: "eye",
-    description: "Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención medidos con webcam.",
-    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/eyetracking`,
+    description:
+      "Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención medidos con webcam.",
+    newStudyPath: (projectId) =>
+      `/projects/${projectId}/studies/new/eyetracking`,
   },
 ];
 
@@ -76,9 +101,18 @@ export function getTool(type: string): ToolDefinition | undefined {
 }
 
 /** Los estudios de webcam existentes comparten almacenamiento de imágenes con Visual. */
-export function getStudyTool(study: { tool_type: string; config: unknown }): ToolDefinition | undefined {
+export function getStudyTool(study: {
+  tool_type: string;
+  config: unknown;
+}): ToolDefinition | undefined {
   const config = study.config;
-  const eye = study.tool_type === "visual" && typeof config === "object" && config !== null
-    && "mode" in config && config.mode === "pieces" && "eyeTracking" in config && Boolean(config.eyeTracking);
+  const eye =
+    study.tool_type === "visual" &&
+    typeof config === "object" &&
+    config !== null &&
+    "mode" in config &&
+    config.mode === "pieces" &&
+    "eyeTracking" in config &&
+    Boolean(config.eyeTracking);
   return getTool(eye ? "eyetracking" : study.tool_type);
 }

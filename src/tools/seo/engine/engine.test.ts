@@ -21,7 +21,7 @@ const GOOD = `<!doctype html><html lang="es-MX"><head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://www.demo.mx/zapatos">
 <meta property="og:title" content="Zapatos"><meta property="og:description" content="d"><meta property="og:image" content="https://www.demo.mx/a.jpg">
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Demo"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1}]}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"Demo"},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio"}]}]}</script>
 </head><body><h1>Zapatos de piel para hombre</h1><h2>Destacados</h2><h3>Oxford</h3>
 <p>${"palabra ".repeat(200)}</p>
 <img src="/a.jpg" alt="Zapato oxford café"><a href="/botas">Botas</a><a href="https://demo.mx/tenis#x">Tenis</a><a href="https://otro.com" rel="nofollow">x</a><a href="mailto:a@b.c">m</a>
@@ -36,7 +36,7 @@ describe("extractPageData", () => {
     const p = extractPageData("https://www.demo.mx/zapatos", GOOD);
     expect(p.title).toBe("Zapatos de piel para hombre | Tienda Demo");
     expect(p.canonical).toBe("https://www.demo.mx/zapatos");
-    expect(p.jsonLd).toEqual({ blocks: 1, errors: 0, types: ["BreadcrumbList", "ListItem", "Organization"] });
+    expect(p.jsonLd).toEqual({ blocks: 1, errors: 0, issues: [], types: ["BreadcrumbList", "ListItem", "Organization"] });
     expect(p.links.internal.sort()).toEqual(["https://demo.mx/tenis", "https://www.demo.mx/botas"]);
     expect(p.links.external).toBe(1);
     expect(p.links.nofollow).toBe(1);
@@ -58,7 +58,7 @@ describe("auditPage", () => {
     expect(sev["page.noindex"]).toBe("critical");
     expect(sev["page.nofollow"]).toBe("medium");
     expect(sev["title.present"]).toBe("medium");
-    expect(sev["meta.description"]).toBe("high");
+    expect(sev["meta.description"]).toBe("medium");
     expect(sev["h1"]).toBe("medium");
     expect(sev["headings.hierarchy"]).toBe("medium");
     expect(sev["structured_data"]).toBe("high");
@@ -69,11 +69,12 @@ describe("auditPage", () => {
     expect(sev["html.lang"]).toBe("medium");
   });
 
-  it("canonical a otra URL o relativa es MEJORABLE; hreflang sin x-default también", () => {
+  it("canonical alternativa es contextual; hreflang no requiere x-default", () => {
     const html = `<html lang="es"><head><link rel="canonical" href="/otra"><link rel="alternate" hreflang="es-MX" href="https://d.mx/p"><link rel="alternate" hreflang="en" href="https://d.mx/en/p"></head><body></body></html>`;
     const f = auditPage(extractPageData("https://d.mx/p", html));
     expect(f.find((x) => x.rule === "canonical")?.detail).toContain("otra URL");
-    expect(f.find((x) => x.rule === "hreflang")?.detail).toContain("x-default");
+    expect(f.find((x) => x.rule === "canonical")?.advisory).toBe(true);
+    expect(f.find((x) => x.rule === "hreflang")?.severity).toBe("ok");
   });
 });
 

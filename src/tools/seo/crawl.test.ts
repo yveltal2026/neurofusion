@@ -62,11 +62,28 @@ describe("runLiveAudit", () => {
     expect(out.pages.map((p) => [p.url, p.status]).sort()).toEqual([["https://d.mx/", 200], ["https://d.mx/a", 200], ["https://d.mx/roto", 404]]);
     const sev = (rule: string) => out.findings.filter((f) => f.rule === rule).map((f) => f.severity);
     expect(sev("https.redirect")).toEqual(["ok"]);
-    expect(sev("site.broken_links")).toEqual(["high"]);
-    expect(sev("site.duplicate_titles")).toEqual(["medium"]);
+    expect(sev("site.broken_links").filter((s) => s !== "ok")).toEqual(["high"]);
+    expect(sev("site.duplicate_titles")).toEqual(["medium", "medium"]);
     const c = out.summary.counts;
     expect(c.critical + c.high + c.medium + c.ok).toBe(out.findings.length);
-    expect(out.engineVersion).toBe("nf-seo-1.0");
+    expect(out.engineVersion).toBe("nf-seo-1.1");
+  });
+
+  it("prioriza objetivos por URL, conserva su contexto y contrasta sitemap con noindex de cabecera", async () => {
+    const deps = fakeSite({
+      "https://d.mx/robots.txt": { status: 200, body: "User-agent: *\nDisallow: /privado\nSitemap: https://d.mx/sitemap.xml" },
+      "https://d.mx/sitemap.xml": { status: 200, body: '<urlset><url><loc>https://d.mx/objetivo</loc></url><url><loc>https://d.mx/privado</loc></url><url><loc>https://d.mx/sin-revisar</loc></url></urlset>' },
+      "https://d.mx/": { status: 200, body: page("Inicio", ["/otro"]) },
+      "https://d.mx/objetivo": { status: 200, body: page("Objetivo"), headers: { "x-robots-tag": "noindex" } },
+    });
+    const out = await runLiveAudit(seoConfigSchema.parse({ siteUrl: "https://d.mx/", maxPages: 2, checkPerformance: false, targetKeyword: "general", pageTargets: [{ url: "https://d.mx/objetivo", keyword: "específica", goal: "Excluir", indexable: false }] }), deps);
+    expect(out.pages.map((p) => p.url)).toEqual(["https://d.mx/", "https://d.mx/objetivo"]);
+    expect(out.pages[1].target).toEqual({ keyword: "específica", goal: "Excluir", indexable: false });
+    expect(out.findings.find((f) => f.rule === "page.noindex" && f.url === "https://d.mx/objetivo")?.severity).toBe("ok");
+    expect(out.findings.find((f) => f.rule === "sitemap.indexability" && f.url === "https://d.mx/objetivo")?.severity).toBe("high");
+    expect(out.findings.find((f) => f.rule === "sitemap.indexability" && f.url === "https://d.mx/privado")?.severity).toBe("high");
+    expect(out.findings.find((f) => f.rule === "sitemap.indexability" && f.url === "https://d.mx/sin-revisar")).toBeUndefined();
+    expect(out.summary.coverage).toMatchObject({ htmlPages: 2, sitemapUrls: 3, sitemapChecked: 2, stopReason: "page_limit" });
   });
 
   it("no sigue redirecciones hacia la red interna", async () => {

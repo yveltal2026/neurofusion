@@ -21,6 +21,12 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
 
+### Imágenes con IA: lote y desglose por elemento
+
+El resumen de piezas permite seleccionar imágenes individuales, todas o sólo las pendientes y **Analizar seleccionadas** con progreso, errores por pieza y reintento de fallidas. Los journeys ofrecen el mismo control en **Analizar capturas en lote**. Cada resultado se guarda por separado y el lote se puede detener después de la solicitud activa.
+
+El detalle de cada imagen y su informe muestran **Aciertos principales**, **Debilidades principales** con recomendaciones y **KPIs estimados por AOI** (TTFF, FC, FD, TFD, dwell, hit rate, primera fijación, visitas y regresos), exportables a CSV. Son **predicciones numéricas de IA no medidas ni validadas**, bajo un escenario hipotético común de 5 segundos; la advertencia y el escenario se conservan en la exportación. Los análisis anteriores siguen disponibles y requieren un nuevo análisis para obtener predicciones; las AOI modificadas no heredan números de otras regiones. No se mezclan con mediciones de webcam. Método y límites en [`docs/ANALISIS_VISUAL_LOTES.md`](docs/ANALISIS_VISUAL_LOTES.md).
+
 ### Estudios de eye tracking con webcam
 
 Los controles de `eye-v3` calculan detección y frecuencia sólo durante la fijación, excluyendo el tiempo para mover los ojos al siguiente objetivo. Un punto sin suficientes lecturas se recaptura una sola vez durante 1.5 s adicionales. La recuperación muestra la causa y sus métricas. Tras dos ajustes fallidos se ofrece terminar con **precisión limitada**: la participación se guarda con `measurementStatus=limited` y `passed=false`, y queda fuera de los mapas de atención válidos. Los criterios angulares permanecen iguales. Para investigar un fallo real, abre la liga con `?diagnostic=1` (o `&diagnostic=1` si ya tiene parámetros); la pausa permite descargar un JSON local sin token de acceso ni video.

@@ -29,13 +29,18 @@ export interface Finding {
   detail: string;
   /** URL de la página; null para hallazgos de todo el sitio. */
   url: string | null;
+  /** Observación contextual: visible, pero no resta puntos ni confirma un error. */
+  advisory?: boolean;
 }
 
 export interface PageData {
   url: string;
+  documentUrl?: string;
+  expectedIndexable?: boolean;
   title: string | null;
   metaDescription: string | null;
   canonical: string | null;
+  canonicalDeclarations?: string[];
   robotsMeta: string | null;
   lang: string | null;
   viewport: string | null;
@@ -43,7 +48,12 @@ export interface PageData {
   headings: { level: number; text: string }[];
   hreflang: { lang: string; href: string }[];
   og: Record<string, string>;
-  jsonLd: { blocks: number; errors: number; types: string[] };
+  jsonLd: {
+    blocks: number;
+    errors: number;
+    types: string[];
+    issues?: string[];
+  };
   images: { total: number; missingAlt: number };
   links: { internal: string[]; external: number; nofollow: number };
   wordCount: number;
@@ -74,6 +84,7 @@ export interface PageSummary {
   wordCount: number | null;
   internalLinks: number | null;
   source: "live" | "upload";
+  target?: { keyword: string | null; goal: string; indexable: boolean };
 }
 
 export interface SeverityCounts {
@@ -90,6 +101,26 @@ export interface AuditSummary {
   scoreVersion: string;
   byCategory: { category: Category; score: number; failing: number }[];
   pagesAudited: number;
+  advisoryCount?: number;
+  scoredChecks?: number;
+  coverage?: {
+    requestedPages: number;
+    htmlPages: number;
+    httpChecks: number;
+    sitemapUrls: number;
+    sitemapChecked: number;
+    blockedUrls: number;
+    stopReason:
+      "complete" | "page_limit" | "time_limit" | "fetch_limit" | "upload";
+    performanceRequested: boolean;
+    performanceMeasured: boolean;
+  };
+  /** Configuración efectiva al ejecutar; no se toma de ajustes posteriores. */
+  scope?: {
+    targetKeyword: string | null;
+    pageTargets: import("../config").PageTarget[];
+    strategy: "mobile" | "desktop" | null;
+  };
 }
 
 export interface PerformanceResult {
@@ -98,8 +129,19 @@ export interface PerformanceResult {
   performanceScore: number | null;
   /** Categoría SEO de Lighthouse (1 página, ya renderizada). Opcional: auditorías anteriores no la tienen. */
   lighthouseSeoScore?: number | null;
-  lab: { lcpMs: number | null; cls: number | null; tbtMs: number | null; fcpMs: number | null; speedIndexMs: number | null };
+  lab: {
+    lcpMs: number | null;
+    cls: number | null;
+    tbtMs: number | null;
+    fcpMs: number | null;
+    speedIndexMs: number | null;
+  };
   /** Datos de campo (CrUX). null si el sitio no tiene tráfico suficiente. */
-  field: { lcpMs: number | null; cls: number | null; inpMs: number | null; category: string | null } | null;
+  field: {
+    lcpMs: number | null;
+    cls: number | null;
+    inpMs: number | null;
+    category: string | null;
+  } | null;
   opportunities: { id: string; title: string; savingsMs: number }[];
 }
