@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { Callout, ConsentCheck, FactList, ParticipantScreen, Prose, ReadingPanel, ScreenHeader, Section, StatusScreen } from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { IconTile } from "@/components/ui/icon-tile";
 import type { EmbeddedStep } from "@/lib/embedded-step";
 import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice, type DeviceInfo } from "@/tools/iat/runner/device";
@@ -27,8 +27,9 @@ type Stage =
 /** Códigos de error que cierran el estudio para el participante (no tiene caso reintentar). */
 const BLOCKING = ["already_participated", "closed", "full", "not_available", "invalid_link"];
 
+// Paleta neutra: el kit del participante sin la marca, para no sesgar la percepción.
 function Screen({ children }: { children: ReactNode }) {
-  return <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 py-10">{children}</main>;
+  return <ParticipantScreen brand={false}>{children}</ParticipantScreen>;
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
@@ -172,11 +173,28 @@ export function VariantRunner({
     [plan, submit],
   );
 
-  // Modo neutro: el acento es el color de texto de la marca, no el morado de acción (la pantalla del participante es la más calmada).
-  const theme: CSSProperties =
-    config.theme.mode === "custom" && config.theme.accent
-      ? ({ "--primary": config.theme.accent, "--primary-foreground": readableOn(config.theme.accent) } as CSSProperties)
-      : ({ "--primary": "var(--heading)", "--primary-foreground": "var(--background)" } as CSSProperties);
+  // Modo neutro: el acento es el color de texto de la marca, no el morado de acción (la pantalla del participante es la
+  // más calmada). Los tokens de Neuro también se neutralizan para que el kit no tiña el estudio.
+  const accent = config.theme.mode === "custom" && config.theme.accent ? config.theme.accent : null;
+  const theme: CSSProperties = accent
+    ? ({
+        "--primary": accent,
+        "--primary-foreground": readableOn(accent),
+        "--neuro": accent,
+        "--neuro-soft": accent,
+        "--neuro-ink": "var(--heading)",
+        "--focus": "var(--heading)",
+        "--control": "var(--muted)",
+      } as CSSProperties)
+    : ({
+        "--primary": "var(--heading)",
+        "--primary-foreground": "var(--background)",
+        "--neuro": "var(--heading)",
+        "--neuro-soft": "var(--heading)",
+        "--neuro-ink": "var(--heading)",
+        "--focus": "var(--heading)",
+        "--control": "var(--muted)",
+      } as CSSProperties);
 
   let body: ReactNode = null;
 
@@ -200,17 +218,27 @@ export function VariantRunner({
   } else if (stage.kind === "welcome") {
     body = (
       <Screen>
-        <div className="space-y-6">
-          <IconTile name="neuro" />
-          <h1 className="text-2xl font-semibold tracking-tight">Estudio sobre {config.product}</h1>
-          <p className="text-sm text-muted">Dura unos {minutes} {minutes === 1 ? "minuto" : "minutos"}.</p>
-          <div className="space-y-3 whitespace-pre-line text-sm leading-relaxed">{config.texts.consent}</div>
+        <ScreenHeader icon="neuro" title={`Estudio sobre ${config.product}`} />
+        <Section title="Qué vas a hacer">
+          <FactList
+            items={[
+              { icon: "clock", text: `Dura unos ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.` },
+              { icon: "bolt", text: "Verás palabras en pantalla y responderás lo más rápido que puedas." },
+              { icon: "device", text: "Funciona mejor en una computadora con teclado." },
+            ]}
+          />
+        </Section>
+        <Section icon="lock" title="Consentimiento informado">
+          <ReadingPanel>
+            <Prose text={config.texts.consent} />
+          </ReadingPanel>
+        </Section>
+        <div className="space-y-4">
           {startError ? <Alert tone="error">{startError}</Alert> : null}
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input type="checkbox" className="mt-1" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+          <ConsentCheck checked={consent} onChange={setConsent}>
             He leído la información y acepto participar de forma voluntaria.
-          </label>
-          <Button className="w-full" disabled={!consent || starting} onClick={() => void start()}>
+          </ConsentCheck>
+          <Button size="lg" className="w-full" disabled={!consent || starting} onClick={() => void start()}>
             {starting ? "Preparando…" : "Comenzar"}
           </Button>
         </div>
@@ -220,33 +248,32 @@ export function VariantRunner({
     const strong = config.deviceNotice === "suggest_desktop";
     body = (
       <Screen>
-        <div className="space-y-5">
-          <h2 className="text-xl font-semibold tracking-tight">Estás usando un {device?.deviceType === "tablet" ? "tableta" : "celular"}</h2>
-          <Alert tone={strong ? "warning" : "info"}>
-            Para mayor fiabilidad de los resultados, este estudio se recomienda en una <strong>computadora con teclado</strong>.
-            {strong ? " Si te es posible, abre esta misma liga en una computadora." : " Puedes continuar en tu dispositivo si lo prefieres."}
-          </Alert>
-          <Button className="w-full" autoFocus onClick={() => setStage({ kind: "intro" })}>
-            Continuar en este dispositivo
-          </Button>
-        </div>
+        <ScreenHeader icon="device" title={`Estás usando un ${device?.deviceType === "tablet" ? "tableta" : "celular"}`} />
+        <Alert tone={strong ? "warning" : "info"}>
+          Para mayor fiabilidad de los resultados, este estudio se recomienda en una <strong>computadora con teclado</strong>.
+          {strong ? " Si te es posible, abre esta misma liga en una computadora." : " Puedes continuar en tu dispositivo si lo prefieres."}
+        </Alert>
+        <Button size="lg" className="w-full" autoFocus onClick={() => setStage({ kind: "intro" })}>
+          Continuar en este dispositivo
+        </Button>
       </Screen>
     );
   } else if (stage.kind === "intro") {
     body = (
       <Screen>
-        <div className="space-y-5">
-          <IconTile name="agenda" />
-          <h2 className="text-xl font-semibold tracking-tight">Instrucciones</h2>
-          <p className="text-sm leading-relaxed">
+        <ScreenHeader icon="agenda" title="Instrucciones" />
+        <Callout icon="bolt" title="Tu tarea">
+          <p>
             Verás palabras en el centro de la pantalla, una a la vez. Antes de cada parte te explicaremos qué hacer.{" "}
             <strong>Responde lo más rápido que puedas, sin equivocarte</strong>: el tiempo para cada palabra es corto a propósito.
           </p>
-          <p className="text-sm leading-relaxed">Busca un lugar tranquilo; el estudio no se puede pausar.</p>
-          <Button className="w-full" autoFocus onClick={() => setStage({ kind: "block-intro", block: 0 })}>
-            Entendido, continuar
-          </Button>
-        </div>
+        </Callout>
+        <Section title="Antes de empezar">
+          <p className="text-base leading-relaxed">Busca un lugar tranquilo; el estudio no se puede pausar.</p>
+        </Section>
+        <Button size="lg" className="w-full" autoFocus onClick={() => setStage({ kind: "block-intro", block: 0 })}>
+          Entendido, continuar
+        </Button>
       </Screen>
     );
   } else if (stage.kind === "block-intro" && plan && device) {
@@ -254,13 +281,15 @@ export function VariantRunner({
     const intro = blockIntro(config, plan, block as never, stage.block + 1, plan.blocks.length, device.inputMode);
     body = (
       <Screen>
-        <div className="space-y-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">{intro.title}</p>
-          <p className="text-base leading-relaxed">{intro.body}</p>
-          <Button className="w-full" autoFocus onClick={() => setStage({ kind: "block", block: stage.block })}>
+        <ScreenHeader eyebrow={intro.title} title="Lee antes de empezar" />
+        <Callout icon="agenda" title="Qué hacer en este bloque">
+          <p>{intro.body}</p>
+        </Callout>
+        <div className="space-y-3">
+          <Button size="lg" className="w-full" autoFocus onClick={() => setStage({ kind: "block", block: stage.block })}>
             Comenzar
           </Button>
-          {device.inputMode === "keyboard" ? <p className="text-center text-xs text-muted">o presiona la barra espaciadora</p> : null}
+          {device.inputMode === "keyboard" ? <p className="text-center text-sm text-muted">o presiona la barra espaciadora</p> : null}
         </div>
       </Screen>
     );
@@ -279,48 +308,39 @@ export function VariantRunner({
       />
     );
   } else if (stage.kind === "saving") {
-    body = (
-      <Screen>
-        <div className="space-y-4 text-center">
-          {saveError ? (
-            <>
-              <Alert tone="error">{saveError}</Alert>
-              <p className="text-sm text-muted">Tus respuestas siguen en esta ventana: no la cierres.</p>
-              <Button onClick={() => void submit()}>Reintentar</Button>
-            </>
-          ) : (
-            <p className="text-sm text-muted" role="status">
-              Guardando tus respuestas…
-            </p>
-          )}
-        </div>
-      </Screen>
+    body = saveError ? (
+      <StatusScreen
+        brand={false}
+        icon="alert"
+        title="No pudimos guardar tus respuestas"
+        role="alert"
+        actions={<Button size="lg" onClick={() => void submit()}>Reintentar</Button>}
+      >
+        <Alert tone="error">{saveError}</Alert>
+        <p className="text-muted">Tus respuestas siguen en esta ventana: no la cierres.</p>
+      </StatusScreen>
+    ) : (
+      <StatusScreen brand={false} icon="refresh" title="Guardando tus respuestas…" role="status" />
     );
   } else if (stage.kind === "thanks" && embedded) {
     body = (
       <Screen>
-        <p className="text-center text-sm text-muted" role="status">
+        <p className="text-center text-base text-muted" role="status">
           Continuando…
         </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {
     body = (
-      <Screen>
-        <div className="flex flex-col items-center space-y-4 text-center" data-testid="thanks">
-          <IconTile name="check" size="lg" />
-          <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
-          <p className="whitespace-pre-line text-sm leading-relaxed">{config.texts.thankYou}</p>
-        </div>
-      </Screen>
+      <StatusScreen brand={false} icon="check" title="¡Gracias!" testId="thanks">
+        <Prose text={config.texts.thankYou} />
+      </StatusScreen>
     );
   } else if (stage.kind === "blocked") {
     body = (
-      <Screen>
-        <div className="space-y-4 text-center" data-testid="blocked">
-          <p className="text-base">{stage.message}</p>
-        </div>
-      </Screen>
+      <StatusScreen brand={false} icon="ban" title="No podemos abrir este estudio">
+        <p data-testid="blocked">{stage.message}</p>
+      </StatusScreen>
     );
   }
 

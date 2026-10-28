@@ -19,18 +19,23 @@ export function ParticipantScreen({
   children,
   width = "xl",
   aside,
+  brand = true,
 }: {
   children: ReactNode;
   width?: "xl" | "3xl";
   /** Texto corto a la derecha de la marca (p. ej. «Paso 2 de 3»). */
   aside?: ReactNode;
+  /** `false` en los estudios de paleta neutra (IAT y variantes): sin marca, para no sesgar la percepción. */
+  brand?: boolean;
 }) {
   return (
-    <main className={`mx-auto flex min-h-dvh w-full flex-col px-6 pb-10 pt-6 ${width === "3xl" ? "max-w-3xl" : "max-w-xl"}`}>
-      <div className="flex items-center justify-between pb-6">
-        <Logo width={104} decorative />
-        {aside ? <p className="font-display text-sm font-semibold text-muted">{aside}</p> : null}
-      </div>
+    <main className={`mx-auto flex min-h-dvh w-full flex-col px-6 pb-10 ${brand ? "pt-6" : "pt-10"} ${width === "3xl" ? "max-w-3xl" : "max-w-xl"}`}>
+      {brand || aside ? (
+        <div className="flex items-center justify-between pb-6">
+          {brand ? <Logo width={104} decorative /> : <span />}
+          {aside ? <p className="font-display text-sm font-semibold text-muted">{aside}</p> : null}
+        </div>
+      ) : null}
       <div className="my-auto space-y-8">{children}</div>
     </main>
   );
@@ -169,6 +174,7 @@ export function StatusScreen({
   actions,
   testId,
   role,
+  brand = true,
 }: {
   icon: IconName;
   title: string;
@@ -176,9 +182,10 @@ export function StatusScreen({
   actions?: ReactNode;
   testId?: string;
   role?: "status" | "alert";
+  brand?: boolean;
 }) {
   return (
-    <ParticipantScreen>
+    <ParticipantScreen brand={brand}>
       <div className="flex flex-col items-center gap-5 text-center" data-testid={testId} role={role}>
         <IconTile name={icon} size="lg" className="size-20 p-4" />
         <h1 className="text-3xl font-bold leading-tight text-balance">{title}</h1>
@@ -188,6 +195,16 @@ export function StatusScreen({
     </ParticipantScreen>
   );
 }
+
+// Estilos compartidos de las respuestas (encuesta y formulario del participante del IAT).
+/** Opción de respuesta grande (objetivo de toque cómodo); la elegida cambia de borde, fondo y peso. */
+export const OPTION_CLASS =
+  "flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 border-border bg-surface px-4 py-3 text-base transition-colors duration-150 motion-reduce:transition-none hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:font-medium has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
+/** Punto de una escala numérica: columnas iguales; el punto elegido se llena. */
+export const POINT_CLASS =
+  "flex h-12 min-w-0 cursor-pointer items-center justify-center rounded-lg border-2 border-border bg-surface font-display text-base font-semibold transition-colors duration-150 hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 motion-reduce:transition-none";
+/** Enunciado de una pregunta: lo más grande de su bloque. */
+export const LEGEND_CLASS = "mb-3 font-display text-lg font-semibold leading-snug text-heading";
 
 /** Tarjeta de una pregunta: número, enunciado y respuestas juntas; separada de la siguiente. */
 export function QuestionCard({ number, children }: { number?: number; children: ReactNode }) {

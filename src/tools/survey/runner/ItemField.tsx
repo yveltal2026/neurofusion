@@ -1,16 +1,8 @@
 "use client";
 
+import { LEGEND_CLASS as LEGEND, OPTION_CLASS, POINT_CLASS } from "@/components/participant";
 import { Input, Textarea } from "@/components/ui/field";
 import { MAX_TEXT_ANSWER, type SurveyItem } from "../engine";
-
-// Cada respuesta posible es una opción grande (objetivo de toque cómodo); la elegida cambia de borde, fondo y peso.
-const OPTION_CLASS =
-  "flex min-h-14 cursor-pointer items-center gap-3 rounded-lg border-2 border-border bg-surface px-4 py-3 text-base transition-colors duration-150 motion-reduce:transition-none hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:font-medium has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40";
-// Escala numérica: una sola fila con columnas iguales (nunca se parte en dos renglones); el punto elegido se llena.
-const POINT_CLASS =
-  "flex h-12 min-w-0 cursor-pointer items-center justify-center rounded-lg border-2 border-border bg-surface font-display text-base font-semibold transition-colors duration-150 hover:border-primary/50 has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40 motion-reduce:transition-none";
-// El enunciado de cada pregunta es lo más grande de su tarjeta; la ayuda va debajo, más chica y en gris.
-const LEGEND = "mb-3 font-display text-lg font-semibold leading-snug text-heading";
 
 function numberHint(min?: number, max?: number): string {
   if (min !== undefined && max !== undefined)
