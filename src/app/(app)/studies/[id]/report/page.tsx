@@ -63,7 +63,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
               </div>
             ) : null}
             <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-              {a.ai ? <AiReading result={a.ai.result} aois={a.aois} /> : <Card className="text-sm text-muted">Sin análisis de IA.</Card>}
+              {a.ai ? <AiReading result={a.ai.result} aois={a.aois} analyzedAois={a.ai.aois} asset={{ id: a.row.id, title: a.row.title }} /> : <Card className="text-sm text-muted">Sin análisis de IA.</Card>}
               {a.metrics ? <MetricsPanel metrics={a.metrics} img={{ width: a.row.width, height: a.row.height, bytes: a.row.bytes, placement: a.row.placement }} /> : null}
             </div>
           </section>

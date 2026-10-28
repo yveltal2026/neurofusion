@@ -9,16 +9,18 @@ import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, StudyRow, VisualAssetRow } from "@/lib/db/types";
 import { ASSETS_BUCKET } from "@/lib/study-files";
 import { buildSuggestText, suggestionsSchema, SUGGEST_SYSTEM_PROMPT } from "./analysis/journey";
+import { PREDICTION_EXPOSURE_MS, PREDICTION_VERSION } from "./analysis/prediction";
 import {
   buildPieceUserText,
   buildReviewUserText,
   elementsToAois,
   mergeMissingElements,
   PIECE_SYSTEM_PROMPT,
-  pieceAiSchema,
+  pieceVisionSchema,
   REVIEW_SYSTEM_PROMPT,
-  reviewSchema,
+  visionReviewSchema,
   VISION_ENGINE_VERSION,
+  type PieceAiResult,
 } from "./analysis/piece";
 import { journeyConfigSchema, siteKey, visualConfigSchema, type JourneyConfig, type VisualConfig } from "./config";
 import { aoiListSchema } from "./engine/aoi";
@@ -34,6 +36,7 @@ export interface VisualFormState {
   error?: string;
   ok?: boolean;
   message?: string;
+  code?: "rate_limit";
 }
 
 const uuid = z.string().uuid();
@@ -292,7 +295,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
 
   const since = new Date(Date.now() - 60 * 60_000).toISOString();
   const { count } = await supabase.from("visual_assets").select("id", { count: "exact", head: true }).eq("study_id", studyId.data).gte("ai_generated_at", since);
-  if ((count ?? 0) >= MAX_VISION_PER_HOUR) return { error: "Alcanzaste el límite de análisis con IA por hora en este estudio." };
+  if ((count ?? 0) >= MAX_VISION_PER_HOUR) return { error: "Alcanzaste el límite de análisis con IA por hora en este estudio.", code: "rate_limit" };
 
   const buf = await download(supabase, row.storage_path);
   if (!buf) return { error: "No se pudo leer la imagen" };
@@ -320,11 +323,11 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   try {
     const startedAt = Date.now();
     const provider = getAnalysisProvider();
-    const first = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user, schema: pieceAiSchema });
+    const first = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user, schema: pieceVisionSchema });
     // Proveedor y modelo de la lectura principal (la segunda pasada podría responderla otro nivel).
     const providerName = provider.name;
     const model = first.model;
-    let data = first.data;
+    let data: PieceAiResult = first.data;
 
     // Segunda pasada, opcional: la IA tiende a omitir lo pequeño o periférico (contacto, sellos, plazos).
     // Si falla o se acaba el tiempo, se conserva la lectura principal.
@@ -335,7 +338,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
           provider,
           system: REVIEW_SYSTEM_PROMPT,
           user: [...parts, { type: "text", text: buildReviewUserText(data.elements, { objective: cfg.objective, brand: cfg.brand, tiles: parts.length }) }],
-          schema: reviewSchema,
+          schema: visionReviewSchema,
           signal: AbortSignal.timeout(Math.min(REVIEW_TIMEOUT_MS, REVIEW_DEADLINE_MS - elapsed)),
         });
         const merged = mergeMissingElements(data, review.data.missing);
@@ -346,6 +349,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
       }
     }
 
+    data = { ...data, predictionContext: { source: "ai_prediction_unvalidated", version: PREDICTION_VERSION, exposureMs: PREDICTION_EXPOSURE_MS } };
     const aois = elementsToAois(data, plan);
     const stored: StoredAi = storedAiSchema.parse({ result: data, aois, coverage: plan.coverage, tiles: parts.length });
     const contrast = await textContrasts(buf, aois);
@@ -364,9 +368,12 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
       .eq("id", row.id);
     if (error) return { error: "El análisis se generó pero no se pudo guardar." };
     revalidatePath(`/studies/${studyId.data}/assets/${assetId.data}`);
+    revalidatePath(`/studies/${studyId.data}`);
+    revalidatePath(`/studies/${studyId.data}/report`);
+    revalidatePath(`/studies/${studyId.data}/compare`);
     return { ok: true, message: keepAnalyst ? "Análisis actualizado. Se conservaron tus áreas de interés revisadas." : undefined };
   } catch (e) {
-    if (e instanceof AiError) return { error: e.message };
+    if (e instanceof AiError) return { error: e.message, ...(e.kind === "rate_limit" ? { code: "rate_limit" as const } : {}) };
     return { error: "No se pudo completar el análisis. Inténtalo de nuevo." };
   }
 }
