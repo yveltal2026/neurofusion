@@ -4,6 +4,7 @@ import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Glossary } from "@/components/ui/glossary";
 import { StatStrip } from "@/components/ui/stat-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { OneSampleTest } from "@/tools/iat/engine/math";
@@ -86,6 +87,15 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
           { icon: "check", label: "Entran al promedio", value: a.nIncluded },
           { icon: "alert", label: "Con advertencias de calidad", value: a.nFlagged, attention: true },
           { icon: "ban", label: "Excluidos a mano", value: a.nManuallyExcluded },
+        ]}
+      />
+
+      <Glossary
+        terms={[
+          { term: "IC95 %", meaning: "Rango donde, con 95 % de confianza, está el efecto real. Si incluye 0, no hay evidencia de efecto." },
+          { term: "t y p", meaning: "Prueba contra 0 (dos colas). Un p menor a 0.05 indica que el efecto difícilmente es casualidad." },
+          { term: "d de Cohen", meaning: "Tamaño del efecto: cerca de 0.2 es pequeño, 0.5 mediano y 0.8 o más grande." },
+          { term: "Entran al promedio", meaning: "Participantes cuyos datos pasaron los controles de calidad y no fueron excluidos a mano." },
         ]}
       />
 

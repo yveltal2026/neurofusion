@@ -5,6 +5,8 @@ import { RunAnalysisForm } from "@/components/run-analysis-form";
 import { StudyTabs } from "@/components/study-tabs";
 import { Alert } from "@/components/ui/alert";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
+import { Glossary } from "@/components/ui/glossary";
+import { NoticeList } from "@/components/ui/notice-list";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { concordanceChart, directionChart, histogramChart, meanDChart } from "@/tools/iat/analysis/charts";
@@ -174,25 +176,22 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
         </Link>
       </div>
 
-      {warnings.length ? (
-        <div className="space-y-2">
-          {warnings.map((w) => (
-            <Alert key={w.text} tone={w.level === "error" ? "error" : w.level === "warning" ? "warning" : "info"}>
-              {w.text}
-            </Alert>
-          ))}
-        </div>
-      ) : null}
+      <NoticeList notices={warnings} />
 
       {aggregates.nWithUsableData > 0 ? (
         <>
           <section className="space-y-3">
             <h2 className="font-medium">Estadísticos por dimensión</h2>
             <StatsTable dims={[...aggregates.dimensions, aggregates.overall]} config={config} />
-            <p className="text-xs text-muted">
-              t de una muestra contra D = 0 (dos colas). d de Cohen = D medio / DE de D. El compuesto promedia, por participante, sus D
-              utilizables.
-            </p>
+            <Glossary
+              terms={[
+                { term: "D medio", meaning: "Promedio de las puntuaciones D: positivo si la marca A se asocia más al polo positivo; negativo si lo hace la B; cerca de 0, sin preferencia." },
+                { term: "IC 95 %", meaning: "Rango donde, con 95 % de confianza, está el D medio real. Si incluye 0, no hay evidencia de asociación." },
+                { term: "t (gl) y p", meaning: "Prueba contra D = 0 (dos colas). Un p menor a 0.05 indica que la asociación difícilmente es casualidad." },
+                { term: "d de Cohen", meaning: "Tamaño del efecto: D medio entre la desviación estándar de D. Cerca de 0.2 es pequeño, 0.5 mediano y 0.8 o más grande." },
+                { term: "Compuesto", meaning: "Promedio, por participante, de sus D utilizables en todas las dimensiones." },
+              ]}
+            />
           </section>
 
           <section className="space-y-3">

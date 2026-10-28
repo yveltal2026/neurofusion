@@ -63,8 +63,8 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
       {aois.length ? (
         <Card className="space-y-1">
           <h3 className="font-medium">Zonas ciegas</h3>
-          <p className="text-xs text-muted">
-            Elementos con atracción estimada baja (≤ {Math.round(LOW_ATTENTION * 100)} %): «zona ciega» si son importantes (4–5) y «baja atención» si su importancia es media (3).
+          <p className="text-sm text-muted">
+            AOI = zona de interés: un elemento de la pieza (logo, precio, botón) que se mide aparte. Elementos con atracción estimada baja (≤ {Math.round(LOW_ATTENTION * 100)} %): «zona ciega» si son importantes (4–5) y «baja atención» si su importancia es media (3).
           </p>
           {cold.length ? (
             <ul className="list-disc pl-5 text-sm">
