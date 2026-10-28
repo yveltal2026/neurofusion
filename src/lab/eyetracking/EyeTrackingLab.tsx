@@ -939,7 +939,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         ) : (
         <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="font-display text-xs font-semibold text-muted">Laboratorio · interno</p>
+            <p className="text-xs font-semibold text-muted">Laboratorio · interno</p>
             <h1 className="text-2xl font-semibold">Prueba de eye tracking con webcam</h1>
             <p className="text-sm text-muted">
               Mide qué tan preciso es WebEyeTrack en este dispositivo. Calibración recomendada de 18 puntos en dos etapas y validación independiente de 8.
@@ -1138,7 +1138,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "results" && session && !study ? (
         <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="font-display text-xs font-semibold text-muted">
+            <p className="text-xs font-semibold text-muted">
               {session.participant} · {session.device} · {session.engineId}
             </p>
             <h1 className="text-2xl font-semibold">Resultados de la validación</h1>

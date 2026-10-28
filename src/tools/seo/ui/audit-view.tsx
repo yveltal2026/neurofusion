@@ -78,7 +78,7 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
         ) : null}
       </div>
       <table className="w-full text-left text-sm">
-        <thead className="font-display text-xs font-semibold text-muted">
+        <thead className="text-xs font-semibold text-muted">
           <tr>
             <th className="py-1">Métrica</th>
             <th className="py-1">Usuarios reales (CrUX p75)</th>
@@ -116,7 +116,7 @@ export function PagesTable({ pages }: { pages: PageSummary[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+        <thead className="bg-neuro-wash text-xs font-semibold text-muted">
           <tr>
             <th className="px-3 py-2">URL</th>
             <th className="px-3 py-2">Estado</th>
@@ -193,7 +193,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
           <p className="text-xs text-muted">Propuestas de la IA para revisión editorial; no se aplican automáticamente.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <th className="py-1 pr-3">Página</th>
                   <th className="py-1 pr-3">Campo</th>

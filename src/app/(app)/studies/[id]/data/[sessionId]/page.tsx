@@ -80,7 +80,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
         {view.status !== "completed" ? <p className="text-sm text-muted">Esta sesión no se completó, por lo que no tiene resultados.</p> : null}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="font-display text-xs font-semibold text-muted">
+            <thead className="text-xs font-semibold text-muted">
               <tr>
                 <th className="py-2 pr-4">Dimensión</th>
                 <th className="py-2 pr-4">D</th>

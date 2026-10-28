@@ -120,6 +120,11 @@
 }
 
 @theme {
+  /* Escala de texto de la interfaz: nada por debajo de 13 px (manual v4.1, cap. 9) y el texto de apoyo a 15 px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.55;
   /* Formas: tarjetas 18 px, campos 12 px, botones y etiquetas en píldora. */
   --radius-md: 0.75rem;
   --radius-lg: 1.125rem;
