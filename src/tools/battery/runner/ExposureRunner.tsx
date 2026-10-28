@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ParticipantScreen, ScreenHeader, StatusScreen } from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { withRetry } from "@/tools/iat/runner/api";
@@ -9,11 +10,7 @@ import type { ExposurePiece } from "../participant";
 import { batteryApi } from "./api";
 
 function Screen({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col justify-center gap-5 px-6 py-8">
-      {children}
-    </main>
-  );
+  return <ParticipantScreen width="3xl">{children}</ParticipantScreen>;
 }
 
 /**
@@ -49,20 +46,12 @@ function PieceView({
   const ready = loaded && done;
   return (
     <Screen>
-      <div className="space-y-1">
-        {total > 1 ? (
-          <p className="text-sm text-muted">
-            Imagen {index + 1} de {total}
-          </p>
-        ) : null}
-        <h2 className="text-xl font-semibold tracking-tight">
-          Mira con atención
-        </h2>
-        <p className="text-sm text-muted">
-          Observa la imagen como lo harías normalmente. Cuando termine la cuenta
-          podrás continuar.
-        </p>
-      </div>
+      <ScreenHeader
+        eyebrow={total > 1 ? `Imagen ${index + 1} de ${total}` : undefined}
+        title="Mira con atención"
+        lead="Observa la imagen como lo harías normalmente. Cuando termine la cuenta podrás continuar."
+        as="h2"
+      />
 
       {failed ? (
         <div className="space-y-3">
@@ -93,7 +82,15 @@ function PieceView({
         </div>
       )}
 
-      <Button className="w-full" disabled={!ready} onClick={onNext}>
+      {loaded && !done ? (
+        <div aria-hidden="true" className="h-2 overflow-hidden rounded-full bg-neuro/15">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-1000 ease-linear motion-reduce:transition-none"
+            style={{ width: `${Math.round((1 - remaining / seconds) * 100)}%` }}
+          />
+        </div>
+      ) : null}
+      <Button size="lg" className="w-full" disabled={!ready} onClick={onNext}>
         {ready
           ? last
             ? "Continuar"
@@ -185,12 +182,12 @@ export function ExposureRunner({
 
   if (pieces.length === 0)
     return (
-      <Screen>
+      <StatusScreen icon="alert" title="Este paso no se puede mostrar" role="alert">
         <Alert tone="error">
           Este paso no tiene imágenes que mostrar. Avisa a quien te envió la
           liga.
         </Alert>
-      </Screen>
+      </StatusScreen>
     );
 
   if (stage.kind === "viewing") {
@@ -210,26 +207,30 @@ export function ExposureRunner({
     );
   }
 
+  if (error)
+    return (
+      <StatusScreen
+        icon="alert"
+        title="No pudimos continuar"
+        role="alert"
+        actions={
+          <Button
+            size="lg"
+            onClick={() => void (stage.kind === "saving" ? finish() : start())}
+          >
+            Reintentar
+          </Button>
+        }
+      >
+        <Alert tone="error">{error}</Alert>
+      </StatusScreen>
+    );
+
   return (
-    <Screen>
-      <div className="space-y-4 text-center">
-        {error ? (
-          <>
-            <Alert tone="error">{error}</Alert>
-            <Button
-              onClick={() =>
-                void (stage.kind === "saving" ? finish() : start())
-              }
-            >
-              Reintentar
-            </Button>
-          </>
-        ) : (
-          <p className="text-sm text-muted" role="status">
-            {stage.kind === "saving" ? "Guardando…" : "Preparando…"}
-          </p>
-        )}
-      </div>
-    </Screen>
+    <StatusScreen
+      icon="refresh"
+      title={stage.kind === "saving" ? "Guardando…" : "Preparando…"}
+      role="status"
+    />
   );
 }

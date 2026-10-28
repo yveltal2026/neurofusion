@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
 import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -15,10 +15,8 @@ export default async function NewVisualStudyPage({ params, searchParams }: PageP
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${id}/studies/new`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Elegir herramienta
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nuevo análisis visual con IA</h1>
+        <Breadcrumbs items={newStudyCrumbs(id, project.name, "Análisis visual")} />
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nuevo análisis visual con IA</h1>
         <p className="mt-1 text-sm text-muted">Evalúa piezas gráficas o el recorrido de compra de uno o varios sitios.</p>
       </div>
       <Card>

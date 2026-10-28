@@ -9,9 +9,9 @@ const tooltipStyle = { background: "var(--background)", border: "1px solid var(-
 /** Distribución de la medida principal entre los participantes que entran al promedio. */
 export function VariantHistogram({ rows, unitLabel }: { rows: HistogramBin[]; unitLabel: string }) {
   return (
-    <figure className="space-y-2 rounded-lg border border-border p-4">
+    <figure className="space-y-2">
       <figcaption>
-        <p className="text-sm font-medium">Distribución de la medida principal ({unitLabel})</p>
+        <p className="text-base font-semibold text-heading">Distribución de la medida principal ({unitLabel})</p>
         <p className="text-xs text-muted">Número de participantes por rango. La línea marca 0 (sin asociación o sin efecto).</p>
       </figcaption>
       <div className="text-muted" style={{ height: 240 }}>

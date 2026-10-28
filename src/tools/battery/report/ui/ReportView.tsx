@@ -11,11 +11,11 @@ const nf = (d: number) =>
     maximumFractionDigits: d,
     minimumFractionDigits: d,
   });
-const num = (n: number | null, d = 2) => (n === null ? "—" : nf(d).format(n));
+const num = (n: number | null, d = 2) => (n === null ? "sin dato" : nf(d).format(n));
 const range = (r: [number, number] | null, d = 2) =>
-  r ? `${num(r[0], d)} a ${num(r[1], d)}` : "—";
+  r ? `${num(r[0], d)} a ${num(r[1], d)}` : "sin dato";
 const pValue = (p: number | null) =>
-  p === null ? "—" : p < 0.001 ? "< 0,001" : nf(3).format(p);
+  p === null ? "sin dato" : p < 0.001 ? "< 0,001" : nf(3).format(p);
 
 /** Etiqueta de evidencia: qué tan directamente sale del participante. */
 function EvidenceBadge({ kind }: { kind: "medido" | "estimado" }) {
@@ -45,7 +45,7 @@ function Section({
   return (
     <section className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <h2 className="text-xl font-semibold">{title}</h2>
         {evidence ? <EvidenceBadge kind={evidence} /> : null}
       </div>
       {children}
@@ -101,7 +101,7 @@ export function ReportView({
       <Card>
         <dl className="grid gap-4 sm:grid-cols-3">
           <div>
-            <dt className="font-display text-xs font-semibold text-muted">
+            <dt className="text-xs font-semibold text-muted">
               Participantes que terminaron
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -109,7 +109,7 @@ export function ReportView({
             </dd>
           </div>
           <div>
-            <dt className="font-display text-xs font-semibold text-muted">
+            <dt className="text-xs font-semibold text-muted">
               En el análisis
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -117,7 +117,7 @@ export function ReportView({
             </dd>
           </div>
           <div>
-            <dt className="font-display text-xs font-semibold text-muted">
+            <dt className="text-xs font-semibold text-muted">
               Excluidos
             </dt>
             <dd className="text-2xl font-semibold tabular-nums">
@@ -149,7 +149,7 @@ export function ReportView({
         <Section title="Medidas implícitas (IAT)" evidence="medido">
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <Th>Dimensión</Th>
                   <Th>n</Th>
@@ -185,7 +185,7 @@ export function ReportView({
                       {range(d.ci95)}
                     </td>
                     <td className="py-1.5 pr-4 tabular-nums">{pValue(d.p)}</td>
-                    <td className="py-1.5 pr-4">{d.reading ?? "—"}</td>
+                    <td className="py-1.5 pr-4">{d.reading ?? "sin dato"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -198,7 +198,7 @@ export function ReportView({
         <Section title="Variantes del IAT" evidence="medido">
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <Th>Prueba</Th>
                   <Th>n</Th>
@@ -265,12 +265,12 @@ export function ReportView({
           {e.pieces.some((p) => p.criteria) ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-medium">Lectura de la IA de cada imagen</h3>
+                <h3 className="text-lg font-semibold">Lectura de la IA de cada imagen</h3>
                 <EvidenceBadge kind="estimado" />
               </div>
               <Card className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="font-display text-xs font-semibold text-muted">
+                  <thead className="text-xs font-semibold text-muted">
                     <tr>
                       <Th>Imagen</Th>
                       {(e.pieces.find((p) => p.criteria)?.criteria ?? []).map(
@@ -336,7 +336,7 @@ export function ReportView({
         {report.correlations.length ? (
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <Th>Par</Th>
                   <Th>n</Th>
@@ -393,7 +393,7 @@ export function ReportView({
           </p>
           <Card className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <Th>Código</Th>
                   {report.iat.map((d) => (
@@ -419,7 +419,7 @@ export function ReportView({
                     key={r.id}
                     className={`border-t border-border align-top ${r.excluded ? "opacity-60" : ""}`}
                   >
-                    <td className="whitespace-nowrap py-1.5 pr-4 font-display text-xs font-semibold tabular-nums">{r.ref}</td>
+                    <td className="whitespace-nowrap py-1.5 pr-4 text-sm font-semibold tabular-nums">{r.ref}</td>
                     {report.iat.map((d) => (
                       <td
                         key={`${d.stepId}:${d.dimensionId}`}

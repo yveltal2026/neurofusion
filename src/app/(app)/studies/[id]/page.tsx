@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
 import { DuplicateStudyForm } from "@/components/duplicate-study-form";
@@ -8,8 +7,9 @@ import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
-import { Card } from "@/components/ui/card";
+import { Block, Panel } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { IconTile } from "@/components/ui/icon-tile";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tag } from "@/components/ui/tag";
@@ -121,10 +121,8 @@ async function IatOverview({
         <div className="flex items-start gap-4">
           <IconTile name="neuro" size="lg" className="mt-1 hidden sm:inline-flex" />
           <div>
-            <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-              ← {projectName ?? "Proyecto"}
-            </Link>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+            <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
+            <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
             <p className="mt-2 flex items-center gap-2 text-xs text-muted">
               <Tag>IAT</Tag>
               <StatusBadge tone={study.status === "published" ? "success" : study.status === "closed" ? "warning" : "neutral"}>
@@ -141,7 +139,7 @@ async function IatOverview({
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
       {blocked ? <Alert tone="warning">{BATTERY_BLOCK_MESSAGE}</Alert> : null}
 
-      <Card className="space-y-3">
+      <Panel className="space-y-3">
         <div>
           <SectionTitle icon="link">Liga mágica</SectionTitle>
           <p className="text-sm text-muted">
@@ -165,10 +163,10 @@ async function IatOverview({
           Tip: para mayor fiabilidad de los tiempos de reacción, pide a tus participantes que respondan desde una computadora con teclado.
           También funciona en celular.
         </p>
-      </Card>
+      </Panel>
 
       {config.success ? (
-        <Card className="space-y-3">
+        <Block className="space-y-3">
           <SectionTitle icon="layers">Diseño del estudio</SectionTitle>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[160px_1fr]">
             <dt className="text-muted">Producto</dt>
@@ -186,12 +184,12 @@ async function IatOverview({
               {estimateMinutes(config.data.protocol, config.data.dimensions.length)} min
             </dd>
           </dl>
-        </Card>
+        </Block>
       ) : (
         <Alert tone="warning">La configuración guardada de este estudio no es válida.</Alert>
       )}
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <SectionTitle icon="settings">Ajustes</SectionTitle>
         <StudySettingsForm
           id={study.id}
@@ -200,11 +198,11 @@ async function IatOverview({
           closesAt={study.closes_at}
           duplicatePolicy={study.duplicate_policy}
         />
-      </Card>
+      </Block>
 
       <DuplicateStudyForm studyId={study.id} projectId={study.project_id} />
 
-      <Card className="space-y-4 border-danger/30">
+      <Block className="space-y-4 border-danger/30">
         <SectionTitle icon="alert" className="text-danger">
           Zona de riesgo
         </SectionTitle>
@@ -224,7 +222,7 @@ async function IatOverview({
             </Button>
           </form>
         </div>
-      </Card>
+      </Block>
     </div>
   );
 }

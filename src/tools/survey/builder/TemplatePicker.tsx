@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import type { IconName } from "@/components/brand/icon";
+import { Icon, type IconName } from "@/components/brand/icon";
 import { IconTile } from "@/components/ui/icon-tile";
 import { countItems, TEMPLATES, type SurveyTemplate } from "./model";
 
@@ -21,7 +21,7 @@ function statsLabel(id: string): string {
   return `${s.blocks} ${s.blocks === 1 ? "bloque" : "bloques"} · ${s.items} ${s.items === 1 ? "pregunta" : "preguntas"}`;
 }
 
-function TemplateCard({
+function TemplateRow({
   t,
   onPick,
 }: {
@@ -29,23 +29,16 @@ function TemplateCard({
   onPick: (t: SurveyTemplate) => void;
 }) {
   const descId = useId();
-  const blank = t.id === "blank";
   return (
-    <li
-      className={`relative flex gap-4 rounded-lg p-5 transition-colors duration-150 motion-reduce:transition-none ${
-        blank
-          ? "border-2 border-dashed border-border hover:border-heading"
-          : "border border-border bg-surface hover:border-heading"
-      }`}
-    >
-      <IconTile name={TEMPLATE_ICONS[t.id] ?? "survey"} size="lg" />
-      <div className="min-w-0 space-y-1">
-        <h2 className="text-base font-semibold leading-snug">
+    <li className="group relative flex items-center gap-4 px-2 py-4 transition-colors duration-150 hover:bg-neuro-wash motion-reduce:transition-none sm:px-3">
+      <IconTile name={TEMPLATE_ICONS[t.id] ?? "survey"} size="md" />
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <h2 className="font-display text-base font-semibold leading-snug text-heading">
           <button
             type="button"
             aria-describedby={descId}
             onClick={() => onPick(t)}
-            className="text-left after:absolute after:inset-0 after:rounded-lg"
+            className="text-left after:absolute after:inset-0"
           >
             {t.name}
           </button>
@@ -53,10 +46,9 @@ function TemplateCard({
         <p id={descId} className="text-sm text-muted">
           {t.description}
         </p>
-        <p className="pt-1 text-xs font-medium text-heading">
-          {statsLabel(t.id)}
-        </p>
       </div>
+      <p className="hidden shrink-0 text-sm text-muted sm:block">{statsLabel(t.id)}</p>
+      <Icon name="arrow" className="size-5 shrink-0 text-muted transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-neuro-ink motion-reduce:transition-none" />
     </li>
   );
 }
@@ -74,17 +66,17 @@ export function TemplatePicker({
     <div className="space-y-8">
       <header className="space-y-1">
         <p className="text-sm text-muted">Proyecto: {projectName}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight">
           Nueva encuesta
         </h1>
         <p className="text-sm text-muted">
           Elige un punto de partida; todo se puede editar después.
         </p>
       </header>
-      <ul className="grid gap-4 sm:grid-cols-2">
-        <TemplateCard t={blank!} onPick={onPick} />
+      <ul className="divide-y divide-border border-y border-border">
+        <TemplateRow t={blank!} onPick={onPick} />
         {ready.map((t) => (
-          <TemplateCard key={t.id} t={t} onPick={onPick} />
+          <TemplateRow key={t.id} t={t} onPick={onPick} />
         ))}
       </ul>
     </div>

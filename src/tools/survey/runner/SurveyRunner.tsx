@@ -7,10 +7,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Icon } from "@/components/brand/icon";
-import { IconTile } from "@/components/ui/icon-tile";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Callout,
+  ConsentCheck,
+  FactList,
+  ParticipantScreen,
+  Prose,
+  QuestionCard,
+  ReadingPanel,
+  ScreenHeader,
+  Section,
+  StatusScreen,
+} from "@/components/participant";
 import type { EmbeddedStep } from "@/lib/embedded-step";
 import { withRetry } from "@/tools/iat/runner/api";
 import { detectDevice, type DeviceInfo } from "@/tools/iat/runner/device";
@@ -43,18 +53,24 @@ const BLOCKING = [
 ];
 
 function Screen({ children }: { children: ReactNode }) {
-  return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-6 py-10">
-      {children}
-    </main>
-  );
+  return <ParticipantScreen>{children}</ParticipantScreen>;
 }
+
+/**
+ * Título neutro de cada parte. No se muestra el nombre del instrumento (SUS, NPS…): nombrarlo
+ * condicionaría la respuesta, y cada instrumento ya trae su indicación sin revelarlo.
+ */
+const BLOCK_TITLE = {
+  questions: "Cuéntanos sobre ti",
+  instrument: "Tu opinión",
+  price: "Sobre el precio",
+} as const;
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
   const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return (
     <div
-      className="fixed inset-x-0 top-0 z-10 h-1.5 bg-foreground/10"
+      className="fixed inset-x-0 top-0 z-10 h-2 bg-neuro/15"
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
@@ -62,7 +78,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
       aria-label="Progreso"
     >
       <div
-        className="h-full bg-heading transition-[width] duration-300 motion-reduce:transition-none"
+        className="h-full rounded-r-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -236,49 +252,41 @@ export function SurveyRunner({
   } else if (stage.kind === "welcome") {
     body = (
       <Screen>
-        <div className="space-y-6">
-          <IconTile name="survey" />
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {config.title}
-          </h1>
-          {config.intro ? (
-            <p className="whitespace-pre-line text-sm leading-relaxed">
-              {config.intro}
-            </p>
-          ) : null}
-          <ul className="space-y-2 rounded-md bg-primary/10 px-4 py-3 text-sm">
-            <li className="flex items-center gap-3">
-              <Icon name="clock" className="size-5" />
-              {blocks.length === 1
-                ? "Es una sola parte"
-                : `Son ${blocks.length} partes`}
-              {` y toma unos ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`}
-            </li>
-            <li className="flex items-center gap-3">
-              <Icon name="check" className="size-5" />
-              No hay respuestas correctas ni incorrectas: queremos tu opinión
-              sincera.
-            </li>
-            <li className="flex items-center gap-3">
-              <Icon name="device" className="size-5" />
-              Puedes responder desde tu celular o tu computadora, sin ayuda de
-              nadie.
-            </li>
-          </ul>
-          <div className="space-y-3 whitespace-pre-line text-sm leading-relaxed">
-            {config.texts.consent}
-          </div>
+        <ScreenHeader
+          icon="survey"
+          title={config.title}
+          lead={config.intro ? <Prose text={config.intro} size="lg" /> : undefined}
+        />
+        <Section title="Antes de empezar">
+          <FactList
+            items={[
+              {
+                icon: "clock",
+                text: `${blocks.length === 1 ? "Es una sola parte" : `Son ${blocks.length} partes`} y toma unos ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`,
+              },
+              {
+                icon: "check",
+                text: "No hay respuestas correctas ni incorrectas: queremos tu opinión sincera.",
+              },
+              {
+                icon: "device",
+                text: "Puedes responder desde tu celular o tu computadora, sin ayuda de nadie.",
+              },
+            ]}
+          />
+        </Section>
+        <Section icon="lock" title="Consentimiento informado">
+          <ReadingPanel>
+            <Prose text={config.texts.consent} />
+          </ReadingPanel>
+        </Section>
+        <div className="space-y-4">
           {startError ? <Alert tone="error">{startError}</Alert> : null}
-          <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-            />
+          <ConsentCheck checked={consent} onChange={setConsent}>
             He leído la información y acepto participar de forma voluntaria.
-          </label>
+          </ConsentCheck>
           <Button
+            size="lg"
             className="w-full"
             disabled={!consent || starting}
             onClick={() => void start()}
@@ -293,27 +301,32 @@ export function SurveyRunner({
     const items = itemsOfBlock(config, block.id);
     const instructions = blockInstructions(block);
     const last = stage.index + 1 === blocks.length;
+    const groups = groupBipolar(items);
     body = (
       <Screen>
-        <div ref={topRef} className="space-y-6">
-          {blocks.length > 1 ? (
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              Parte {stage.index + 1} de {blocks.length}
-            </p>
-          ) : null}
+        <div ref={topRef} className="space-y-8">
+          <ScreenHeader
+            eyebrow={
+              blocks.length > 1
+                ? `Parte ${stage.index + 1} de ${blocks.length}`
+                : undefined
+            }
+            title={BLOCK_TITLE[block.kind]}
+          />
           {instructions ? (
-            <p className="text-sm leading-relaxed text-muted">{instructions}</p>
+            <Callout title="Cómo responder">{instructions}</Callout>
           ) : null}
           {errors._form ? <Alert tone="error">{errors._form}</Alert> : null}
           <form
-            className="space-y-6"
+            className="space-y-5"
             noValidate
             onSubmit={(e) => {
               e.preventDefault();
               next(stage.index);
             }}
           >
-            {groupBipolar(items).map((group) => {
+            {groups.map((group, gi) => {
+              const number = groups.length > 1 ? gi + 1 : undefined;
               const clear = (ids: string[]) =>
                 setErrors((er) => {
                   if (!ids.some((id) => er[id]) && !er._form) return er;
@@ -324,34 +337,36 @@ export function SurveyRunner({
                 });
               if (group.length > 1)
                 return (
-                  <BipolarGroup
-                    key={group[0]!.id}
-                    items={
-                      group as Extract<
-                        (typeof group)[number],
-                        { type: "scale" }
-                      >[]
-                    }
-                    values={answers}
-                    errors={errors}
-                    onChange={(id, v) => {
-                      setAnswers((a) => ({ ...a, [id]: v }));
-                      clear([id]);
-                    }}
-                  />
+                  <QuestionCard key={group[0]!.id} number={number}>
+                    <BipolarGroup
+                      items={
+                        group as Extract<
+                          (typeof group)[number],
+                          { type: "scale" }
+                        >[]
+                      }
+                      values={answers}
+                      errors={errors}
+                      onChange={(id, v) => {
+                        setAnswers((a) => ({ ...a, [id]: v }));
+                        clear([id]);
+                      }}
+                    />
+                  </QuestionCard>
                 );
               const item = group[0]!;
               return (
-                <ItemField
-                  key={item.id}
-                  item={item}
-                  value={answers[item.id]}
-                  error={errors[item.id]}
-                  onChange={(v) => {
-                    setAnswers((a) => ({ ...a, [item.id]: v }));
-                    clear([item.id]);
-                  }}
-                />
+                <QuestionCard key={item.id} number={number}>
+                  <ItemField
+                    item={item}
+                    value={answers[item.id]}
+                    error={errors[item.id]}
+                    onChange={(v) => {
+                      setAnswers((a) => ({ ...a, [item.id]: v }));
+                      clear([item.id]);
+                    }}
+                  />
+                </QuestionCard>
               );
             })}
             {Object.keys(errors).some((k) => k !== "_form") ? (
@@ -359,10 +374,11 @@ export function SurveyRunner({
                 Revisa las preguntas marcadas para continuar.
               </Alert>
             ) : null}
-            <div className="flex gap-3">
+            <div className="sticky bottom-0 -mx-6 flex gap-3 border-t border-border bg-background/95 px-6 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:backdrop-blur-none">
               {stage.index > 0 ? (
                 <Button
                   type="button"
+                  size="lg"
                   variant="secondary"
                   onClick={() => {
                     setErrors({});
@@ -372,7 +388,7 @@ export function SurveyRunner({
                   Atrás
                 </Button>
               ) : null}
-              <Button type="submit" className="flex-1">
+              <Button type="submit" size="lg" className="flex-1">
                 {last ? "Enviar respuestas" : "Continuar"}
               </Button>
             </div>
@@ -381,55 +397,40 @@ export function SurveyRunner({
       </Screen>
     );
   } else if (stage.kind === "submitting") {
-    body = (
-      <Screen>
-        <div className="space-y-4 text-center">
-          {saveError ? (
-            <>
-              <Alert tone="error">{saveError}</Alert>
-              <p className="text-sm text-muted">
-                Tus respuestas siguen en esta ventana: no la cierres.
-              </p>
-              <Button onClick={() => void submit()}>Reintentar</Button>
-            </>
-          ) : (
-            <p className="text-sm text-muted" role="status">
-              Guardando tus respuestas…
-            </p>
-          )}
-        </div>
-      </Screen>
+    body = saveError ? (
+      <StatusScreen
+        icon="alert"
+        title="No pudimos guardar tus respuestas"
+        role="alert"
+        actions={<Button size="lg" onClick={() => void submit()}>Reintentar</Button>}
+      >
+        <Alert tone="error">{saveError}</Alert>
+        <p className="text-muted">
+          Tus respuestas siguen en esta ventana: no la cierres.
+        </p>
+      </StatusScreen>
+    ) : (
+      <StatusScreen icon="refresh" title="Guardando tus respuestas…" role="status" />
     );
   } else if (stage.kind === "thanks" && embedded) {
     body = (
       <Screen>
-        <p className="text-center text-sm text-muted" role="status">
+        <p className="text-center text-base text-muted" role="status">
           Continuando…
         </p>
       </Screen>
     );
   } else if (stage.kind === "thanks") {
     body = (
-      <Screen>
-        <div
-          className="flex flex-col items-center space-y-4 text-center"
-          data-testid="thanks"
-        >
-          <IconTile name="check" size="lg" />
-          <h2 className="text-2xl font-semibold tracking-tight">¡Gracias!</h2>
-          <p className="whitespace-pre-line text-sm leading-relaxed">
-            {config.texts.thankYou}
-          </p>
-        </div>
-      </Screen>
+      <StatusScreen icon="check" title="¡Gracias!" testId="thanks">
+        <Prose text={config.texts.thankYou} />
+      </StatusScreen>
     );
   } else if (stage.kind === "blocked") {
     body = (
-      <Screen>
-        <div className="space-y-4 text-center" data-testid="blocked">
-          <p className="text-base">{stage.message}</p>
-        </div>
-      </Screen>
+      <StatusScreen icon="ban" title="No podemos abrir esta encuesta">
+        <p data-testid="blocked">{stage.message}</p>
+      </StatusScreen>
     );
   }
 

@@ -25,7 +25,7 @@ export function StepShell({
   return (
     <section className="space-y-5">
       <header className="space-y-1">
-        <p className="font-display text-xs font-semibold text-muted">{title}</p>
+        <p className="text-xs font-semibold text-muted">{title}</p>
         <h2 className="text-xl font-semibold tracking-tight">{question}</h2>
       </header>
       {children}

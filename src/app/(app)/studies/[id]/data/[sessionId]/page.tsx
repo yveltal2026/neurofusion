@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { StudyTabs } from "@/components/study-tabs";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { fetchAll, loadStudyForResearcher } from "@/lib/studies";
 import { DEVICE_LABEL, FLAG_LABEL, STATUS_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
@@ -18,7 +18,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
   const { id, sessionId } = await params;
   if (!z.string().uuid().safeParse(sessionId).success) notFound();
   const { supabase } = await requireUser();
-  const { config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
   const view = (await loadSessionViews(supabase, id, config)).find((v) => v.id === sessionId);
   if (!view) notFound();
 
@@ -36,30 +36,34 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
 
   const demo = view.demographics ?? {};
   const explicitLabel =
-    view.explicit_preference === "A" ? config.conceptA.label : view.explicit_preference === "B" ? config.conceptB.label : view.explicit_preference === "neutral" ? "Ninguna / me da igual" : "—";
+    view.explicit_preference === "A" ? config.conceptA.label : view.explicit_preference === "B" ? config.conceptB.label : view.explicit_preference === "neutral" ? "Ninguna / me da igual" : "sin dato";
   const fields: [string, string][] = [
     ["Estado", STATUS_LABEL[view.status]],
     ["Inicio", new Date(view.started_at).toLocaleString("es-MX")],
-    ["Fin", view.completed_at ? new Date(view.completed_at).toLocaleString("es-MX") : "—"],
+    ["Fin", view.completed_at ? new Date(view.completed_at).toLocaleString("es-MX") : "sin dato"],
     ["Dispositivo", `${DEVICE_LABEL[view.device_type]} · ${view.input_mode === "touch" ? "táctil" : "teclado"} · ${view.screen_width ?? "?"}×${view.screen_height ?? "?"}`],
     ["Preferencia explícita", explicitLabel],
-    ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "—")]] as [string, string][]) : []),
-    ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "—")]] as [string, string][]) : []),
+    ...(config.participant.collectAge ? ([["Edad", String(demo.age ?? "sin dato")]] as [string, string][]) : []),
+    ...(config.participant.collectGender ? ([["Género", String(demo.gender ?? "sin dato")]] as [string, string][]) : []),
     ...config.participant.extraFields.map((f): [string, string] => [f.label, formatExtraAnswer(f, demo[f.id])]),
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/studies/${id}/data`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Datos
-        </Link>
-        <h1 className="mt-1 font-display text-xl font-semibold tabular-nums">{view.participant_ref}</h1>
+        <Breadcrumbs
+          items={[
+            ...projectCrumbs(study.project_id, projectName),
+            { label: study.name, href: `/studies/${id}` },
+            { label: "Datos", href: `/studies/${id}/data` },
+          ]}
+        />
+        <h1 className="mt-1 font-display text-3xl font-bold tabular-nums">{view.participant_ref}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Participante</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Participante</h2>
         <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[180px_1fr]">
           {fields.map(([k, v]) => (
             <div key={k} className="contents">
@@ -69,14 +73,14 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
           ))}
         </dl>
         {view.duplicate_flag ? <p className="text-sm text-warning">Marcada como posible duplicado (misma IP y navegador que otra sesión).</p> : null}
-      </Card>
+      </Block>
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Resultados por dimensión</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Resultados por dimensión</h2>
         {view.status !== "completed" ? <p className="text-sm text-muted">Esta sesión no se completó, por lo que no tiene resultados.</p> : null}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="font-display text-xs font-semibold text-muted">
+            <thead className="text-xs font-semibold text-muted">
               <tr>
                 <th className="py-2 pr-4">Dimensión</th>
                 <th className="py-2 pr-4">D</th>
@@ -93,25 +97,25 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
                 return (
                   <tr key={d.id}>
                     <td className="py-2 pr-4">{d.name}</td>
-                    <td className="py-2 pr-4 tabular-nums">{r?.d_score != null ? r.d_score.toFixed(3) : "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r?.d_score != null ? r.d_score.toFixed(3) : "sin dato"}</td>
                     <td className="py-2 pr-4">{interpretationText(config, i, r)}</td>
                     <td className="py-2 pr-4">
-                      {r ? validityText(r.valid) : "—"}
+                      {r ? validityText(r.valid) : "sin dato"}
                       {r && r.flags.length ? <div className="text-xs text-muted">{r.flags.map((f) => FLAG_LABEL[f] ?? f).join("; ")}</div> : null}
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.error_rate * 100).toFixed(1)} %` : "—"}</td>
-                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.fast_fraction * 100).toFixed(1)} %` : "—"}</td>
-                    <td className="py-2 tabular-nums">{r ? `${r.n_used} / ${r.n_trials}` : "—"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.error_rate * 100).toFixed(1)} %` : "sin dato"}</td>
+                    <td className="py-2 pr-4 tabular-nums">{r ? `${(r.fast_fraction * 100).toFixed(1)} %` : "sin dato"}</td>
+                    <td className="py-2 tabular-nums">{r ? `${r.n_used} / ${r.n_trials}` : "sin dato"}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-      </Card>
+      </Block>
 
-      <Card className="space-y-3">
-        <h2 className="font-medium">Excluir del análisis</h2>
+      <Block className="space-y-3">
+        <h2 className="text-xl font-semibold">Excluir del análisis</h2>
         <form action={setSessionExcluded} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="studyId" value={id} />
           <input type="hidden" name="sessionId" value={sessionId} />
@@ -128,7 +132,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
             {view.excluded ? "Reincorporar al análisis" : "Excluir del análisis"}
           </Button>
         </form>
-      </Card>
+      </Block>
 
       <details className="rounded-lg border border-border p-4">
         <summary className="cursor-pointer text-sm font-medium">Ensayos ({trials.length})</summary>

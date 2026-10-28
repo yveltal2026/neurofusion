@@ -1,3 +1,4 @@
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { isAiConfigured } from "@/lib/ai";
 import { requireUser } from "@/lib/auth/session";
@@ -13,7 +14,8 @@ export default async function NewIatStudyPage({ params }: PageProps<"/projects/[
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Nuevo estudio IAT</h1>
+      <Breadcrumbs items={newStudyCrumbs(id, project.name, "IAT")} />
+      <h1 className="mt-1 text-3xl font-bold tracking-tight">Nuevo estudio IAT</h1>
       <Wizard projectId={project.id} projectName={project.name} aiAvailable={isAiConfigured()} />
     </div>
   );

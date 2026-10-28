@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import type { ExportedSession } from "./session";
 
 function fmt(v: number | null, digits = 1): string {
-  return v === null || !Number.isFinite(v) ? "—" : v.toFixed(digits);
+  return v === null || !Number.isFinite(v) ? "sin dato" : v.toFixed(digits);
 }
 
 const pct = (v: number | null) => (v === null ? null : v * 100);
@@ -56,7 +56,7 @@ export function ResultsView({ session }: { session: ExportedSession }) {
     <div className="space-y-6">
       {session.driftChecks?.length ? (
         <Card className="space-y-2">
-          <h2 className="font-medium">Controles de deriva</h2>
+          <h2 className="text-xl font-semibold">Controles de deriva</h2>
           {session.driftChecks.map((check, i) => (
             <p key={i} className="text-sm">Control {i + 1}: {check.passed ? "aceptable" : "requiere recalibración"} · error mediano {fmt(check.medianErrorDeg)}° · máximo {fmt(check.maxErrorDeg)}°</p>
           ))}
@@ -89,7 +89,7 @@ export function ResultsView({ session }: { session: ExportedSession }) {
       </dl>
 
       <Card className="space-y-2">
-        <h2 className="text-base font-semibold">Diagnóstico por eje</h2>
+        <h2 className="text-xl font-semibold">Diagnóstico por eje</h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Stat
             label="Ganancia horizontal"
@@ -122,7 +122,7 @@ export function ResultsView({ session }: { session: ExportedSession }) {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-base font-semibold">Objetivos vs. mirada</h2>
+        <h2 className="text-xl font-semibold">Objetivos vs. mirada</h2>
         <GazeMap session={session} />
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">

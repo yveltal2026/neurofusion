@@ -1,6 +1,6 @@
 import { Icon } from "@/components/brand/icon";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import { requireUser } from "@/lib/auth/session";
 import { duplicateStudy } from "@/app/(app)/studies/[id]/actions";
@@ -12,7 +12,7 @@ export async function DuplicateStudyForm({ studyId, projectId }: { studyId: stri
   const projects = data ?? [];
 
   return (
-    <Card className="space-y-3">
+    <Block className="space-y-3">
       <SectionTitle icon="copy">Duplicar o usar como plantilla</SectionTitle>
       <p className="text-sm text-muted">
         Crea una copia con la misma configuración, una liga nueva y sin respuestas. Queda en borrador: publícala en Ajustes cuando esté lista.
@@ -38,6 +38,6 @@ export async function DuplicateStudyForm({ studyId, projectId }: { studyId: stri
           Crear copia
         </Button>
       </form>
-    </Card>
+    </Block>
   );
 }

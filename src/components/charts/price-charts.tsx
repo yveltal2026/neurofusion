@@ -8,9 +8,9 @@ const tooltipStyle = { background: "var(--background)", border: "1px solid var(-
 
 function Frame({ title, caption, children }: { title: string; caption: string; children: React.ReactNode }) {
   return (
-    <figure className="space-y-2 rounded-lg border border-border p-4 break-inside-avoid">
+    <figure className="space-y-2 break-inside-avoid">
       <figcaption>
-        <p className="text-sm font-medium">{title}</p>
+        <p className="text-base font-semibold text-heading">{title}</p>
         <p className="text-xs text-muted">{caption}</p>
       </figcaption>
       <div className="text-muted" style={{ height: 280 }}>

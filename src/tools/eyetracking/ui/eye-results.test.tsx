@@ -72,9 +72,9 @@ it("muestra los KPIs agregados, cambia de participante y alterna visualizaciones
   });
   row = within(screen.getByRole("rowheader", { name: "Logo" }).closest("tr")!);
   expect(row.getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
-    "—",
+    "sin dato",
     "0",
-    "—",
+    "sin dato",
     "0",
     "0",
     "0",
@@ -108,7 +108,7 @@ it("distingue ausencia de registros de ceros medidos y ofrece definir AOI", () =
   expect(
     within(screen.getByRole("rowheader", { name: "Logo" }).closest("tr")!)
       .getAllByRole("cell")
-      .every((cell) => cell.textContent === "—"),
+      .every((cell) => cell.textContent === "sin dato"),
   ).toBe(true);
   expect(
     (

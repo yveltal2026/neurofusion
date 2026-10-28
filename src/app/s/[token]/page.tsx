@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { StatusScreen } from "@/components/participant";
 import { apiMessage, availabilityError, loadParticipantStudyByToken } from "@/lib/participant-api";
 import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
 import { EyeStudyRunner } from "@/tools/visual/eye/EyeStudyRunner";
@@ -14,9 +15,9 @@ export const metadata: Metadata = {
 
 function Unavailable({ message }: { message: string }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md items-center justify-center px-6 text-center">
+    <StatusScreen icon="ban" title="No podemos abrir este estudio">
       <p>{message}</p>
-    </main>
+    </StatusScreen>
   );
 }
 

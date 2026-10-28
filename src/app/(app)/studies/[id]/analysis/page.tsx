@@ -4,6 +4,9 @@ import { ConcordanceChart, DirectionChart, HistogramChart, MeanDChart } from "@/
 import { RunAnalysisForm } from "@/components/run-analysis-form";
 import { StudyTabs } from "@/components/study-tabs";
 import { Alert } from "@/components/ui/alert";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
+import { Glossary } from "@/components/ui/glossary";
+import { NoticeList } from "@/components/ui/notice-list";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { concordanceChart, directionChart, histogramChart, meanDChart } from "@/tools/iat/analysis/charts";
@@ -27,7 +30,7 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+        <thead className="bg-neuro-wash text-xs font-semibold text-muted">
           <tr>
             <th className="px-3 py-2">Dimensión</th>
             <th className="px-3 py-2">n</th>
@@ -43,7 +46,7 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
           {dims.map((d) => {
             const t = d.test;
             const idx = typeof d.index === "number" ? d.index : null;
-            let reading = "—";
+            let reading = "sin dato";
             if (t) {
               const i = interpretD(t.mean);
               const dim = idx !== null ? config.dimensions[idx] : null;
@@ -58,11 +61,11 @@ function StatsTable({ dims, config }: { dims: DimensionAggregate[]; config: Awai
               <tr key={String(d.index)}>
                 <td className="px-3 py-2 font-medium">{d.label}</td>
                 <td className="px-3 py-2 tabular-nums">{d.n}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "—"}</td>
-                <td className="px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "—"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmt(t.mean, 3) : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? `[${fmt(t.ci95[0])}, ${fmt(t.ci95[1])}]` : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? `${fmt(t.t)} (${t.df})` : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmtP(t.p) : "sin dato"}</td>
+                <td className="whitespace-nowrap px-3 py-2 tabular-nums">{t ? fmt(t.cohenD) : "sin dato"}</td>
                 <td className="px-3 py-2">{reading}</td>
               </tr>
             );
@@ -77,10 +80,10 @@ function Breakdown({ title, data, dimNames }: { title: string; data: SegmentBrea
   if (data.groups.length === 0) return null;
   return (
     <div className="space-y-1.5">
-      <h3 className="text-sm font-medium">{title}</h3>
+      <h3 className="text-base font-semibold">{title}</h3>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+          <thead className="bg-neuro-wash text-xs font-semibold text-muted">
             <tr>
               <th className="px-3 py-2">Grupo</th>
               <th className="px-3 py-2">Sesiones</th>
@@ -99,10 +102,10 @@ function Breakdown({ title, data, dimNames }: { title: string; data: SegmentBrea
                 <td className="px-3 py-2 tabular-nums">{g.nSessions}</td>
                 {g.meanD.map((m, i) => (
                   <td key={i} className="px-3 py-2 tabular-nums">
-                    {m === null ? "—" : fmt(m)}
+                    {m === null ? "sin dato" : fmt(m)}
                   </td>
                 ))}
-                <td className="px-3 py-2 tabular-nums">{g.overallMeanD === null ? "—" : fmt(g.overallMeanD)}</td>
+                <td className="px-3 py-2 tabular-nums">{g.overallMeanD === null ? "sin dato" : fmt(g.overallMeanD)}</td>
               </tr>
             ))}
           </tbody>
@@ -124,7 +127,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const includeInvalid = sp.invalid === "1";
   const { supabase } = await requireUser();
-  const { study, config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
 
   const views = await loadSessionViews(supabase, id, config);
   const aggregates = computeStudyAggregates(toStatsSessions(config, views), {
@@ -158,10 +161,8 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Proyecto
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+        <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="analysis" />
 
@@ -175,29 +176,26 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
         </Link>
       </div>
 
-      {warnings.length ? (
-        <div className="space-y-2">
-          {warnings.map((w) => (
-            <Alert key={w.text} tone={w.level === "error" ? "error" : w.level === "warning" ? "warning" : "info"}>
-              {w.text}
-            </Alert>
-          ))}
-        </div>
-      ) : null}
+      <NoticeList notices={warnings} />
 
       {aggregates.nWithUsableData > 0 ? (
         <>
           <section className="space-y-3">
-            <h2 className="font-medium">Estadísticos por dimensión</h2>
+            <h2 className="text-xl font-semibold">Estadísticos por dimensión</h2>
             <StatsTable dims={[...aggregates.dimensions, aggregates.overall]} config={config} />
-            <p className="text-xs text-muted">
-              t de una muestra contra D = 0 (dos colas). d de Cohen = D medio / DE de D. El compuesto promedia, por participante, sus D
-              utilizables.
-            </p>
+            <Glossary
+              terms={[
+                { term: "D medio", meaning: "Promedio de las puntuaciones D: positivo si la marca A se asocia más al polo positivo; negativo si lo hace la B; cerca de 0, sin preferencia." },
+                { term: "IC 95 %", meaning: "Rango donde, con 95 % de confianza, está el D medio real. Si incluye 0, no hay evidencia de asociación." },
+                { term: "t (gl) y p", meaning: "Prueba contra D = 0 (dos colas). Un p menor a 0.05 indica que la asociación difícilmente es casualidad." },
+                { term: "d de Cohen", meaning: "Tamaño del efecto: D medio entre la desviación estándar de D. Cerca de 0.2 es pequeño, 0.5 mediano y 0.8 o más grande." },
+                { term: "Compuesto", meaning: "Promedio, por participante, de sus D utilizables en todas las dimensiones." },
+              ]}
+            />
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-medium">Gráficas</h2>
+            <h2 className="text-xl font-semibold">Gráficas</h2>
             <div className="grid gap-4 lg:grid-cols-2">
               {meanRows.length ? <MeanDChart rows={meanRows} /> : null}
               {directionRows.length ? <DirectionChart rows={directionRows} labelA={config.conceptA.label} labelB={config.conceptB.label} /> : null}
@@ -209,7 +207,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
           </section>
 
           <section className="space-y-4">
-            <h2 className="font-medium">Desgloses</h2>
+            <h2 className="text-xl font-semibold">Desgloses</h2>
             <Breakdown
               title="Por dispositivo"
               data={{ ...aggregates.byDevice, groups: aggregates.byDevice.groups.map((g) => ({ ...g, group: DEVICE_NAMES[g.group] ?? g.group })) }}
@@ -224,7 +222,7 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
 
       <section className="space-y-3">
         <div>
-          <h2 className="font-medium">Conclusiones con IA</h2>
+          <h2 className="text-xl font-semibold">Conclusiones con IA</h2>
           <p className="text-sm text-muted">
             La IA redacta la interpretación a partir de los estadísticos de arriba; nunca recibe respuestas individuales ni datos
             personales. Las cifras oficiales son las de las tablas y gráficas.

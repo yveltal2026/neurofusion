@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -14,10 +14,8 @@ export default async function NewSeoStudyPage({ params }: PageProps<"/projects/[
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${id}/studies/new`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Elegir herramienta
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Nueva auditoría SEO</h1>
+        <Breadcrumbs items={newStudyCrumbs(id, project.name, "Auditoría SEO")} />
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nueva auditoría SEO</h1>
         <p className="mt-1 text-sm text-muted">
           Define el sitio una vez y audítalo cuantas veces quieras para seguir su evolución.
         </p>

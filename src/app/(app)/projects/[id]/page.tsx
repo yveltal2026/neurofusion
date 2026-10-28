@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconTile } from "@/components/ui/icon-tile";
+import { RowLink, RowList } from "@/components/ui/rows";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
@@ -43,10 +44,8 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/projects" className="inline-block py-1 text-sm text-muted hover:underline">
-            ← Proyectos
-          </Link>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.name}</h1>
+          <Breadcrumbs items={[{ label: "Proyectos", href: "/projects" }]} />
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">{project.name}</h1>
           {project.description ? <p className="mt-1 text-sm text-muted">{project.description}</p> : null}
         </div>
         <form action={deleteProject}>
@@ -60,7 +59,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Estudios</h2>
+          <h2 className="text-xl font-semibold">Estudios</h2>
           <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
             <Icon name="plus" className="size-5" />
             Nuevo estudio
@@ -80,30 +79,28 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
             Elige una herramienta (IAT, encuesta, SEO o análisis visual) y arma tu primer estudio.
           </EmptyState>
         ) : (
-          <ul className="space-y-2">
+          <RowList>
             {(studies ?? []).map((s) => (
-              <li key={s.id}>
-                <Link href={`/studies/${s.id}`} className="block">
-                  <Card className="flex items-center justify-between gap-3 py-4 transition hover:border-primary">
-                    <span className="flex min-w-0 items-center gap-3">
-                      <IconTile name={getStudyTool(s)?.icon ?? "layers"} size="sm" />
-                      <span className="truncate font-medium">{s.name}</span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2 font-display text-xs font-semibold text-muted">
-                      {getStudyTool(s)?.shortName ?? s.tool_type}
-                      {s.tool_type === "iat" ? <StatusBadge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status]}</StatusBadge> : null}
-                    </span>
-                  </Card>
-                </Link>
-              </li>
+              <RowLink
+                key={s.id}
+                href={`/studies/${s.id}`}
+                icon={getStudyTool(s)?.icon ?? "layers"}
+                title={s.name}
+                meta={
+                  <>
+                    {getStudyTool(s)?.shortName ?? s.tool_type}
+                    {s.tool_type === "iat" ? <StatusBadge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status]}</StatusBadge> : null}
+                  </>
+                }
+              />
             ))}
-          </ul>
+          </RowList>
         )}
       </section>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-medium">Baterías</h2>
+          <h2 className="text-xl font-semibold">Baterías</h2>
           <Link href={`/projects/${project.id}/batteries/new`} className={buttonClass("secondary")}>
             Nueva batería
           </Link>
@@ -111,21 +108,22 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
         {(batteries ?? []).length === 0 ? (
           <Card className="text-sm text-muted">Una batería une varios estudios (IAT, variantes, encuestas e imágenes con IA) en una sola liga. Aún no hay ninguna.</Card>
         ) : (
-          <ul className="space-y-2">
+          <RowList>
             {(batteries ?? []).map((b) => (
-              <li key={b.id}>
-                <Link href={`/batteries/${b.id}`} className="block">
-                  <Card className="flex items-center justify-between transition hover:border-primary">
-                    <span className="font-medium">{b.name}</span>
-                    <span className="flex shrink-0 items-center gap-2 font-display text-xs font-semibold text-muted">
-                      Batería
-                      <StatusBadge tone={STATUS_TONE[b.status]}>{STATUS_LABEL[b.status]}</StatusBadge>
-                    </span>
-                  </Card>
-                </Link>
-              </li>
+              <RowLink
+                key={b.id}
+                href={`/batteries/${b.id}`}
+                icon="layers"
+                title={b.name}
+                meta={
+                  <>
+                    Batería
+                    <StatusBadge tone={STATUS_TONE[b.status]}>{STATUS_LABEL[b.status]}</StatusBadge>
+                  </>
+                }
+              />
             ))}
-          </ul>
+          </RowList>
         )}
       </section>
     </div>

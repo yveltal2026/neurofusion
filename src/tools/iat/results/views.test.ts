@@ -170,6 +170,6 @@ describe("interpretationText", () => {
       "Fuerte · Marca B más asociada a «Pos confianza»",
     );
     expect(interpretationText(config, 0, result("1", 0, { strength: "none", direction: "none", d_score: 0.01 }))).toBe("Sin preferencia clara");
-    expect(interpretationText(config, 0, null)).toBe("—");
+    expect(interpretationText(config, 0, null)).toBe("sin dato");
   });
 });

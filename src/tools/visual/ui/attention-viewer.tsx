@@ -412,7 +412,7 @@ export function AttentionViewer({
                       min={1}
                       max={50}
                       value={sel.order ?? ""}
-                      placeholder="—"
+                      placeholder="sin dato"
                       onChange={(e) => update(sel.id, { order: e.target.value ? Math.max(1, Math.min(50, Number(e.target.value))) : null })}
                       className="w-full rounded border border-control bg-background px-2 py-1"
                     />

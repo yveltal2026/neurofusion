@@ -160,7 +160,7 @@ export function Wizard({ projectId, projectName, aiAvailable = false }: { projec
         <Card className="space-y-5">
           {aiNotes && ["product", "concepts", "dimensions", "words"].includes(step.id) ? (
             <Alert tone="info">
-              <p className="font-medium">Propuesta generada por IA — revísala y edítala libremente.</p>
+              <p className="font-medium">Propuesta generada por IA: revísala y edítala libremente.</p>
               <p className="mt-1">{aiNotes}</p>
             </Alert>
           ) : null}
@@ -438,7 +438,7 @@ function WordsStep({ config, update, version, bump }: StepProps & { version: num
         return (
           <div key={d.id} className="space-y-3 rounded-lg border border-border p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="font-medium">{d.name || `Dimensión ${i + 1}`}</h3>
+              <h3 className="text-lg font-semibold">{d.name || `Dimensión ${i + 1}`}</h3>
               {suggestion ? (
                 <Button
                   type="button"
@@ -717,7 +717,7 @@ function LikertEditor({ field, onChange }: { field: Extract<ExtraField, { type: 
           ))}
         </div>
         <p className="text-xs text-muted">
-          1 = {field.minLabel || "—"} · {field.points} = {field.maxLabel || "—"}
+          1 = {field.minLabel || "sin dato"} · {field.points} = {field.maxLabel || "sin dato"}
         </p>
       </div>
     </div>
@@ -809,7 +809,7 @@ function ConfirmStep({
       </dl>
 
       <div className="space-y-4">
-        <h3 className="font-medium">Ajustes finales</h3>
+        <h3 className="text-lg font-semibold">Ajustes finales</h3>
         <Field label="Nombre del estudio">
           <Input value={studyName} maxLength={160} onChange={(e) => setStudyName(e.target.value)} />
         </Field>

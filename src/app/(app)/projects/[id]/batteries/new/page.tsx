@@ -1,3 +1,4 @@
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -23,7 +24,10 @@ export default async function NewBatteryPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Nueva batería</h1>
+      <div>
+        <Breadcrumbs items={newStudyCrumbs(id, project.name, "Batería")} />
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nueva batería</h1>
+      </div>
       {available.length === 0 ? (
         <Card className="space-y-2">
           <p className="text-sm">

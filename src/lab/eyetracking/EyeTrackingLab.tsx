@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Callout, ConsentCheck, FactList, ParticipantScreen, ReadingPanel, ScreenHeader, Section, StatusScreen } from "@/components/participant";
 import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Field, Input } from "@/components/ui/field";
 import {
   EngineError,
@@ -783,55 +785,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     URL.revokeObjectURL(url);
   }
 
-  const showPreview = stage === "position" || stage === "recovery";
-
-  return (
+  const screenFields = (
     <>
-      {/* El video debe seguir montado y “visible” para el navegador (iOS no decodifica con display:none). */}
-      <video
-        ref={videoRef}
-        id="webeyetrack-video"
-        autoPlay
-        playsInline
-        muted
-        aria-hidden={!showPreview}
-        className={
-          showPreview
-            ? "mx-auto mb-4 aspect-4/3 w-60 -scale-x-100 rounded-md border border-border bg-black object-cover"
-            : "pointer-events-none fixed top-0 left-0 size-px opacity-0"
-        }
-      />
-
-      {stage === "setup" || stage === "loading" ? (
-        <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
-          <header className="space-y-1">
-            <p className="font-display text-xs font-semibold text-muted">{study ? "Estudio de eye tracking" : "Laboratorio · interno"}</p>
-            <h1 className="text-2xl font-semibold">{study ? study.title : "Prueba de eye tracking con webcam"}</h1>
-            <p className="text-sm text-muted">
-              {study
-                ? `Calibra la cámara y mira ${study.assets.length} ${study.assets.length === 1 ? "pieza" : "piezas"} durante ${study.durationSeconds} segundos cada una. No necesitas crear una cuenta.`
-                : "Mide qué tan preciso es WebEyeTrack en este dispositivo. Calibración recomendada de 18 puntos en dos etapas y validación independiente de 8."}
-            </p>
-          </header>
-
-          <Alert tone="info">
-            <p>
-              El video se procesa en este dispositivo y no se envía a NeuroFusion. {study
-                ? "Con tu consentimiento, se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración; el investigador podrá consultar las lecturas y resultados agregados."
-                : "El resultado solo se guarda si lo descargas."} Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
-              <code>storage.googleapis.com</code>.
-            </p>
-          </Alert>
-
-          {error ? <Alert tone="error">{error}</Alert> : null}
-
-          <Card className="space-y-4">
-            {!study ? (
-              <Field label="Código de la persona" hint="Por ejemplo P01. No pongas nombres ni correos.">
-                <Input value={participant} onChange={(e) => setParticipant(e.target.value)} maxLength={24} autoComplete="off" />
-              </Field>
-            ) : null}
-
             <Field label="Dispositivo">
               <select
                 className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
@@ -865,7 +820,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                 <option value="32:9">Super ultrawide 32:9</option>
               </select>
             </Field>
-
+    </>
+  );
+  const conditionFields = (
+    <>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Iluminación">
                 <select
@@ -894,13 +852,117 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <input type="checkbox" checked={glasses} onChange={(e) => setGlasses(e.target.checked)} className="size-4" />
               Usa lentes
             </label>
+    </>
+  );
 
-            {study ? (
-              <label className="flex items-start gap-2 text-sm">
-                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 size-4" />
+  const showPreview = stage === "position" || stage === "recovery";
+
+  return (
+    <>
+      {/* El video debe seguir montado y “visible” para el navegador (iOS no decodifica con display:none). */}
+      <video
+        ref={videoRef}
+        id="webeyetrack-video"
+        autoPlay
+        playsInline
+        muted
+        aria-hidden={!showPreview}
+        className={
+          showPreview
+            ? "mx-auto mb-4 aspect-4/3 w-60 -scale-x-100 rounded-md border border-border bg-black object-cover"
+            : "pointer-events-none fixed top-0 left-0 size-px opacity-0"
+        }
+      />
+
+      {stage === "setup" || stage === "loading" ? (
+        study ? (
+          <ParticipantScreen>
+            <ScreenHeader
+              icon="eye"
+              eyebrow="Estudio de eye tracking"
+              title={study.title}
+              lead={`Calibra la cámara y mira ${study.assets.length} ${study.assets.length === 1 ? "pieza" : "piezas"} durante ${study.durationSeconds} segundos cada una. No necesitas crear una cuenta.`}
+            />
+
+            <Section title="Cómo funciona">
+              <FactList
+                items={[
+                  { icon: "user", text: "Te acomodas frente a la cámara, con buena luz." },
+                  { icon: "target", text: "Sigues unos puntos en la pantalla para calibrar." },
+                  { icon: "image", text: `Miras ${study.assets.length === 1 ? "la pieza" : "las piezas"} sin hacer nada más.` },
+                ]}
+              />
+            </Section>
+
+            <Section icon="lock" title="Tu privacidad">
+              <ReadingPanel>
+                <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed">
+                  <li>El video se procesa en este dispositivo y no se envía a NeuroFusion.</li>
+                  <li>Con tu consentimiento se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración.</li>
+                  <li>El investigador consulta las lecturas y resultados agregados.</li>
+                </ul>
+                <details className="mt-3 text-sm text-muted">
+                  <summary className="cursor-pointer font-medium text-heading">Detalles técnicos</summary>
+                  <p className="mt-2">
+                    Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y <code>storage.googleapis.com</code>.
+                  </p>
+                </details>
+              </ReadingPanel>
+            </Section>
+
+            {error ? <Alert tone="error">{error}</Alert> : null}
+
+            <Section icon="device" title="Tu pantalla">
+              <ReadingPanel>
+                <div className="space-y-4">{screenFields}</div>
+              </ReadingPanel>
+            </Section>
+
+            <Section icon="settings" title="Condiciones de la prueba">
+              <ReadingPanel>
+                <div className="space-y-4">{conditionFields}</div>
+              </ReadingPanel>
+            </Section>
+
+            <div className="space-y-4">
+              <ConsentCheck checked={consent} onChange={setConsent}>
                 Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
-              </label>
-            ) : null}
+              </ConsentCheck>
+              <Button size="lg" onClick={start} disabled={stage === "loading"} className="w-full">
+                {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
+              </Button>
+              {stage === "loading" ? (
+                <p className="text-sm text-muted" role="status">La primera vez descarga varios MB de modelos; puede tardar hasta 45 s.</p>
+              ) : null}
+            </div>
+          </ParticipantScreen>
+        ) : (
+        <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
+          <header className="space-y-1">
+            <p className="text-xs font-semibold text-muted">Laboratorio · interno</p>
+            <h1 className="text-3xl font-bold">Prueba de eye tracking con webcam</h1>
+            <p className="text-sm text-muted">
+              Mide qué tan preciso es WebEyeTrack en este dispositivo. Calibración recomendada de 18 puntos en dos etapas y validación independiente de 8.
+            </p>
+          </header>
+
+          <Alert tone="info">
+            <p>
+              El video se procesa en este dispositivo y no se envía a NeuroFusion. El resultado solo se guarda si lo descargas. Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
+              <code>storage.googleapis.com</code>.
+            </p>
+          </Alert>
+
+          {error ? <Alert tone="error">{error}</Alert> : null}
+
+          <Card className="space-y-4">
+            <Field label="Código de la persona" hint="Por ejemplo P01. No pongas nombres ni correos.">
+              <Input value={participant} onChange={(e) => setParticipant(e.target.value)} maxLength={24} autoComplete="off" />
+            </Field>
+
+            {screenFields}
+
+            {conditionFields}
 
             <Button onClick={start} disabled={stage === "loading"} className="w-full">
               {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
@@ -910,57 +972,68 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             ) : null}
           </Card>
         </div>
+        )
       ) : null}
 
       {stage === "position" ? (
-        <div className="mx-auto max-w-xl space-y-4 px-4 py-8 text-center">
-          <h1 className="text-xl font-semibold">Acomódate frente a la cámara</h1>
-          <p className="text-sm text-muted">
-            Tu cara debe verse completa y centrada, con luz de frente. Apoya el dispositivo (no lo sostengas en el aire) y no
-            lo muevas ni lo gires durante toda la prueba. Mantén la cabeza lo más quieta que puedas.
-          </p>
+        <ParticipantScreen>
+          <ScreenHeader
+            icon="user"
+            title="Acomódate frente a la cámara"
+            lead="Tu cara debe verse completa y centrada, con luz de frente."
+          />
+          <ul className="list-disc space-y-2 pl-6 text-base leading-relaxed">
+            <li>Apoya el dispositivo: no lo sostengas en el aire.</li>
+            <li>No lo muevas ni lo gires durante toda la prueba.</li>
+            <li>Mantén la cabeza lo más quieta que puedas.</li>
+          </ul>
           {error ? <Alert tone="error">{error}</Alert> : null}
-          <p className="text-sm" role="status">
-            Cara detectada: <strong>{live.faceOk ? "sí" : "no"}</strong> · lecturas/s: <strong>{live.fps}</strong>
+          <p role="status" className="flex flex-wrap items-center gap-2 text-base">
+            <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
+            <span className="text-sm text-muted">Lecturas por segundo: {live.fps}</span>
           </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button onClick={startCalibration} disabled={!live.faceOk}>
+          <div className="flex flex-wrap gap-3">
+            <Button size="lg" onClick={startCalibration} disabled={!live.faceOk}>
               Comenzar calibración
             </Button>
-            <Button variant="secondary" onClick={() => setStage("free")} disabled={!live.faceOk}>
+            <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.faceOk}>
               Ver mi punto de mirada
             </Button>
           </div>
-        </div>
+        </ParticipantScreen>
       ) : null}
 
       {stage === "recovery" && study ? (
-        <div className="mx-auto max-w-xl space-y-4 px-4 py-8 text-center">
-          <h1 className="text-xl font-semibold">Hagamos un ajuste rápido</h1>
+        <ParticipantScreen>
+          <ScreenHeader icon="refresh" title="Hagamos un ajuste rápido" />
           {error ? <Alert tone="warning">{error}</Alert> : null}
-          <p className="text-sm">
-            Conservamos {resumeCount ?? 0} de {study.assets.length} imágenes validadas en esta sesión.
-            Continuarás desde la imagen {(resumeCount ?? 0) + 1}.
-          </p>
-          <p className="text-sm text-muted">
-            Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control; tarda entre 6 y 11 segundos.
-            Repetiremos sólo las imágenes del bloque que quedó sin validar.
-          </p>
-          {lastDriftCheck ? <p className="text-xs text-muted">
+          <Callout icon="check" title="Tu avance está guardado">
+            <p>
+              Conservamos {resumeCount ?? 0} de {study.assets.length} imágenes validadas en esta sesión.
+              Continuarás desde la imagen {(resumeCount ?? 0) + 1}.
+            </p>
+          </Callout>
+          <Section title="Qué hacer">
+            <p className="text-base leading-relaxed">
+              Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control; tarda entre 6 y 11 segundos.
+              Repetiremos sólo las imágenes del bloque que quedó sin validar.
+            </p>
+            {needsCalibration ? <p className="text-base leading-relaxed">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
+          </Section>
+          {lastDriftCheck ? <p className="text-sm text-muted">
             Error mediano: {lastDriftCheck.medianErrorDeg !== null ? `${lastDriftCheck.medianErrorDeg.toFixed(1)}°` : "sin medición"} · Lecturas/s: {lastDriftCheck.fps.toFixed(0)} · Detección durante fijación: {Math.round(lastDriftCheck.validRatio * 100)} %
           </p> : null}
-          {needsCalibration ? <p className="text-sm">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
-            <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+          <div className="flex flex-wrap gap-3">
+            <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
+            <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
           </div>
-          {limitedReady ? <Card className="space-y-3 text-left">
-            <p className="text-sm">Si el ajuste sigue fallando, puedes terminar. Tu participación quedará marcada con precisión limitada y sus miradas no se incluirán en los mapas válidos.</p>
-            <Button variant="secondary" onClick={() => void startStudy(true)} disabled={studyBusy}>Continuar con precisión limitada</Button>
-          </Card> : null}
+          {limitedReady ? <Callout icon="alert" title="Si el ajuste sigue fallando">
+            <p>Puedes terminar. Tu participación quedará marcada con precisión limitada y sus miradas no se incluirán en los mapas válidos.</p>
+            <Button className="mt-3" variant="secondary" onClick={() => void startStudy(true)} disabled={studyBusy}>Continuar con precisión limitada</Button>
+          </Callout> : null}
           {diagnosticsEnabled ? <Button variant="ghost" onClick={downloadRecoveryDiagnostic}>Descargar diagnóstico</Button> : null}
-          <p className="text-xs text-muted">El avance se conserva mientras mantengas abierta esta sesión.</p>
-        </div>
+          <p className="text-sm text-muted">El avance se conserva mientras mantengas abierta esta sesión.</p>
+        </ParticipantScreen>
       ) : null}
 
       {stage === "calibration" && calibPoints[calibIndex] ? (
@@ -1035,36 +1108,47 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         </div>
       ) : null}
 
-      {stage === "results" && session ? (
+      {stage === "results" && session && study ? (
+        <ParticipantScreen>
+          {session.verdict.pass && !needsCalibration ? (
+            <ScreenHeader
+              icon="check"
+              title="Calibración terminada"
+              lead="La precisión alcanzó el criterio de esta prueba. Ya puedes mirar las piezas."
+            />
+          ) : (
+            <ScreenHeader
+              icon="alert"
+              title="Calibración terminada"
+              lead="La calibración tuvo precisión baja. Repite la calibración antes de mirar las piezas."
+            />
+          )}
+          {error ? <Alert tone="error">{error}</Alert> : null}
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>
+              <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+            </div>
+            {resumeCount !== null ? <p className="text-base text-muted">Conservamos {resumeCount} imágenes ya validadas. Continuaremos desde ese punto.</p> : null}
+            {study.preview ? <p className="text-sm text-muted">Vista previa: no se guardarán datos.</p> : null}
+          </div>
+        </ParticipantScreen>
+      ) : null}
+
+      {stage === "results" && session && !study ? (
         <div className="mx-auto max-w-3xl space-y-5 px-4 py-8">
           <header className="space-y-1">
-            <p className="font-display text-xs font-semibold text-muted">
+            <p className="text-xs font-semibold text-muted">
               {session.participant} · {session.device} · {session.engineId}
             </p>
-            <h1 className="text-2xl font-semibold">{study ? "Calibración terminada" : "Resultados de la validación"}</h1>
+            <h1 className="text-3xl font-bold">Resultados de la validación</h1>
           </header>
 
           {error ? <Alert tone="error">{error}</Alert> : null}
-          {study ? (
-            <Card className="space-y-4">
-              <p className="text-sm">
-                {session.verdict.pass && !needsCalibration
-                  ? "La precisión alcanzó el criterio de esta prueba. Ya puedes mirar las piezas."
-                  : "La calibración tuvo precisión baja. Repite la calibración antes de mirar las piezas."}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>
-                <Button variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
-              </div>
-              {resumeCount !== null ? <p className="text-sm text-muted">Conservamos {resumeCount} imágenes ya validadas. Continuaremos desde ese punto.</p> : null}
-              {study.preview ? <p className="text-xs text-muted">Vista previa: no se guardarán datos.</p> : null}
-            </Card>
-          ) : (
-            <ResultsView session={session} />
-          )}
+          <ResultsView session={session} />
 
-          {!study ? <Card className="space-y-3">
-            <h2 className="text-base font-semibold">Guardar y seguir</h2>
+          <Card className="space-y-3">
+            <h2 className="text-xl font-semibold">Guardar y seguir</h2>
             <div className="flex flex-wrap gap-3">
               <Button onClick={downloadJson}>Descargar JSON</Button>
               <Button variant="secondary" onClick={copyJson}>
@@ -1091,13 +1175,13 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                 value={JSON.stringify(session, null, 2)}
               />
             </details>
-          </Card> : null}
+          </Card>
         </div>
       ) : null}
 
       {stage === "stimulus" && study?.assets[stimulusIndex] ? (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background px-4 py-3 text-center">
-          <p className="text-sm text-muted">Pieza {stimulusIndex + 1} de {study.assets.length} · {remaining} s</p>
+          <p className="font-display text-sm font-semibold text-muted">Pieza {stimulusIndex + 1} de {study.assets.length} · {remaining} s</p>
           {measurementLimited ? <p className="text-xs text-muted">Continuando con precisión limitada.</p> : null}
           {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage; necesitamos el rectángulo exacto mostrado */}
           <img
@@ -1109,21 +1193,29 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         </div>
       ) : null}
 
-      {stage === "preparing" ? <div className="px-6 py-16 text-center" role="status">Preparando las imágenes…</div> : null}
+      {stage === "preparing" ? <StatusScreen icon="refresh" title="Preparando las imágenes…" role="status" /> : null}
 
       {stage === "saving" ? (
-        <div className="mx-auto max-w-md space-y-4 px-6 py-16 text-center">
-          <h1 className="text-xl font-semibold">Guardando tu participación</h1>
-          {error ? <Alert tone="error">{error}</Alert> : <p className="text-sm text-muted">Espera un momento…</p>}
-          {error ? <Button onClick={() => void saveStudy()}>Reintentar guardado</Button> : null}
-        </div>
+        error ? (
+          <StatusScreen
+            icon="alert"
+            title="Guardando tu participación"
+            role="alert"
+            actions={<Button size="lg" onClick={() => void saveStudy()}>Reintentar guardado</Button>}
+          >
+            <Alert tone="error">{error}</Alert>
+          </StatusScreen>
+        ) : (
+          <StatusScreen icon="refresh" title="Guardando tu participación" role="status">
+            <p className="text-muted">Espera un momento…</p>
+          </StatusScreen>
+        )
       ) : null}
 
       {stage === "done" ? (
-        <div className="mx-auto max-w-md space-y-3 px-6 py-16 text-center">
-          <h1 className="text-2xl font-semibold">Gracias por participar</h1>
-          <p className="text-sm text-muted">{study?.preview ? "Esta vista previa no guardó datos." : "Tu sesión de mirada se guardó correctamente."}</p>
-        </div>
+        <StatusScreen icon="check" title="Gracias por participar">
+          <p>{study?.preview ? "Esta vista previa no guardó datos." : "Tu sesión de mirada se guardó correctamente."}</p>
+        </StatusScreen>
       ) : null}
     </>
   );

@@ -90,8 +90,8 @@ export function ageRange(age: number): string {
 
 /** Respuesta a un campo adicional, legible para la vista de una sesión. */
 export function formatExtraAnswer(field: ExtraField, value: unknown): string {
-  if (value === undefined || value === null || value === "") return "—";
-  if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+  if (value === undefined || value === null || value === "") return "sin dato";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "sin dato";
   if (field.type === "likert" && typeof value === "number") return `${value} de ${field.points}`;
   return String(value);
 }

@@ -1,3 +1,4 @@
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Alert } from "@/components/ui/alert";
@@ -19,18 +20,19 @@ export default async function BatteryReportPage({
   if (!input) notFound();
   const { detail, steps, unreadable, participants } = input;
   const report = buildBatteryReport(steps, participants);
+  const { data: project } = await supabase.from("projects").select("name").eq("id", detail.battery.project_id).maybeSingle<{ name: string }>();
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link
-            href={`/batteries/${id}`}
-            className="inline-block py-1 text-sm text-muted hover:underline"
-          >
-            ← {detail.battery.name}
-          </Link>
-          <h1 className="mt-1 break-words text-2xl font-semibold tracking-tight">
+          <Breadcrumbs
+            items={[
+              ...projectCrumbs(detail.battery.project_id, project?.name),
+              { label: detail.battery.name, href: `/batteries/${id}` },
+            ]}
+          />
+          <h1 className="mt-1 break-words text-3xl font-bold tracking-tight">
             Informe integrado
           </h1>
           <p className="mt-1 text-xs text-muted">

@@ -3,7 +3,7 @@ import { SensitivityChart, IfdChart, TaskSuccessChart } from "@/components/chart
 import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, IfdMeasurementRow } from "@/lib/db/types";
@@ -64,9 +64,9 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
     <div className="space-y-8">
       <StudyHeader study={study} projectName={projectName} active="results" variant="journey" subtitle="Índice de Fricción Digital" />
 
-      <Card className="space-y-3">
+      <Block className="space-y-3">
         <div>
-          <h2 className="font-medium">Calcular</h2>
+          <h2 className="text-xl font-semibold">Calcular</h2>
           <p className="text-sm text-muted">
             Todos los sitios se simulan con el mismo panel modelado y la misma semilla ({config.panel.seed}), así las diferencias reflejan sólo las
             calificaciones. Cada corrida queda guardada con sus versiones.
@@ -81,15 +81,15 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
           </Alert>
         ) : null}
         <RunIfdForm studyId={id} ready={ready} />
-      </Card>
+      </Block>
 
       {latest.length ? (
         <>
           <section className="space-y-3">
-            <h2 className="font-medium">Última medición · {new Date(latest[0].created_at).toLocaleString("es-MX")}</h2>
+            <h2 className="text-xl font-semibold">Última medición · {new Date(latest[0].created_at).toLocaleString("es-MX")}</h2>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
-                <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+                <thead className="bg-neuro-wash text-xs font-semibold text-muted">
                   <tr>
                     <th className="px-3 py-2">#</th>
                     <th className="px-3 py-2">Sitio</th>
@@ -134,7 +134,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <caption className="sr-only">Éxito estimado por tarea y sitio</caption>
-                  <thead className="font-display text-xs font-semibold text-muted">
+                  <thead className="text-xs font-semibold text-muted">
                     <tr>
                       <th className="py-1 pr-3">Tarea</th>
                       {byConfigOrder(latest).map((m) => (
@@ -169,7 +169,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-medium">¿Qué calificaciones mueven el IFD?</h2>
+            <h2 className="text-xl font-semibold">¿Qué calificaciones mueven el IFD?</h2>
             <div className="grid gap-4 lg:grid-cols-2">
               {latest.map((m) => {
                 const sens = ((m.inputs as { sensitivity?: SensitivityRow[] }).sensitivity ?? []).slice(0, 8);
@@ -185,7 +185,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
           </section>
 
           <section className="space-y-3">
-            <h2 className="font-medium">Desglose por segmento (sitio principal)</h2>
+            <h2 className="text-xl font-semibold">Desglose por segmento (sitio principal)</h2>
             {(() => {
               const main = latest.find((m) => !m.is_competitor) ?? latest[0];
               const s = main.summary as SiteSummary;
@@ -197,7 +197,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
                   ].map(([title, data]) => (
                     <div key={title as string} className="overflow-x-auto rounded-lg border border-border">
                       <table className="w-full text-left text-sm">
-                        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+                        <thead className="bg-neuro-wash text-xs font-semibold text-muted">
                           <tr>
                             <th className="px-3 py-2">{title as string}</th>
                             <th className="px-3 py-2">Perfiles</th>
@@ -232,7 +232,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
 
       {runs.length > 1 ? (
         <section className="space-y-2">
-          <h2 className="font-medium">Corridas de este estudio</h2>
+          <h2 className="text-xl font-semibold">Corridas de este estudio</h2>
           <ul className="space-y-1 text-sm">
             {runs.map(([run, at]) => (
               <li key={run}>
@@ -249,10 +249,10 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
 
       {(history ?? []).some((h) => h.study_id !== id) ? (
         <section className="space-y-2">
-          <h2 className="font-medium">Serie histórica en el proyecto</h2>
+          <h2 className="text-xl font-semibold">Serie histórica en el proyecto</h2>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+              <thead className="bg-neuro-wash text-xs font-semibold text-muted">
                 <tr>
                   <th className="px-3 py-2">Fecha</th>
                   <th className="px-3 py-2">Estudio</th>
@@ -265,7 +265,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
                 {(history ?? []).map((h, i) => (
                   <tr key={`${h.study_id}-${h.site_url}-${i}`}>
                     <td className="px-3 py-2">{new Date(h.created_at).toLocaleDateString("es-MX")}</td>
-                    <td className="px-3 py-2">{studyName.get(h.study_id) ?? "—"}</td>
+                    <td className="px-3 py-2">{studyName.get(h.study_id) ?? "sin dato"}</td>
                     <td className="px-3 py-2">{h.site_name}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {h.ifd.toFixed(1)} · {h.reading}

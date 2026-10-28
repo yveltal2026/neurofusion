@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { RenameStudyForm } from "@/components/rename-study-form";
 import { StudyHeader } from "@/components/study-header";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import type { StudyRow } from "@/lib/db/types";
 import { seoConfigSchema } from "@/tools/seo/config";
@@ -29,31 +29,31 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
   return (
     <div className="space-y-8">
       <StudyHeader study={study} projectName={project?.name} active="settings" variant={variant} />
-      <Card className="space-y-4">
-        <h2 className="font-medium">Nombre</h2>
+      <Block className="space-y-4">
+        <h2 className="text-xl font-semibold">Nombre</h2>
         <RenameStudyForm id={study.id} name={study.name} />
-      </Card>
+      </Block>
       {seo?.success ? (
-        <Card className="space-y-4">
-          <h2 className="font-medium">Configuración de la auditoría</h2>
+        <Block className="space-y-4">
+          <h2 className="text-xl font-semibold">Configuración de la auditoría</h2>
           <SeoSettingsForm studyId={study.id} config={seo.data} />
-        </Card>
+        </Block>
       ) : null}
       {visual?.success ? (
-        <Card className="space-y-4">
-          <h2 className="font-medium">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
+        <Block className="space-y-4">
+          <h2 className="text-xl font-semibold">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
           <VisualContextForm studyId={study.id} config={visual.data} />
-        </Card>
+        </Block>
       ) : null}
-      <Card className="space-y-4 border-danger/30">
-        <h2 className="font-medium text-danger">Zona de riesgo</h2>
+      <Block className="space-y-4 border-danger/30">
+        <h2 className="text-xl font-semibold text-danger">Zona de riesgo</h2>
         <form action={deleteStudy}>
           <input type="hidden" name="id" value={study.id} />
           <Button type="submit" variant="danger">
             Eliminar estudio y todos sus datos{study.tool_type === "visual" ? " e imágenes" : ""}
           </Button>
         </form>
-      </Card>
+      </Block>
     </div>
   );
 }

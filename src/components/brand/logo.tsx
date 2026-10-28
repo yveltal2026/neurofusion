@@ -27,14 +27,18 @@ export function Logo({
   width = 140,
   tone = "auto",
   variant,
+  decorative = false,
   className = "",
 }: {
   width?: number;
   tone?: "auto" | "deep";
   variant?: LogoVariant;
+  /** Marca de apoyo (el nombre ya está en el título de la página): sin texto alternativo. */
+  decorative?: boolean;
   className?: string;
 }) {
   const v = VARIANTS[variant ?? variantFor(width)];
+  const alt = decorative ? "" : v.alt;
   const w = Math.max(width, 24);
   const h = Math.round(w * v.ratio);
   const light = `/brand/${v.file}.svg`;
@@ -42,14 +46,14 @@ export function Logo({
   if (tone === "deep") {
     return (
       <span className={`inline-flex ${className}`}>
-        <Image src={dark} alt={v.alt} width={w} height={h} priority />
+        <Image src={dark} alt={alt} width={w} height={h} priority />
       </span>
     );
   }
   return (
     <span className={`inline-flex ${className}`}>
-      <Image src={light} alt={v.alt} width={w} height={h} priority className="dark:hidden" />
-      <Image src={dark} alt={v.alt} width={w} height={h} priority className="hidden dark:block" />
+      <Image src={light} alt={alt} width={w} height={h} priority className="dark:hidden" />
+      <Image src={dark} alt={alt} width={w} height={h} priority className="hidden dark:block" />
     </span>
   );
 }

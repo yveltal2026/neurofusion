@@ -20,6 +20,8 @@ export async function fetchAll<T>(
 export interface LoadedStudy {
   study: StudyRow;
   config: IatConfig;
+  /** Nombre del proyecto (para las migas de la pantalla). */
+  projectName: string | null;
 }
 
 /** Estudio IAT + configuración validada, respetando RLS. Responde 404 si no existe o no es del usuario. */
@@ -28,5 +30,6 @@ export async function loadStudyForResearcher(supabase: SupabaseClient, id: strin
   if (!study || study.tool_type !== "iat") notFound();
   const config = iatConfigSchema.safeParse(study.config);
   if (!config.success) throw new Error("La configuración guardada del estudio no es válida");
-  return { study, config: config.data };
+  const { data: project } = await supabase.from("projects").select("name").eq("id", study.project_id).maybeSingle<{ name: string }>();
+  return { study, config: config.data, projectName: project?.name ?? null };
 }

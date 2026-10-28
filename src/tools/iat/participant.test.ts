@@ -126,9 +126,9 @@ describe("opción múltiple y Likert", () => {
   it("formatExtraAnswer: listas, escala y vacíos", () => {
     const [canales, , valor] = config.participant.extraFields;
     expect(formatExtraAnswer(canales, ["Tienda", "En línea"])).toBe("Tienda, En línea");
-    expect(formatExtraAnswer(canales, [])).toBe("—");
+    expect(formatExtraAnswer(canales, [])).toBe("sin dato");
     expect(formatExtraAnswer(valor, 4)).toBe("4 de 5");
-    expect(formatExtraAnswer(valor, undefined)).toBe("—");
+    expect(formatExtraAnswer(valor, undefined)).toBe("sin dato");
   });
 
   it("extraFieldColumns: una columna 0/1 por opción y una por Likert", () => {

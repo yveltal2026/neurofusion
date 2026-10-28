@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { StatusScreen } from "@/components/participant";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -18,10 +19,16 @@ export function ParticipantError({
     console.error(error);
   }, [error]);
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-4 py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">
-        No pudimos cargar esta página
-      </h1>
+    <StatusScreen
+      icon="alert"
+      title="No pudimos cargar esta página"
+      role="alert"
+      actions={
+        <Button type="button" size="lg" onClick={() => retry()}>
+          Intentar de nuevo
+        </Button>
+      }
+    >
       <p className="text-muted">
         Algo falló de nuestro lado, no del tuyo. Si ya habías empezado, puedes
         volver a abrir la misma liga más tarde desde este mismo dispositivo y
@@ -38,9 +45,6 @@ export function ParticipantError({
         ) : null}
         .
       </p>
-      <Button type="button" onClick={() => retry()}>
-        Intentar de nuevo
-      </Button>
-    </main>
+    </StatusScreen>
   );
 }

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { StudyTabs } from "@/components/study-tabs";
+import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
 import { EmptyState } from "@/components/ui/empty-state";
-import { StatTile } from "@/components/ui/stat-tile";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { StatStrip } from "@/components/ui/stat-strip";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { loadSessionViews } from "@/tools/iat/results/load";
@@ -22,7 +24,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   const { id } = await params;
   const sp = await searchParams;
   const { supabase } = await requireUser();
-  const { study, config } = await loadStudyForResearcher(supabase, id);
+  const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
   const all = await loadSessionViews(supabase, id, config);
 
   const filters: ViewFilters = {
@@ -32,7 +34,21 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
     duplicates: pick(one(sp.dup), ["all", "only"] as const, "all"),
     excluded: pick(one(sp.excluded), ["all", "hide", "only"] as const, "all"),
   };
-  const filtered = filterViews(all, filters);
+  const sortKeys = ["date", "ref", ...config.dimensions.map((_, i) => `d${i}`)];
+  const sort = pick(one(sp.sort), sortKeys, "date");
+  const defaultDir = (key: string) => (key === "ref" ? "asc" : "desc");
+  const dir = pick(one(sp.dir), ["asc", "desc"] as const, defaultDir(sort));
+  const sortValue = (s: (typeof all)[number]): number | string => {
+    if (sort === "ref") return s.participant_ref;
+    if (sort === "date") return new Date(s.started_at).getTime();
+    return s.dimensions[Number(sort.slice(1))]?.d_score ?? Number.NEGATIVE_INFINITY;
+  };
+  const filtered = filterViews(all, filters).sort((a, b) => {
+    const x = sortValue(a);
+    const y = sortValue(b);
+    const c = typeof x === "string" || typeof y === "string" ? String(x).localeCompare(String(y), "es", { numeric: true }) : x - y;
+    return dir === "asc" ? c : -c;
+  });
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const page = Math.min(pages, Math.max(1, Number(one(sp.page)) || 1));
   const rows = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -50,38 +66,116 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
 
   const query = (extra: Record<string, string>) => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ status: filters.status, validity: filters.validity, device: filters.device, dup: filters.duplicates, excluded: filters.excluded, ...extra })) {
+    for (const [k, v] of Object.entries({ status: filters.status, validity: filters.validity, device: filters.device, dup: filters.duplicates, excluded: filters.excluded, sort: sort === "date" && dir === "desc" ? "" : sort, dir: sort === "date" && dir === "desc" ? "" : dir, ...extra })) {
       if (v && v !== "all") p.set(k, v);
     }
     const s = p.toString();
     return s ? `?${s}` : "";
   };
 
+  /** Encabezado ordenable: enlace que alterna el sentido; `aria-sort` dice cuál columna manda. */
+  const sortTh = (k: string, label: string, className = "") => {
+    const active = sort === k;
+    const next = active ? (dir === "asc" ? "desc" : "asc") : defaultDir(k);
+    return (
+      <th key={k} className={`px-3 py-2.5 ${className}`} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+        <Link href={`/studies/${id}/data${query({ sort: k, dir: next, page: "" })}`} className="inline-flex items-center gap-1 hover:text-neuro-ink">
+          {label}
+          <span aria-hidden="true" className={active ? "text-neuro-ink" : "text-muted/60"}>
+            {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
+          </span>
+        </Link>
+      </th>
+    );
+  };
+
+  /** Calidad de los datos de la sesión: lo primero que se revisa, con texto además de color. */
+  const qualityBadges = (s: (typeof all)[number], compact = false) => (
+    <>
+      {s.allValid === null ? (
+        "sin dato"
+      ) : (
+        <StatusBadge tone={s.allValid ? "success" : "warning"}>{compact ? (s.allValid ? "Válidos" : "Revisar") : validityText(s.allValid)}</StatusBadge>
+      )}
+      {s.status !== "completed" ? <StatusBadge tone="neutral">{STATUS_LABEL[s.status]}</StatusBadge> : null}
+      {s.excluded ? <StatusBadge tone="neutral">Excluida</StatusBadge> : null}
+      {s.duplicate_flag ? <StatusBadge tone="warning">{compact ? "Duplicado" : "Posible duplicado"}</StatusBadge> : null}
+    </>
+  );
+
   const selectClass = "h-9 rounded-md border border-control bg-background px-2 text-sm";
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href={`/projects/${study.project_id}`} className="inline-block py-1 text-sm text-muted hover:underline">
-          ← Proyecto
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{study.name}</h1>
+        <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
       <StudyTabs id={id} active="data" />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile icon="check" label="Completadas" value={stats.completed} />
-        <StatTile icon="clock" label="En curso" value={stats.started} />
-        <StatTile icon="inbox" label="Abandonadas" value={stats.abandoned} />
-        <StatTile icon="alert" label="Datos a revisar" value={stats.invalid} />
-        <StatTile icon="copy" label="Posibles duplicados" value={stats.dup} />
-        <StatTile icon="ban" label="Excluidas del análisis" value={stats.excluded} />
-        <StatTile icon="device" label="Desde celular/tableta" value={stats.mobile} />
+      <StatStrip
+        items={[
+          { icon: "check", label: "Completadas", value: stats.completed },
+          { icon: "clock", label: "En curso", value: stats.started },
+          { icon: "inbox", label: "Abandonadas", value: stats.abandoned },
+          { icon: "alert", label: "Datos a revisar", value: stats.invalid, attention: true },
+          { icon: "copy", label: "Posibles duplicados", value: stats.dup, attention: true },
+          { icon: "ban", label: "Excluidas del análisis", value: stats.excluded },
+          { icon: "device", label: "Desde celular o tableta", value: stats.mobile },
+        ]}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Calidad de los datos" className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">Mostrar:</span>
+          {(
+            [
+              ["all", "Todas"],
+              ["invalid", "A revisar"],
+              ["valid", "Válidas"],
+            ] as const
+          ).map(([v, label]) => (
+            <Link
+              key={v}
+              href={`/studies/${id}/data${query({ validity: v, page: "" })}`}
+              aria-current={filters.validity === v ? "true" : undefined}
+              className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+                filters.validity === v ? "border-primary bg-primary/10 text-neuro-ink" : "border-border text-muted hover:border-primary/50 hover:text-heading"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <details className="relative">
+          <summary className={`${buttonClass("secondary", "cursor-pointer list-none", "sm")}`}>
+            <Icon name="download" className="size-5" />
+            Exportar
+          </summary>
+          <div className="absolute right-0 z-20 mt-2 w-64 space-y-1 rounded-lg border border-border bg-surface p-2 shadow-sm">
+            <a href={`/api/studies/${id}/export/session_summary`} className="block rounded-md px-3 py-2 text-sm hover:bg-neuro-wash">
+              <span className="font-semibold text-heading">Resumen por sesión</span>
+              <span className="block text-muted">session_summary.csv</span>
+            </a>
+            <a href={`/api/studies/${id}/export/raw_trials`} className="block rounded-md px-3 py-2 text-sm hover:bg-neuro-wash">
+              <span className="font-semibold text-heading">Ensayos sin procesar</span>
+              <span className="block text-muted">raw_trials.csv</span>
+            </a>
+          </div>
+        </details>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <form method="get" className="flex flex-wrap items-end gap-3">
-          <label className="space-y-1 text-xs text-muted">
+      <details className="group" open={filters.status !== "all" || filters.device !== "all" || filters.duplicates !== "all" || filters.excluded !== "all"}>
+        <summary className="inline-flex cursor-pointer items-center gap-1.5 py-1 text-sm font-medium text-neuro-ink hover:underline">Más filtros</summary>
+        <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
+          {sort !== "date" || dir !== "desc" ? (
+            <>
+              <input type="hidden" name="sort" value={sort} />
+              <input type="hidden" name="dir" value={dir} />
+            </>
+          ) : null}
+          <input type="hidden" name="validity" value={filters.validity} />
+          <label className="space-y-1 text-sm text-muted">
             Estado
             <select name="status" defaultValue={filters.status} className={`${selectClass} block`}>
               <option value="all">Todos</option>
@@ -90,15 +184,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="abandoned">Abandonadas</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
-            Calidad
-            <select name="validity" defaultValue={filters.validity} className={`${selectClass} block`}>
-              <option value="all">Todas</option>
-              <option value="valid">Válidas</option>
-              <option value="invalid">A revisar</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Dispositivo
             <select name="device" defaultValue={filters.device} className={`${selectClass} block`}>
               <option value="all">Todos</option>
@@ -107,14 +193,14 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="tablet">Tableta</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Duplicados
             <select name="dup" defaultValue={filters.duplicates} className={`${selectClass} block`}>
               <option value="all">Todas</option>
               <option value="only">Sólo posibles duplicados</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Exclusión
             <select name="excluded" defaultValue={filters.excluded} className={`${selectClass} block`}>
               <option value="all">Todas</option>
@@ -123,20 +209,10 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
             </select>
           </label>
           <button type="submit" className={buttonClass("secondary", "", "sm")}>
-            Filtrar
+            Aplicar
           </button>
         </form>
-        <div className="flex flex-wrap gap-2">
-          <a href={`/api/studies/${id}/export/session_summary`} className={buttonClass("secondary", "", "sm")}>
-            <Icon name="download" className="size-5" />
-            session_summary.csv
-          </a>
-          <a href={`/api/studies/${id}/export/raw_trials`} className={buttonClass("secondary", "", "sm")}>
-            <Icon name="download" className="size-5" />
-            raw_trials.csv
-          </a>
-        </div>
-      </div>
+      </details>
 
       {all.length === 0 ? (
         <EmptyState
@@ -152,52 +228,45 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
           Comparte la liga del estudio con tus participantes para empezar a recolectar datos.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto md:overflow-visible">
           <table className="w-full text-left text-sm">
-            <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+            <thead className="sticky top-0 z-10 bg-neuro-tint text-sm font-semibold text-heading">
               <tr>
-                <th className="px-3 py-2">Sesión</th>
-                <th className="px-3 py-2">Estado</th>
-                <th className="px-3 py-2">Fecha</th>
-                <th className="px-3 py-2">Dispositivo</th>
-                {config.dimensions.map((d) => (
-                  <th key={d.id} className="px-3 py-2">
-                    D · {d.name}
-                  </th>
-                ))}
-                <th className="px-3 py-2">Calidad</th>
-                <th className="px-3 py-2">Notas</th>
+                {sortTh("ref", "Sesión")}
+                <th className="hidden px-3 py-2.5 md:table-cell">Calidad</th>
+                {sortTh("date", "Fecha", "hidden md:table-cell")}
+                <th className="hidden px-3 py-2.5 md:table-cell">Dispositivo</th>
+                {config.dimensions.map((d, i) => sortTh(`d${i}`, `D · ${d.name}`))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border border-b border-border">
               {rows.map((s) => (
-                <tr key={s.id} className={s.excluded ? "opacity-50" : undefined}>
-                  <td className="px-3 py-2">
-                    <Link href={`/studies/${id}/data/${s.id}`} className="whitespace-nowrap font-display text-xs font-semibold tabular-nums text-neuro-ink hover:underline">
+                <tr key={s.id} className={s.excluded ? "opacity-60" : undefined}>
+                  <td className="px-3 py-3">
+                    <Link href={`/studies/${id}/data/${s.id}`} className="whitespace-nowrap font-display font-semibold tabular-nums text-neuro-ink hover:underline">
                       {s.participant_ref}
                     </Link>
+                    <span className="mt-0.5 block text-xs text-muted md:hidden">{new Date(s.started_at).toLocaleDateString("es-MX", { dateStyle: "short" })}</span>
+                    <span className="mt-1.5 flex flex-wrap gap-1.5 md:hidden">{qualityBadges(s, true)}</span>
                   </td>
-                  <td className="px-3 py-2">{STATUS_LABEL[s.status]}</td>
-                  <td className="whitespace-nowrap px-3 py-2">{new Date(s.started_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</td>
-                  <td className="px-3 py-2">
+                  <td className="hidden px-3 py-3 md:table-cell">
+                    <span className="flex flex-wrap items-center gap-1.5">{qualityBadges(s)}</span>
+                  </td>
+                  <td className="hidden whitespace-nowrap px-3 py-3 md:table-cell">{new Date(s.started_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</td>
+                  <td className="hidden whitespace-nowrap px-3 py-3 md:table-cell">
                     {DEVICE_LABEL[s.device_type]}
-                    <span className="text-xs text-muted"> · {s.input_mode === "touch" ? "táctil" : "teclado"}</span>
+                    <span className="text-sm text-muted"> · {s.input_mode === "touch" ? "táctil" : "teclado"}</span>
                   </td>
                   {s.dimensions.map((r, i) => (
-                    <td key={i} className="px-3 py-2 tabular-nums">
-                      {r?.d_score !== null && r?.d_score !== undefined ? r.d_score.toFixed(2) : "—"}
+                    <td key={i} className="px-3 py-3 tabular-nums">
+                      {r?.d_score !== null && r?.d_score !== undefined ? r.d_score.toFixed(2) : "sin dato"}
                     </td>
                   ))}
-                  <td className="whitespace-nowrap px-3 py-2">{s.allValid === null ? "—" : validityText(s.allValid)}</td>
-                  <td className="px-3 py-2 text-xs">
-                    {s.excluded ? <span className="rounded bg-foreground/10 px-1.5 py-0.5">Excluida</span> : null}{" "}
-                    {s.duplicate_flag ? <span className="rounded bg-warning/20 px-1.5 py-0.5">Posible duplicado</span> : null}
-                  </td>
                 </tr>
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6 + config.dimensions.length} className="px-3 py-6 text-center text-muted">
+                  <td colSpan={3 + config.dimensions.length} className="px-3 py-6 text-center text-muted">
                     Ninguna sesión coincide con los filtros.
                   </td>
                 </tr>

@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CRITERIA_LABEL, type PieceAiResult } from "../analysis/piece";
 import { AOI_KIND_LABEL, coldZones, LOW_ATTENTION, type Aoi } from "../engine/aoi";
@@ -23,8 +23,8 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
   const cold = coldZones(aois);
   return (
     <div className="space-y-4">
-      <Card className="space-y-2">
-        <h3 className="font-medium">Lectura de la IA</h3>
+      <Block className="space-y-2">
+        <h3 className="text-lg font-semibold">Lectura de la IA</h3>
         <p className="text-sm leading-relaxed">{result.summary}</p>
         <p className="text-sm">
           <span className="text-muted">Mensaje que comunica:</span> {result.message}
@@ -32,9 +32,9 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
         <p className="text-sm">
           <span className="text-muted">Primeros segundos:</span> {result.firstSeconds}
         </p>
-      </Card>
-      <Card className="space-y-3">
-        <h3 className="font-medium">Criterios (1–5)</h3>
+      </Block>
+      <Block className="space-y-3">
+        <h3 className="text-lg font-semibold">Criterios (1–5)</h3>
         <dl className="space-y-2 text-sm">
           {(Object.keys(CRITERIA_LABEL) as (keyof typeof CRITERIA_LABEL)[]).map((k) => (
             <div key={k} className="grid gap-1 sm:grid-cols-[200px_90px_1fr]">
@@ -46,10 +46,10 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
             </div>
           ))}
         </dl>
-      </Card>
+      </Block>
       {result.issues.length ? (
-        <Card className="space-y-2">
-          <h3 className="font-medium">Problemas y recomendaciones</h3>
+        <Block className="space-y-2">
+          <h3 className="text-lg font-semibold">Problemas y recomendaciones</h3>
           <ul className="space-y-2 text-sm">
             {result.issues.map((i) => (
               <li key={i.problem} className="space-y-0.5">
@@ -58,13 +58,13 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
               </li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
       {aois.length ? (
-        <Card className="space-y-1">
-          <h3 className="font-medium">Zonas ciegas</h3>
-          <p className="text-xs text-muted">
-            Elementos con atracción estimada baja (≤ {Math.round(LOW_ATTENTION * 100)} %): «zona ciega» si son importantes (4–5) y «baja atención» si su importancia es media (3).
+        <Block className="space-y-1">
+          <h3 className="text-lg font-semibold">Zonas ciegas</h3>
+          <p className="text-sm text-muted">
+            AOI = zona de interés: un elemento de la pieza (logo, precio, botón) que se mide aparte. Elementos con atracción estimada baja (≤ {Math.round(LOW_ATTENTION * 100)} %): «zona ciega» si son importantes (4–5) y «baja atención» si su importancia es media (3).
           </p>
           {cold.length ? (
             <ul className="list-disc pl-5 text-sm">
@@ -77,27 +77,27 @@ export function AiReading({ result, aois }: { result: PieceAiResult; aois: Aoi[]
           ) : (
             <p className="text-sm text-muted">No se detectaron: ningún elemento importante tiene atención baja.</p>
           )}
-        </Card>
+        </Block>
       ) : null}
       {result.strengths.length ? (
-        <Card className="space-y-1">
-          <h3 className="font-medium">Fortalezas</h3>
+        <Block className="space-y-1">
+          <h3 className="text-lg font-semibold">Fortalezas</h3>
           <ul className="list-disc pl-5 text-sm">
             {result.strengths.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
       {result.limitations.length ? (
-        <Card className="space-y-1">
-          <h3 className="font-medium">Límites de la lectura</h3>
+        <Block className="space-y-1">
+          <h3 className="text-lg font-semibold">Límites de la lectura</h3>
           <ul className="list-disc pl-5 text-sm">
             {result.limitations.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
     </div>
   );
@@ -108,9 +108,9 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
   const spec = getPlacement(img.placement);
   const checks = spec ? checkPlacement(spec, img) : [];
   return (
-    <Card className="space-y-3 break-inside-avoid">
+    <Block className="space-y-3 break-inside-avoid">
       <div>
-        <h3 className="font-medium">Métricas de imagen</h3>
+        <h3 className="text-lg font-semibold">Métricas de imagen</h3>
         <p className="text-xs text-muted">Medidas deterministas sobre los píxeles ({metrics.version}).</p>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -169,6 +169,6 @@ export function MetricsPanel({ metrics, img }: { metrics: StoredMetrics; img: { 
           {spec.note ? <p className="text-xs text-muted">{spec.note}</p> : null}
         </div>
       ) : null}
-    </Card>
+    </Block>
   );
 }

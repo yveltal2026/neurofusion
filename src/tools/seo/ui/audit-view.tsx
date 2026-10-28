@@ -1,6 +1,7 @@
 import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
+import { Glossary } from "@/components/ui/glossary";
 import { SectionTitle } from "@/components/ui/section-title";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
 import { SeverityBadge } from "./findings-table";
@@ -56,20 +57,20 @@ export function CategoryChart({ summary }: { summary: AuditSummary }) {
   return <CategoryScoreChart rows={summary.byCategory.map((c) => ({ label: CATEGORY_LABEL[c.category], score: c.score }))} />;
 }
 
-const sec = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`);
+const sec = (ms: number | null) => (ms === null ? "sin dato" : `${(ms / 1000).toFixed(1)} s`);
 
 export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
   const rows: [string, string, string][] = [
-    ["LCP", perf.field?.lcpMs != null ? sec(perf.field.lcpMs) : "—", sec(perf.lab.lcpMs)],
-    ["CLS", perf.field?.cls != null ? perf.field.cls.toFixed(2) : "—", perf.lab.cls != null ? perf.lab.cls.toFixed(2) : "—"],
-    ["INP", perf.field?.inpMs != null ? `${Math.round(perf.field.inpMs)} ms` : "—", "— (sólo campo)"],
-    ["TBT", "—", perf.lab.tbtMs != null ? `${Math.round(perf.lab.tbtMs)} ms` : "—"],
-    ["FCP", "—", sec(perf.lab.fcpMs)],
+    ["LCP", perf.field?.lcpMs != null ? sec(perf.field.lcpMs) : "sin dato", sec(perf.lab.lcpMs)],
+    ["CLS", perf.field?.cls != null ? perf.field.cls.toFixed(2) : "sin dato", perf.lab.cls != null ? perf.lab.cls.toFixed(2) : "sin dato"],
+    ["INP", perf.field?.inpMs != null ? `${Math.round(perf.field.inpMs)} ms` : "sin dato", "sin dato (sólo campo)"],
+    ["TBT", "sin dato", perf.lab.tbtMs != null ? `${Math.round(perf.lab.tbtMs)} ms` : "sin dato"],
+    ["FCP", "sin dato", sec(perf.lab.fcpMs)],
   ];
   return (
-    <Card className="space-y-3 break-inside-avoid">
+    <Block className="space-y-3 break-inside-avoid">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-medium">Rendimiento ({perf.strategy === "mobile" ? "móvil" : "escritorio"})</h2>
+        <h2 className="text-xl font-semibold">Rendimiento ({perf.strategy === "mobile" ? "móvil" : "escritorio"})</h2>
         {perf.performanceScore !== null ? (
           <p className="text-sm">
             Lighthouse: <strong style={{ color: scoreColor(perf.performanceScore) }}>{perf.performanceScore}/100</strong> ·{" "}
@@ -78,7 +79,7 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
         ) : null}
       </div>
       <table className="w-full text-left text-sm">
-        <thead className="font-display text-xs font-semibold text-muted">
+        <thead className="text-sm font-semibold text-heading">
           <tr>
             <th className="py-1">Métrica</th>
             <th className="py-1">Usuarios reales (CrUX p75)</th>
@@ -95,6 +96,15 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
           ))}
         </tbody>
       </table>
+      <Glossary
+        terms={[
+          { term: "LCP", meaning: "Tiempo hasta que aparece el contenido principal. Menos de 2.5 s es bueno." },
+          { term: "CLS", meaning: "Cuánto se mueve la página mientras carga. Menos de 0.1 es bueno." },
+          { term: "INP", meaning: "Qué tan rápido responde la página al tocar o hacer clic. Menos de 200 ms es bueno." },
+          { term: "TBT y FCP", meaning: "TBT: tiempo en que la página no responde mientras carga. FCP: tiempo hasta ver el primer contenido." },
+          { term: "CrUX p75", meaning: "Medición de usuarios reales: el valor que el 75 % de las visitas igualan o mejoran." },
+        ]}
+      />
       {!perf.field ? <p className="text-xs text-muted">Sin datos de campo: el sitio no tiene tráfico suficiente en CrUX. Se usan datos de laboratorio.</p> : null}
       {perf.opportunities.length ? (
         <div>
@@ -108,7 +118,7 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
           </ul>
         </div>
       ) : null}
-    </Card>
+    </Block>
   );
 }
 
@@ -116,7 +126,7 @@ export function PagesTable({ pages }: { pages: PageSummary[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full text-left text-sm">
-        <thead className="bg-neuro-wash font-display text-xs font-semibold text-muted">
+        <thead className="bg-neuro-wash text-xs font-semibold text-muted">
           <tr>
             <th className="px-3 py-2">URL</th>
             <th className="px-3 py-2">Estado</th>
@@ -134,10 +144,10 @@ export function PagesTable({ pages }: { pages: PageSummary[] }) {
                 {p.finalUrl !== p.url ? <span className="block text-muted">→ {p.finalUrl}</span> : null}
               </td>
               <td className="px-3 py-2 tabular-nums">{p.status ?? (p.source === "upload" ? "subido" : "error")}</td>
-              <td className="px-3 py-2 tabular-nums">{p.timeMs === null ? "—" : `${p.timeMs} ms`}</td>
-              <td className="px-3 py-2">{p.title ?? "—"}</td>
-              <td className="px-3 py-2 tabular-nums">{p.wordCount ?? "—"}</td>
-              <td className="px-3 py-2 tabular-nums">{p.internalLinks ?? "—"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.timeMs === null ? "sin dato" : `${p.timeMs} ms`}</td>
+              <td className="px-3 py-2">{p.title ?? "sin dato"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.wordCount ?? "sin dato"}</td>
+              <td className="px-3 py-2 tabular-nums">{p.internalLinks ?? "sin dato"}</td>
             </tr>
           ))}
         </tbody>
@@ -151,10 +161,10 @@ const FIELD_LABEL = { title: "Título", description: "Descripción", h1: "H1" } 
 export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
   return (
     <div className="space-y-4">
-      <Card className="space-y-2">
+      <Block className="space-y-2">
         <SectionTitle icon="neuro">Resumen ejecutivo</SectionTitle>
         <p className="text-sm leading-relaxed">{plan.executiveSummary}</p>
-      </Card>
+      </Block>
       {plan.priorities.length ? (
         <div className="space-y-3">
           {plan.priorities.map((p, i) => (
@@ -178,22 +188,22 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
         </div>
       ) : null}
       {plan.quickWins.length ? (
-        <Card className="space-y-2">
+        <Block className="space-y-2">
           <SectionTitle icon="bolt">Ganancias rápidas</SectionTitle>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {plan.quickWins.map((q) => (
               <li key={q}>{q}</li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
       {plan.rewrites.length ? (
-        <Card className="space-y-2">
+        <Block className="space-y-2">
           <SectionTitle icon="chat">Propuestas de reescritura</SectionTitle>
           <p className="text-xs text-muted">Propuestas de la IA para revisión editorial; no se aplican automáticamente.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <th className="py-1 pr-3">Página</th>
                   <th className="py-1 pr-3">Campo</th>
@@ -206,7 +216,7 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
                   <tr key={`${r.url}-${r.field}`}>
                     <td className="max-w-48 break-all py-1.5 pr-3 text-xs text-muted">{r.url}</td>
                     <td className="py-1.5 pr-3">{FIELD_LABEL[r.field]}</td>
-                    <td className="py-1.5 pr-3 text-muted">{r.current ?? "—"}</td>
+                    <td className="py-1.5 pr-3 text-muted">{r.current ?? "sin dato"}</td>
                     <td className="py-1.5 pr-3">
                       {r.proposal}
                       <span className="block text-xs text-muted">{r.reason}</span>
@@ -216,17 +226,17 @@ export function SeoPlanView({ plan }: { plan: SeoAiResult }) {
               </tbody>
             </table>
           </div>
-        </Card>
+        </Block>
       ) : null}
       {plan.limitations.length ? (
-        <Card className="space-y-2">
+        <Block className="space-y-2">
           <SectionTitle icon="alert">Límites de esta auditoría</SectionTitle>
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {plan.limitations.map((l) => (
               <li key={l}>{l}</li>
             ))}
           </ul>
-        </Card>
+        </Block>
       ) : null}
     </div>
   );

@@ -5,7 +5,7 @@ import { StudyHeader } from "@/components/study-header";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Block, Panel } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import type { StudyRow } from "@/lib/db/types";
 import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
@@ -56,7 +56,7 @@ export function SurveyOverview({
       ) : null}
       {blocked ? <Alert tone="warning">{BATTERY_BLOCK_MESSAGE}</Alert> : null}
 
-      <Card className="space-y-3">
+      <Panel className="space-y-3">
         <div>
           <SectionTitle icon="link">Liga mágica</SectionTitle>
           <p className="text-sm text-muted">
@@ -79,10 +79,10 @@ export function SurveyOverview({
             {STATUS_LABEL[study.status].toLowerCase()}».
           </Alert>
         ) : null}
-      </Card>
+      </Panel>
 
       {config.success ? (
-        <Card className="space-y-3">
+        <Block className="space-y-3">
           <SectionTitle icon="survey">Diseño de la encuesta</SectionTitle>
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[160px_1fr]">
             <dt className="text-muted">Título</dt>
@@ -117,14 +117,14 @@ export function SurveyOverview({
             <dt className="text-muted">Elementos</dt>
             <dd>{items.length} en total</dd>
           </dl>
-        </Card>
+        </Block>
       ) : (
         <Alert tone="warning">
           La configuración guardada de este estudio no es válida.
         </Alert>
       )}
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <SectionTitle icon="settings">Ajustes</SectionTitle>
         <StudySettingsForm
           id={study.id}
@@ -133,11 +133,11 @@ export function SurveyOverview({
           closesAt={study.closes_at}
           duplicatePolicy={study.duplicate_policy}
         />
-      </Card>
+      </Block>
 
       <DuplicateStudyForm studyId={study.id} projectId={study.project_id} />
 
-      <Card className="space-y-4 border-danger/30">
+      <Block className="space-y-4 border-danger/30">
         <SectionTitle icon="alert" className="text-danger">Zona de riesgo</SectionTitle>
         <div className="flex flex-wrap gap-3">
           <form action={regenerateLink}>
@@ -153,7 +153,7 @@ export function SurveyOverview({
             </Button>
           </form>
         </div>
-      </Card>
+      </Block>
     </div>
   );
 }

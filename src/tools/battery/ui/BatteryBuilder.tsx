@@ -94,7 +94,7 @@ export function BatteryBuilder({
       </p>
 
       <Card className="space-y-4">
-        <h2 className="font-medium">Datos básicos</h2>
+        <h2 className="text-xl font-semibold">Datos básicos</h2>
         <Field label="Nombre de la batería" hint="Sólo lo ves tú.">
           <Input
             value={name}
@@ -123,7 +123,7 @@ export function BatteryBuilder({
       </Card>
 
       <section className="space-y-3" aria-label="Pasos">
-        <h2 className="text-lg font-semibold">Pasos</h2>
+        <h2 className="text-xl font-semibold">Pasos</h2>
         <p className="text-sm text-muted">
           El participante hace los pasos activos en este orden. La plataforma
           sugiere un orden, pero tú decides: puedes intercambiar pasos u omitir
@@ -133,7 +133,7 @@ export function BatteryBuilder({
       </section>
 
       <Card className="space-y-4">
-        <h2 className="font-medium">Textos para el participante</h2>
+        <h2 className="text-xl font-semibold">Textos para el participante</h2>
         <Field
           label="Consentimiento"
           hint="Se genera con el título; edítalo si lo necesitas. Cubre toda la batería: los pasos no piden otro. Tu equipo legal debe validarlo antes de usar la liga con personas reales."

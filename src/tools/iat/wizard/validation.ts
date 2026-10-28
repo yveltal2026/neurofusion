@@ -31,6 +31,20 @@ export const WIZARD_STEPS: { id: WizardStepId; title: string }[] = [
   { id: "confirm", title: "Confirmación" },
 ];
 
+const spanish = z.locales.es().localeError;
+
+/**
+ * Mensajes de zod en español cuando el esquema no trae uno propio. Las listas largas o cortas se dicen como las
+ * ve la persona («Máximo 9 palabras»), no como las describe el esquema («se esperaba que arreglo tuviera <=10 elementos»).
+ */
+const ES_OPTIONS = {
+  error: (issue: Parameters<typeof spanish>[0]) => {
+    if (issue.code === "too_big" && issue.origin === "array") return `Máximo ${issue.maximum} elementos`;
+    if (issue.code === "too_small" && issue.origin === "array") return `Mínimo ${issue.minimum} elementos`;
+    return spanish(issue);
+  },
+};
+
 const productSchema = z.string().trim().min(1, "Escribe el producto, servicio o categoría").max(120, "Máximo 120 caracteres");
 
 function messages(error: z.ZodError): string[] {
@@ -41,7 +55,7 @@ function messages(error: z.ZodError): string[] {
 export function validateStep(step: WizardStepId, c: IatConfig): string[] {
   switch (step) {
     case "product": {
-      const r = productSchema.safeParse(c.product);
+      const r = productSchema.safeParse(c.product, ES_OPTIONS);
       return r.success ? [] : messages(r.error);
     }
     case "concepts": {
@@ -50,7 +64,7 @@ export function validateStep(step: WizardStepId, c: IatConfig): string[] {
         ["A", c.conceptA],
         ["B", c.conceptB],
       ] as const) {
-        const r = conceptSchema.safeParse(concept);
+        const r = conceptSchema.safeParse(concept, ES_OPTIONS);
         if (!r.success) errors.push(...messages(r.error).map((m) => `Concepto ${key}: ${m}`));
       }
       if (c.conceptA.label.trim() && normalizeWord(c.conceptA.label) === normalizeWord(c.conceptB.label)) {
@@ -62,7 +76,7 @@ export function validateStep(step: WizardStepId, c: IatConfig): string[] {
       if (c.dimensions.length === 0) return ["Agrega al menos una dimensión"];
       const errors: string[] = [];
       c.dimensions.forEach((d, i) => {
-        const r = dimensionBaseSchema.pick({ name: true, positiveLabel: true, negativeLabel: true }).safeParse(d);
+        const r = dimensionBaseSchema.pick({ name: true, positiveLabel: true, negativeLabel: true }).safeParse(d, ES_OPTIONS);
         if (!r.success) errors.push(...messages(r.error).map((m) => `Dimensión ${i + 1}: ${m}`));
         else if (normalizeWord(d.positiveLabel) === normalizeWord(d.negativeLabel)) {
           errors.push(`Dimensión ${i + 1}: los dos polos deben ser distintos`);
@@ -73,7 +87,7 @@ export function validateStep(step: WizardStepId, c: IatConfig): string[] {
     case "words": {
       const errors: string[] = [];
       c.dimensions.forEach((d, i) => {
-        const r = dimensionSchema.safeParse(d);
+        const r = dimensionSchema.safeParse(d, ES_OPTIONS);
         if (!r.success) errors.push(...messages(r.error).map((m) => `«${d.name || `Dimensión ${i + 1}`}»: ${m}`));
       });
       return errors;
@@ -81,16 +95,16 @@ export function validateStep(step: WizardStepId, c: IatConfig): string[] {
     case "protocol":
       return [];
     case "participant": {
-      const r = participantSchema.safeParse(c.participant);
+      const r = participantSchema.safeParse(c.participant, ES_OPTIONS);
       return r.success ? [] : messages(r.error);
     }
     case "theme": {
-      const r = themeSchema.safeParse(c.theme);
+      const r = themeSchema.safeParse(c.theme, ES_OPTIONS);
       if (!r.success) return messages(r.error);
       return c.theme.mode === "custom" && !c.theme.accent ? ["Elige un color"] : [];
     }
     case "confirm": {
-      const r = iatConfigSchema.safeParse(c);
+      const r = iatConfigSchema.safeParse(c, ES_OPTIONS);
       return r.success ? [] : messages(r.error);
     }
   }

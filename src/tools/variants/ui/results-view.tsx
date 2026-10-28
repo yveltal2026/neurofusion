@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { VariantHistogram } from "@/components/charts/variant-charts";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Block } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/section-title";
-import { StatTile } from "@/components/ui/stat-tile";
+import { Glossary } from "@/components/ui/glossary";
+import { StatStrip } from "@/components/ui/stat-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { OneSampleTest } from "@/tools/iat/engine/math";
 import { VARIANT_INFO, type VariantConfig } from "../config";
@@ -80,12 +81,23 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon="user" label="Completaron" value={a.nCompleted} />
-        <StatTile icon="check" label="Entran al promedio" value={a.nIncluded} />
-        <StatTile icon="alert" label="Con advertencias de calidad" value={a.nFlagged} />
-        <StatTile icon="ban" label="Excluidos a mano" value={a.nManuallyExcluded} />
-      </div>
+      <StatStrip
+        items={[
+          { icon: "user", label: "Completaron", value: a.nCompleted },
+          { icon: "check", label: "Entran al promedio", value: a.nIncluded },
+          { icon: "alert", label: "Con advertencias de calidad", value: a.nFlagged, attention: true },
+          { icon: "ban", label: "Excluidos a mano", value: a.nManuallyExcluded },
+        ]}
+      />
+
+      <Glossary
+        terms={[
+          { term: "IC95 %", meaning: "Rango donde, con 95 % de confianza, está el efecto real. Si incluye 0, no hay evidencia de efecto." },
+          { term: "t y p", meaning: "Prueba contra 0 (dos colas). Un p menor a 0.05 indica que el efecto difícilmente es casualidad." },
+          { term: "d de Cohen", meaning: "Tamaño del efecto: cerca de 0.2 es pequeño, 0.5 mediano y 0.8 o más grande." },
+          { term: "Entran al promedio", meaning: "Participantes cuyos datos pasaron los controles de calidad y no fueron excluidos a mano." },
+        ]}
+      />
 
       {a.nIncluded > 0 && a.nIncluded < SMALL_SAMPLE ? (
         <Alert tone="info">
@@ -93,7 +105,7 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
         </Alert>
       ) : null}
 
-      <Card className="space-y-4">
+      <Block className="space-y-4">
         <SectionTitle icon="results">Resultado principal · {info.short}</SectionTitle>
         {a.primary.test ? (
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[200px_1fr]">
@@ -126,11 +138,11 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
             ))}
           </dl>
         ) : null}
-      </Card>
+      </Block>
 
       {a.histogram.length > 0 ? <VariantHistogram rows={a.histogram} unitLabel={unit} /> : null}
 
-      <Card className="space-y-3">
+      <Block className="space-y-3">
         <SectionTitle icon="alert">Calidad de los datos</SectionTitle>
         {a.nFlagged === 0 ? (
           <p className="text-sm">
@@ -159,7 +171,7 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
         {a.devices.length > 0 ? (
           <p className="text-xs text-muted">Dispositivos: {a.devices.map((d) => `${d.deviceType} (${d.count})`).join(" · ")}</p>
         ) : null}
-      </Card>
+      </Block>
 
       <Alert tone="info">
         Los parámetros de la tarea y las reglas de puntuación siguen lo descrito en la literatura, pero no se han cotejado contra los datos de las publicaciones originales (ver Metodología). Una sola variante no basta para una conclusión sobre una marca: contrástala con otras mediciones.

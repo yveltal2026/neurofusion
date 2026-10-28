@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { GgChart, VwChart } from "@/components/charts/price-charts";
-import { Card } from "@/components/ui/card";
+import { Block, Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import {
   getInstrument,
@@ -69,7 +69,7 @@ function Stat({
 }) {
   return (
     <div>
-      <dt className="font-display text-xs font-semibold text-muted">{label}</dt>
+      <dt className="text-xs font-semibold text-muted">{label}</dt>
       <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
       {hint ? <p className="text-xs text-muted">{hint}</p> : null}
     </div>
@@ -122,7 +122,7 @@ function InstrumentCard({
           />
           <Stat
             label="Consistencia (α de Cronbach)"
-            value={agg.alpha === null ? "—" : num(agg.alpha, 2)}
+            value={agg.alpha === null ? "sin dato" : num(agg.alpha, 2)}
             hint={
               agg.alpha === null
                 ? "Se calcula con 2 o más respuestas"
@@ -193,7 +193,7 @@ function InstrumentCard({
           <dl className="grid gap-4 sm:grid-cols-2">
             <Stat
               label="Dos categorías superiores"
-              value={agg.topTwoBox ? pct(agg.topTwoBox.pct) : "—"}
+              value={agg.topTwoBox ? pct(agg.topTwoBox.pct) : "sin dato"}
               hint={
                 agg.topTwoBox
                   ? `${agg.topTwoBox.count} de ${agg.n} · IC95 % ${pct(agg.topTwoBox.ci95[0])} a ${pct(agg.topTwoBox.ci95[1])}`
@@ -208,7 +208,7 @@ function InstrumentCard({
                 key={d.value}
                 value={agg.n ? d.count / agg.n : 0}
                 label={def.scaleLabels?.[i] ?? String(d.value)}
-                detail={`${d.count} · ${agg.n ? pct(d.count / agg.n) : "—"}`}
+                detail={`${d.count} · ${agg.n ? pct(d.count / agg.n) : "sin dato"}`}
               />
             ))}
           </ul>
@@ -229,7 +229,7 @@ function InstrumentCard({
           />
           <Stat
             label="Consistencia (α de Cronbach)"
-            value={agg.alpha === null ? "—" : num(agg.alpha, 2)}
+            value={agg.alpha === null ? "sin dato" : num(agg.alpha, 2)}
             hint={
               agg.alpha === null
                 ? "Se calcula con 2 o más respuestas"
@@ -242,9 +242,9 @@ function InstrumentCard({
   }
 
   return (
-    <Card className="space-y-4">
+    <Block className="space-y-4">
       <div>
-        <h3 className="font-medium">
+        <h3 className="text-lg font-semibold">
           {def.name}
           {subject ? (
             <span className="font-normal text-muted"> · {subject}</span>
@@ -264,7 +264,7 @@ function InstrumentCard({
         <p className="mt-1">{def.notes}</p>
         <p className="mt-1">Versión del instrumento: {def.version}</p>
       </details>
-    </Card>
+    </Block>
   );
 }
 
@@ -330,25 +330,25 @@ function ItemCard({ item }: { item: ItemAggregate }) {
     );
   }
   return (
-    <Card className="space-y-3">
+    <Block className="space-y-3">
       <div>
-        <h3 className="font-medium">{item.label}</h3>
+        <h3 className="text-lg font-semibold">{item.label}</h3>
         <p className="text-xs text-muted">
           {item.n} {item.n === 1 ? "respuesta" : "respuestas"}
         </p>
       </div>
       {body}
-    </Card>
+    </Block>
   );
 }
 
 function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) {
   const { result } = agg;
-  const money = (v: number | null) => (v === null ? "—" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
+  const money = (v: number | null) => (v === null ? "sin dato" : `${num(v, v % 1 === 0 ? 0 : 2)} ${agg.currency}`);
   return (
-    <Card className="space-y-4">
+    <Block className="space-y-4">
       <div>
-        <h3 className="font-medium">
+        <h3 className="text-lg font-semibold">
           {agg.method === "van_westendorp" ? "Sensibilidad al precio (Van Westendorp)" : "Curva de demanda (Gabor-Granger)"}
         </h3>
         <p className="text-xs text-muted">
@@ -376,7 +376,7 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
           {agg.result.points.length ? <GgChart points={agg.result.points} currency={agg.currency} /> : null}
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-left text-sm">
-              <thead className="font-display text-xs font-semibold text-muted">
+              <thead className="text-xs font-semibold text-muted">
                 <tr>
                   <th className="px-3 py-2">Precio</th>
                   <th className="px-3 py-2">Compraría</th>
@@ -414,7 +414,7 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
           ))}
         </ul>
       ) : null}
-    </Card>
+    </Block>
   );
 }
 
@@ -467,7 +467,7 @@ export function SurveyResultsView({
 
       {aggregates.instruments.length ? (
         <section className="space-y-4" aria-label="Instrumentos">
-          <h2 className="text-lg font-semibold">Instrumentos</h2>
+          <h2 className="text-xl font-semibold">Instrumentos</h2>
           {aggregates.instruments.map((agg) => (
             <InstrumentCard
               key={agg.blockId}
@@ -491,7 +491,7 @@ export function SurveyResultsView({
 
       {aggregates.items.length ? (
         <section className="space-y-4" aria-label="Preguntas">
-          <h2 className="text-lg font-semibold">Preguntas</h2>
+          <h2 className="text-xl font-semibold">Preguntas</h2>
           {aggregates.items.map((item) => (
             <ItemCard key={item.id} item={item} />
           ))}

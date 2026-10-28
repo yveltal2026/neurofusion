@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LEGEND_CLASS, OPTION_CLASS, POINT_CLASS, QuestionCard, ReadingPanel, ScreenHeader, Section } from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -13,7 +14,7 @@ type Values = Record<string, string | string[]>;
 const str = (v: string | string[] | undefined): string => (typeof v === "string" ? v : "");
 const list = (v: string | string[] | undefined): string[] => (Array.isArray(v) ? v : []);
 
-const SELECT_CLASS = "h-10 w-full rounded-md border border-control bg-background px-3 text-sm";
+const SELECT_CLASS = "h-11 w-full rounded-md border border-control bg-background px-3 text-base";
 
 /** Convierte lo tecleado en el payload tipado que espera el esquema (omite vacíos). */
 function toPayload(config: IatConfig, v: Values): Record<string, unknown> {
@@ -55,6 +56,7 @@ export function ParticipantForm({
     set(key, current.includes(option) ? current.filter((o) => o !== option) : [...current, option]);
   };
   const { participant } = config;
+  const hasAboutYou = participant.collectAge || participant.collectGender || participant.extraFields.length > 0;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,9 +80,18 @@ export function ParticipantForm({
   const err = (key: string) => (fieldErrors[key] ? <p className="text-sm text-danger">{fieldErrors[key]}</p> : null);
 
   return (
-    <form onSubmit={submit} className="space-y-5" noValidate>
-      <h2 className="text-xl font-semibold tracking-tight">Antes de empezar</h2>
+    <form onSubmit={submit} className="space-y-8" noValidate>
+      <ScreenHeader
+        icon="user"
+        title="Antes de empezar"
+        lead="Son unas preguntas breves. Las marcadas como opcionales puedes dejarlas vacías."
+      />
       {error ? <Alert tone="error">{error}</Alert> : null}
+
+      {hasAboutYou ? (
+        <Section title="Sobre ti">
+          <ReadingPanel>
+            <div className="space-y-6">
 
       {participant.collectAge ? (
         <div>
@@ -95,7 +106,7 @@ export function ParticipantForm({
         <div>
           <Field label="Género (opcional)">
             <select className={SELECT_CLASS} value={str(values.gender)} onChange={(e) => set("gender", e.target.value)}>
-              <option value="">—</option>
+              <option value="">Elige una opción</option>
               {GENDER_OPTIONS.map((g) => (
                 <option key={g} value={g}>
                   {g}
@@ -113,10 +124,10 @@ export function ParticipantForm({
           const picked = list(values[f.id]);
           return (
             <fieldset key={f.id} className="space-y-2">
-              <legend className="text-sm font-medium">{label}</legend>
-              <p className="text-xs text-muted">Puedes elegir varias opciones.</p>
+              <legend className={LEGEND_CLASS}>{label}</legend>
+              <p className="text-sm text-muted">Puedes elegir varias opciones.</p>
               {f.options.map((o) => (
-                <label key={o} className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2.5 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <label key={o} className={OPTION_CLASS}>
                   <input type="checkbox" checked={picked.includes(o)} onChange={() => toggle(f.id, o)} />
                   {o}
                 </label>
@@ -129,12 +140,12 @@ export function ParticipantForm({
           const points = Array.from({ length: f.points }, (_, i) => i + 1);
           return (
             <fieldset key={f.id} className="space-y-2">
-              <legend className="text-sm font-medium">{label}</legend>
+              <legend className={LEGEND_CLASS}>{label}</legend>
               <div className="flex flex-wrap gap-2">
                 {points.map((n) => (
                   <label
                     key={n}
-                    className="flex size-11 cursor-pointer items-center justify-center rounded-md border border-border text-sm has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/40"
+                    className={`${POINT_CLASS} size-12`}
                   >
                     <input
                       type="radio"
@@ -166,7 +177,7 @@ export function ParticipantForm({
             <Field label={label}>
               {f.type === "select" ? (
                 <select className={SELECT_CLASS} value={str(values[f.id])} onChange={(e) => set(f.id, e.target.value)}>
-                  <option value="">—</option>
+                  <option value="">Elige una opción</option>
                   {f.options.map((o) => (
                     <option key={o} value={o}>
                       {o}
@@ -187,12 +198,19 @@ export function ParticipantForm({
         );
       })}
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">{participant.explicitQuestion}</legend>
+            </div>
+          </ReadingPanel>
+        </Section>
+      ) : null}
+
+      <Section title="Tu opinión">
+        <QuestionCard>
+      <fieldset className="space-y-3">
+        <legend className={LEGEND_CLASS}>{participant.explicitQuestion}</legend>
         {[...order, "neutral" as const].map((key) => {
           const label = key === "A" ? config.conceptA.label : key === "B" ? config.conceptB.label : NEUTRAL_OPTION_LABEL;
           return (
-            <label key={key} className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2.5 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+            <label key={key} className={OPTION_CLASS}>
               <input type="radio" name="explicit" value={key} checked={values.explicit === key} onChange={() => set("explicit", key)} />
               {label}
             </label>
@@ -200,8 +218,10 @@ export function ParticipantForm({
         })}
         {err("explicit")}
       </fieldset>
+        </QuestionCard>
+      </Section>
 
-      <Button type="submit" className="w-full" disabled={submitting}>
+      <Button type="submit" size="lg" className="w-full" disabled={submitting}>
         {submitting ? "Preparando…" : "Continuar"}
       </Button>
     </form>
