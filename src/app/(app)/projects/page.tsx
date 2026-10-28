@@ -1,7 +1,7 @@
+import { ProjectList } from "@/components/project-list";
 import { NewProjectForm } from "@/components/new-project-form";
 import { Block } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { RowLink, RowList } from "@/components/ui/rows";
 import { SectionTitle } from "@/components/ui/section-title";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow } from "@/lib/db/types";
@@ -29,18 +29,7 @@ export default async function ProjectsPage() {
           Un proyecto agrupa los estudios de una misma investigación. Crea el primero con el formulario de abajo.
         </EmptyState>
       ) : (
-        <RowList>
-          {projects.map((p) => (
-            <RowLink
-              key={p.id}
-              href={`/projects/${p.id}`}
-              icon="folder"
-              title={p.name}
-              description={p.description ? <span className="line-clamp-1">{p.description}</span> : undefined}
-              meta={`Creado el ${new Date(p.created_at).toLocaleDateString("es-MX")}`}
-            />
-          ))}
-        </RowList>
+        <ProjectList projects={projects} />
       )}
 
       <Block className="max-w-lg">

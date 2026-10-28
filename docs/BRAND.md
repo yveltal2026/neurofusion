@@ -99,13 +99,17 @@ Resultado de la crítica de diseño del 28 de octubre de 2026 (`.impeccable/crit
 
 - **Encabezado de 56 px** con el logo sin palabra y el nombre del producto; sin onda ni filo (esos quedan para portada y acceso).
 - **Migas** (`Breadcrumbs`, `projectCrumbs`, `newStudyCrumbs`): Proyectos / proyecto / estudio. Sustituyen a los «← Proyecto» sueltos.
+- **Resultados como reporte**: las gráficas no llevan marco propio (título de 16 px semi-negrita encima) y las secciones de resultados son `Block`.
 - **Sin cajas por reflejo** (manual cap. 11): las listas son filas con filetes (`RowList` / `RowLink`), las cifras una franja (`StatStrip`), las
   secciones bloques abiertos (`Block`) y la acción principal de la pantalla, un único panel tintado (`Panel`). `Card` queda para lo que
   agrupa una acción.
 - **Tablas de datos**: la calidad va en la primera columna, con etiqueta de texto; encabezado fijo y orden por columna (`aria-sort`); en
-  celular se conservan sesión, calidad y D.
-- **Texto**: apoyo a 15 px (`text-sm`) y mínimo 13 px (`text-xs`); Poppins sólo en títulos, botones y números grandes, no en encabezados
-  de tabla ni etiquetas de datos.
+  celular se conservan sesión, calidad y D. Los filtros frecuentes (Calidad) son chips; el resto va en «Más filtros» y las descargas en un
+  menú «Exportar». `useSort` / `SortTh` (`ui/sortable.tsx`) ordenan tablas en el cliente (hallazgos SEO); Proyectos busca desde 6 elementos.
+- **Texto**: escala 13 px (etiquetas, semi-negrita) / 15 px (apoyo y tablas) / 16 px (lectura) / 20 px (secciones, `text-xl font-semibold`) /
+  30 px (título de página, `text-3xl font-bold`). El contraste de jerarquía lo dan los títulos de 20 y 30 px; los tres tamaños bajos se
+  distinguen por peso y color. Poppins sólo en títulos, botones y números grandes, no en encabezados de tabla ni etiquetas de datos.
+  (El detector de Impeccable marca la escala de tokens como «plana»: es deliberado, el mínimo de 13 px y el cuerpo de 16 px los fija el manual.)
 - **Datos que faltan**: «sin dato» (nunca un guion largo).
 - **Resultados**: `Glossary` («¿Qué significa?») bajo cada tabla técnica y `NoticeList`, que deja los errores y advertencias a la vista y pliega las notas.
 

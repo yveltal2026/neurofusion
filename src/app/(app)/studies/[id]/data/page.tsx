@@ -97,6 +97,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
       ) : (
         <StatusBadge tone={s.allValid ? "success" : "warning"}>{compact ? (s.allValid ? "Válidos" : "Revisar") : validityText(s.allValid)}</StatusBadge>
       )}
+      {s.status !== "completed" ? <StatusBadge tone="neutral">{STATUS_LABEL[s.status]}</StatusBadge> : null}
       {s.excluded ? <StatusBadge tone="neutral">Excluida</StatusBadge> : null}
       {s.duplicate_flag ? <StatusBadge tone="warning">{compact ? "Duplicado" : "Posible duplicado"}</StatusBadge> : null}
     </>
@@ -124,15 +125,57 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
         ]}
       />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <form method="get" className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Calidad de los datos" className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">Mostrar:</span>
+          {(
+            [
+              ["all", "Todas"],
+              ["invalid", "A revisar"],
+              ["valid", "Válidas"],
+            ] as const
+          ).map(([v, label]) => (
+            <Link
+              key={v}
+              href={`/studies/${id}/data${query({ validity: v, page: "" })}`}
+              aria-current={filters.validity === v ? "true" : undefined}
+              className={`rounded-full border-2 px-4 py-1.5 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+                filters.validity === v ? "border-primary bg-primary/10 text-neuro-ink" : "border-border text-muted hover:border-primary/50 hover:text-heading"
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+        <details className="relative">
+          <summary className={`${buttonClass("secondary", "cursor-pointer list-none", "sm")}`}>
+            <Icon name="download" className="size-5" />
+            Exportar
+          </summary>
+          <div className="absolute right-0 z-20 mt-2 w-64 space-y-1 rounded-lg border border-border bg-surface p-2 shadow-sm">
+            <a href={`/api/studies/${id}/export/session_summary`} className="block rounded-md px-3 py-2 text-sm hover:bg-neuro-wash">
+              <span className="font-semibold text-heading">Resumen por sesión</span>
+              <span className="block text-muted">session_summary.csv</span>
+            </a>
+            <a href={`/api/studies/${id}/export/raw_trials`} className="block rounded-md px-3 py-2 text-sm hover:bg-neuro-wash">
+              <span className="font-semibold text-heading">Ensayos sin procesar</span>
+              <span className="block text-muted">raw_trials.csv</span>
+            </a>
+          </div>
+        </details>
+      </div>
+
+      <details className="group" open={filters.status !== "all" || filters.device !== "all" || filters.duplicates !== "all" || filters.excluded !== "all"}>
+        <summary className="inline-flex cursor-pointer items-center gap-1.5 py-1 text-sm font-medium text-neuro-ink hover:underline">Más filtros</summary>
+        <form method="get" className="mt-3 flex flex-wrap items-end gap-3">
           {sort !== "date" || dir !== "desc" ? (
             <>
               <input type="hidden" name="sort" value={sort} />
               <input type="hidden" name="dir" value={dir} />
             </>
           ) : null}
-          <label className="space-y-1 text-xs text-muted">
+          <input type="hidden" name="validity" value={filters.validity} />
+          <label className="space-y-1 text-sm text-muted">
             Estado
             <select name="status" defaultValue={filters.status} className={`${selectClass} block`}>
               <option value="all">Todos</option>
@@ -141,15 +184,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="abandoned">Abandonadas</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
-            Calidad
-            <select name="validity" defaultValue={filters.validity} className={`${selectClass} block`}>
-              <option value="all">Todas</option>
-              <option value="valid">Válidas</option>
-              <option value="invalid">A revisar</option>
-            </select>
-          </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Dispositivo
             <select name="device" defaultValue={filters.device} className={`${selectClass} block`}>
               <option value="all">Todos</option>
@@ -158,14 +193,14 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="tablet">Tableta</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Duplicados
             <select name="dup" defaultValue={filters.duplicates} className={`${selectClass} block`}>
               <option value="all">Todas</option>
               <option value="only">Sólo posibles duplicados</option>
             </select>
           </label>
-          <label className="space-y-1 text-xs text-muted">
+          <label className="space-y-1 text-sm text-muted">
             Exclusión
             <select name="excluded" defaultValue={filters.excluded} className={`${selectClass} block`}>
               <option value="all">Todas</option>
@@ -174,20 +209,10 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
             </select>
           </label>
           <button type="submit" className={buttonClass("secondary", "", "sm")}>
-            Filtrar
+            Aplicar
           </button>
         </form>
-        <div className="flex flex-wrap gap-2">
-          <a href={`/api/studies/${id}/export/session_summary`} className={buttonClass("secondary", "", "sm")}>
-            <Icon name="download" className="size-5" />
-            session_summary.csv
-          </a>
-          <a href={`/api/studies/${id}/export/raw_trials`} className={buttonClass("secondary", "", "sm")}>
-            <Icon name="download" className="size-5" />
-            raw_trials.csv
-          </a>
-        </div>
-      </div>
+      </details>
 
       {all.length === 0 ? (
         <EmptyState
@@ -209,7 +234,6 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <tr>
                 {sortTh("ref", "Sesión")}
                 <th className="hidden px-3 py-2.5 md:table-cell">Calidad</th>
-                <th className="hidden px-3 py-2.5 lg:table-cell">Estado</th>
                 {sortTh("date", "Fecha", "hidden md:table-cell")}
                 <th className="hidden px-3 py-2.5 md:table-cell">Dispositivo</th>
                 {config.dimensions.map((d, i) => sortTh(`d${i}`, `D · ${d.name}`))}
@@ -228,7 +252,6 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
                   <td className="hidden px-3 py-3 md:table-cell">
                     <span className="flex flex-wrap items-center gap-1.5">{qualityBadges(s)}</span>
                   </td>
-                  <td className="hidden px-3 py-3 lg:table-cell">{STATUS_LABEL[s.status]}</td>
                   <td className="hidden whitespace-nowrap px-3 py-3 md:table-cell">{new Date(s.started_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}</td>
                   <td className="hidden whitespace-nowrap px-3 py-3 md:table-cell">
                     {DEVICE_LABEL[s.device_type]}
@@ -243,7 +266,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4 + config.dimensions.length} className="px-3 py-6 text-center text-muted">
+                  <td colSpan={3 + config.dimensions.length} className="px-3 py-6 text-center text-muted">
                     Ninguna sesión coincide con los filtros.
                   </td>
                 </tr>

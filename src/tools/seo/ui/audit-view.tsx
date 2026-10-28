@@ -1,6 +1,7 @@
 import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
 import { Block, Card } from "@/components/ui/card";
+import { Glossary } from "@/components/ui/glossary";
 import { SectionTitle } from "@/components/ui/section-title";
 import { LEVEL_LABEL, type SeoAiResult } from "../analysis/schema";
 import { SeverityBadge } from "./findings-table";
@@ -78,7 +79,7 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
         ) : null}
       </div>
       <table className="w-full text-left text-sm">
-        <thead className="text-xs font-semibold text-muted">
+        <thead className="text-sm font-semibold text-heading">
           <tr>
             <th className="py-1">Métrica</th>
             <th className="py-1">Usuarios reales (CrUX p75)</th>
@@ -95,6 +96,15 @@ export function PerformanceCard({ perf }: { perf: PerformanceResult }) {
           ))}
         </tbody>
       </table>
+      <Glossary
+        terms={[
+          { term: "LCP", meaning: "Tiempo hasta que aparece el contenido principal. Menos de 2.5 s es bueno." },
+          { term: "CLS", meaning: "Cuánto se mueve la página mientras carga. Menos de 0.1 es bueno." },
+          { term: "INP", meaning: "Qué tan rápido responde la página al tocar o hacer clic. Menos de 200 ms es bueno." },
+          { term: "TBT y FCP", meaning: "TBT: tiempo en que la página no responde mientras carga. FCP: tiempo hasta ver el primer contenido." },
+          { term: "CrUX p75", meaning: "Medición de usuarios reales: el valor que el 75 % de las visitas igualan o mejoran." },
+        ]}
+      />
       {!perf.field ? <p className="text-xs text-muted">Sin datos de campo: el sitio no tiene tráfico suficiente en CrUX. Se usan datos de laboratorio.</p> : null}
       {perf.opportunities.length ? (
         <div>
