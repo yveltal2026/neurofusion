@@ -1,5 +1,8 @@
 "use client";
 
+import { useParticipationActivity } from "@/components/use-participation-activity";
+import { ParticipationExpired } from "@/components/participation-expired";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -117,9 +120,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const stimulusImgRef = useRef<HTMLImageElement | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
+  const [activitySessionId, setActivitySessionId] = useState<string | null>(null);
+  const expired = useParticipationActivity(study?.token, activitySessionId, Boolean(study && !study.preview && stage !== "done"));
   const observationsRef = useRef<EyeObservation[]>([]);
   const dotRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<GazeEngine | null>(null);
+  useEffect(() => { if (expired) engineRef.current?.stop(); }, [expired]);
   const framesRef = useRef<GazeFrame[]>([]);
   const rawFramesRef = useRef<GazeFrame[]>([]);
   const calibrationFitRef = useRef<CalibrationFit | null>(null);
@@ -609,6 +615,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         const result = await response.json();
         if (!response.ok || !result.sessionId) throw new Error(result.message ?? "No se pudo iniciar la sesión.");
         studySessionIdRef.current = result.sessionId;
+        setActivitySessionId(result.sessionId);
       }
       if (runIdRef.current !== runId) return;
       studyValidationsRef.current.set(calibrationEpochRef.current, session);
@@ -856,6 +863,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   );
 
   const showPreview = stage === "position" || stage === "recovery";
+
+  if (expired) return <ParticipationExpired />;
 
   return (
     <>

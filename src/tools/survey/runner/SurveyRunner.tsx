@@ -1,5 +1,8 @@
 "use client";
 
+import { useParticipationActivity } from "@/components/use-participation-activity";
+import { ParticipationExpired } from "@/components/participation-expired";
+
 import {
   useCallback,
   useEffect,
@@ -114,6 +117,7 @@ export function SurveyRunner({
   const [consent, setConsent] = useState(false);
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const expired = useParticipationActivity(token, sessionId, !preview && !embedded && stage.kind !== "thanks" && stage.kind !== "blocked");
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -229,6 +233,8 @@ export function SurveyRunner({
       setStage({ kind: "block", index: index + 1 });
     else void submit();
   }
+
+  if (expired) return <ParticipationExpired />;
 
   let body: ReactNode = null;
 

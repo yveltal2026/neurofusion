@@ -9,8 +9,10 @@ import { StatStrip } from "@/components/ui/stat-strip";
 import { requireUser } from "@/lib/auth/session";
 import { loadStudyForResearcher } from "@/lib/studies";
 import { loadSessionViews } from "@/tools/iat/results/load";
-import { DEVICE_LABEL, STATUS_LABEL, validityText } from "@/tools/iat/results/labels";
+import { DEVICE_LABEL, validityText } from "@/tools/iat/results/labels";
 import { filterViews, type ViewFilters } from "@/tools/iat/results/views";
+import { participationLabel, participationStatus } from "@/lib/participation-activity";
+import { ActivityRefresh } from "@/components/activity-refresh";
 
 export const metadata = { title: "Datos · NeuroFusion" };
 
@@ -28,7 +30,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   const all = await loadSessionViews(supabase, id, config);
 
   const filters: ViewFilters = {
-    status: pick(one(sp.status), ["all", "completed", "started", "abandoned"] as const, "all"),
+    status: pick(one(sp.status), ["all", "completed", "started", "inactive", "abandoned"] as const, "all"),
     validity: pick(one(sp.validity), ["all", "valid", "invalid"] as const, "all"),
     device: pick(one(sp.device), ["all", "desktop", "mobile", "tablet"] as const, "all"),
     duplicates: pick(one(sp.dup), ["all", "only"] as const, "all"),
@@ -56,7 +58,8 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
   const completed = all.filter((s) => s.status === "completed");
   const stats = {
     completed: completed.length,
-    started: all.filter((s) => s.status === "started").length,
+    started: all.filter((s) => participationStatus(s) === "started").length,
+    inactive: all.filter((s) => participationStatus(s) === "inactive").length,
     abandoned: all.filter((s) => s.status === "abandoned").length,
     invalid: completed.filter((s) => s.allValid === false).length,
     dup: all.filter((s) => s.duplicate_flag).length,
@@ -97,7 +100,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
       ) : (
         <StatusBadge tone={s.allValid ? "success" : "warning"}>{compact ? (s.allValid ? "Válidos" : "Revisar") : validityText(s.allValid)}</StatusBadge>
       )}
-      {s.status !== "completed" ? <StatusBadge tone="neutral">{STATUS_LABEL[s.status]}</StatusBadge> : null}
+      {s.status !== "completed" ? <StatusBadge tone="neutral">{participationLabel(s)}</StatusBadge> : null}
       {s.excluded ? <StatusBadge tone="neutral">Excluida</StatusBadge> : null}
       {s.duplicate_flag ? <StatusBadge tone="warning">{compact ? "Duplicado" : "Posible duplicado"}</StatusBadge> : null}
     </>
@@ -107,6 +110,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
 
   return (
     <div className="space-y-6">
+      <ActivityRefresh />
       <div>
         <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
         <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
@@ -117,6 +121,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
         items={[
           { icon: "check", label: "Completadas", value: stats.completed },
           { icon: "clock", label: "En curso", value: stats.started },
+          { icon: "clock", label: "Inactivas", value: stats.inactive },
           { icon: "inbox", label: "Abandonadas", value: stats.abandoned },
           { icon: "alert", label: "Datos a revisar", value: stats.invalid, attention: true },
           { icon: "copy", label: "Posibles duplicados", value: stats.dup, attention: true },
@@ -182,6 +187,7 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
               <option value="completed">Completadas</option>
               <option value="started">En curso</option>
               <option value="abandoned">Abandonadas</option>
+              <option value="inactive">Inactivas</option>
             </select>
           </label>
           <label className="space-y-1 text-sm text-muted">

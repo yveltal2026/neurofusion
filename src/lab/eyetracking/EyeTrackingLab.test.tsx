@@ -104,6 +104,7 @@ beforeEach(() => {
     set src(_url: string) { Promise.resolve().then(() => this.onload?.()); }
   });
   vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+    if (url.endsWith("/activity")) return Response.json({ ok: true });
     if (url.endsWith("/start")) {
       starts++;
       expect(JSON.parse(String(init.body)).protocol).toBe("eye-v3");

@@ -47,6 +47,7 @@ function createFakeServer(config: VariantConfig, opts: { checkError?: string; st
 
   const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname.replace(/^\/api\/s\/[^/]+\/variant/, "");
+    if (path.endsWith("/activity")) return Response.json({ ok: true });
     state.calls.push(path);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     if (path === "/check") return opts.checkError ? err(opts.checkError, 409) : json({ ok: true });

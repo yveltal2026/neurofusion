@@ -1,3 +1,4 @@
+import { StudyParticipationSummary } from "@/components/study-participation-summary";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
@@ -134,6 +135,7 @@ async function IatOverview({
       </div>
 
       <StudyTabs id={id} active="overview" />
+      <StudyParticipationSummary studyId={study.id} />
 
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
