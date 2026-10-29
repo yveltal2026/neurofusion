@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { analyzeAsset } from "../actions";
+import { AnalysisActivity } from "./analysis-activity";
 
 export interface BatchAsset {
   id: string;
@@ -277,6 +278,7 @@ export function AssetAnalysisBatch({
             aria-label="Imágenes procesadas"
           />
         ) : null}
+        {pending && current ? <AnalysisActivity key={current} /> : null}
       </Card>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {assets.map((asset) => {
@@ -314,6 +316,12 @@ export function AssetAnalysisBatch({
                       className="absolute inset-0 size-full object-contain object-top"
                       loading="lazy"
                     />
+                  ) : null}
+                  {state?.status === "running" ? (
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/80 text-sm font-medium">
+                      <span aria-hidden="true" className="size-5 rounded-full border-2 border-primary/25 border-t-primary motion-safe:animate-spin" />
+                      Analizando esta imagen…
+                    </div>
                   ) : null}
                 </div>
                 <p className="truncate font-medium group-hover:underline">

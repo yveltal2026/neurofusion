@@ -8,6 +8,7 @@ import { analyzeAsset, runIfd, saveRating, suggestRatings, updateAssetMeta, upda
 import type { VisualConfig } from "../config";
 import { PLACEMENTS } from "../engine/placements";
 import type { RubricItem } from "../journey/rubric";
+import { AnalysisActivity } from "./analysis-activity";
 
 const initial: VisualFormState = {};
 const select = "w-full rounded-md border border-control bg-background px-3 py-2 text-sm";
@@ -24,10 +25,11 @@ export function AnalyzeAssetForm({ studyId, assetId, hasAnalysis }: { studyId: s
     <form action={action} className="space-y-3 print:hidden">
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="assetId" value={assetId} />
-      <State state={state} />
+      {!pending ? <State state={state} okText="Análisis guardado." /> : null}
       <Button type="submit" variant={hasAnalysis ? "secondary" : "primary"} disabled={pending}>
-        {pending ? "Analizando la imagen… (puede tardar un minuto)" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
+        {pending ? "Analizando la imagen…" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
       </Button>
+      {pending ? <AnalysisActivity /> : null}
     </form>
   );
 }

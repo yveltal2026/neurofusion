@@ -105,7 +105,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
           {asset.ai ? (
             <>
               <p className="text-xs text-muted">
-                {new Date(asset.ai.generatedAt ?? row.created_at).toLocaleString("es-MX")} · {asset.ai.provider} · {asset.ai.model} · {asset.ai.engineVersion}
+                {new Date(asset.ai.generatedAt ?? row.created_at).toLocaleString("es-MX")} · Proveedor: {asset.ai.provider} · Modelo: {asset.ai.model} · Motor: {asset.ai.engineVersion}
                 {asset.ai.tiles > 1 ? ` · ${asset.ai.tiles} franjas (${Math.round(asset.ai.coverage * 100)} % de la altura)` : ""}
               </p>
               <AiReading result={asset.ai.result} aois={asset.aois} analyzedAois={asset.ai.aois} asset={{ id: row.id, title: row.title }} />
