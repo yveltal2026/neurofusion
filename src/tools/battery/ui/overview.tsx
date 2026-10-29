@@ -15,6 +15,7 @@ import type { BatteryDetail } from "../load";
 import { summarizeBattery } from "../engine";
 import { BatteryStepsPanel } from "./BatteryStepsPanel";
 import { TOOL_LABEL, type AvailableStudy } from "./StepsEditor";
+import { BatteryTabs } from "@/components/battery-tabs";
 
 const STATUS_LABEL = {
   draft: "Borrador",
@@ -86,6 +87,7 @@ export function BatteryOverview({
         </Link>
       </div>
 
+      <BatteryTabs id={battery.id} active="overview" />
       {created ? (
         <Alert>
           ¡Batería generada! Comparte la liga con tus participantes.

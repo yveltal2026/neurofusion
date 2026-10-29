@@ -32,7 +32,7 @@ beforeEach(() => {
 function database(protocol = "eye-v3") {
   const upsert = vi.fn(async () => ({ error: null }));
   const update = vi.fn();
-  const rpc = vi.fn(async () => ({ data: [{ outcome: "ok", new_session_id: sessionId }], error: null }));
+  const rpc = vi.fn(async (): Promise<{ data: unknown; error: null }> => ({ data: [{ outcome: "ok", new_session_id: sessionId }], error: null }));
   mocks.admin.mockReturnValue({ rpc, from: (table: string) => {
     if (table === "eye_tracking_runs") return { upsert };
     const query = { select: () => query, eq: () => query,
@@ -46,6 +46,22 @@ function database(protocol = "eye-v3") {
 }
 
 describe("protocolo de recuperación eye-v3", () => {
+  it("enlaza la mirada a la batería y rechaza pasos fuera de orden", async () => {
+    const batterySessionId = "50000000-0000-4000-8000-000000000001";
+    for (const outcome of ["ok", "out_of_order"]) {
+      const db = database();
+      db.rpc.mockImplementation(async (name?: string) => name === "link_battery_step"
+        ? { data: outcome, error: null }
+        : { data: [{ outcome: "ok", new_session_id: sessionId }], error: null });
+      const request = new NextRequest(`https://example.test/api/s/${token}/eye/start`, { method: "POST", body: JSON.stringify({
+        consent: true, protocol: "eye-v3", batterySessionId, device: { deviceType: "desktop", screenWidth: 1280, screenHeight: 800 },
+      }) });
+      const response = await start(request, ctx);
+      expect(response.status).toBe(outcome === "ok" ? 200 : 409);
+      expect(db.rpc).toHaveBeenCalledWith("link_battery_step", { p_session: sessionId, p_battery_session: batterySessionId });
+      if (outcome !== "ok") expect(db.update).toHaveBeenCalledWith({ status: "abandoned" });
+    }
+  });
   it.each(["eye-v2", "eye-v3"])("registra %s al reclamar una sesión", async (protocol) => {
     const db = database();
     const request = new NextRequest(`https://example.test/api/s/${token}/eye/start`, { method: "POST", body: JSON.stringify({

@@ -150,6 +150,13 @@ describe("loadStepLinks · variantes e imagen con IA", () => {
     expect(await loadStepLinks(f.admin, ["vis-1"])).toEqual({ ok: false, code: "server_error" });
   });
 
+  it("prepara webcam con piezas firmadas, token y duración para el runner calibrado", async () => {
+    const f = fakeAdmin({ studies: [{ ...visualStudy, name: "Mirada", access_token: "t".repeat(43), config: { ...VISUAL_PIECES, eyeTracking: { durationSeconds: 10 } } }], assets: [asset("a1", "vis-1/a1.png")] });
+    const result = await loadStepLinks(f.admin, ["vis-1"]);
+    expect(result).toMatchObject({ ok: true, steps: [{ tool: "eyetracking", title: "Mirada", durationSeconds: 10, token: "t".repeat(43), pieces: [{ id: "a1" }] }] });
+    if (result.ok) expect(result.steps[0]?.tool).not.toBe("visual");
+  });
+
   it("un estudio visual en modo journey no puede ser paso", async () => {
     const f = fakeAdmin({
       studies: [

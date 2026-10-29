@@ -7,6 +7,8 @@ import { requireUser } from "@/lib/auth/session";
 import { loadBatteryReportInput } from "@/tools/battery/report/load";
 import { buildBatteryReport } from "@/tools/battery/report/report";
 import { ReportView } from "@/tools/battery/report/ui/ReportView";
+import { BatteryTabs } from "@/components/battery-tabs";
+import { BatteryParticipantResults } from "@/tools/battery/ui/participant-results";
 
 export const metadata = { title: "Informe integrado · NeuroFusion" };
 
@@ -33,7 +35,7 @@ export default async function BatteryReportPage({
             ]}
           />
           <h1 className="mt-1 break-words text-3xl font-bold tracking-tight">
-            Informe integrado
+            {detail.battery.name} · Resultados
           </h1>
           <p className="mt-1 text-xs text-muted">
             Batería · lo medido (IAT, variantes y encuestas), la exposición a las imágenes y lo estimado (cruces y lectura de la IA)
@@ -47,7 +49,9 @@ export default async function BatteryReportPage({
           Descargar CSV
         </Link>
       </div>
-      {steps.length === 0 ? (
+      <BatteryTabs id={id} active="results" />
+      <BatteryParticipantResults supabase={supabase} detail={detail} />
+      {steps.length === 0 && !detail.steps.some((s) => s.enabled && s.toolType === "eyetracking") ? (
         <Alert tone="warning">
           Esta batería no tiene pasos activos que se puedan reportar.
         </Alert>

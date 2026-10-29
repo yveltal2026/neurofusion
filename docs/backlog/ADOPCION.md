@@ -22,6 +22,8 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 | COG-20261028-diagnostico-cascada-gemini | Anáhuac Mayab | Sin verificar | Sin verificar | Sin verificar |
 | COG-20261028-compatibilidad-universitaria | CognIA, origen | Integrado en `main`: `5c4d4fd` | Contrato documental revisado; no cambia acceso de la plataforma madre | No aplica al comportamiento de la app |
 | COG-20261028-compatibilidad-universitaria | Anáhuac Mayab | Sin verificar | Requisito declarado; implementación sin inspeccionar | Sin verificar |
+| COG-20261028-resultados-analisis-baterias | CognIA, origen | Implementado localmente en `ajustes-resultados-analisis`; integración pendiente | Tipos, ESLint, 1,130 pruebas, SQL/RLS temporal y build webpack con fuentes simuladas correctos; proveedor real pendiente | No desplegado |
+| COG-20261028-resultados-analisis-baterias | Anáhuac Mayab | Sin verificar | Roles, permisos de análisis y mecanismo de acceso pendientes de inspeccionar | Sin verificar |
 
 Al verificar una integración, sustituye «local» o «sin verificar» por el commit/PR del destino y la fecha. Para un despliegue, añade su referencia y la comprobación realizada. Usa «no aplica» sólo con un motivo documentado. Ningún registro de origen certifica automáticamente Anáhuac Mayab u otra universidad.
 
@@ -41,5 +43,6 @@ Al verificar una integración, sustituye «local» o «sin verificar» por el co
 | COG-20261028-actividad-analisis-visual | Anáhuac Mayab | Sin verificar | El parche de origen es de interfaz visual; revisar diff adaptado y verificación de acceso vigente del destino |
 | COG-20261028-diagnostico-cascada-gemini | Anáhuac Mayab | Sin verificar | Diagnosticar configuración de IA propia sin sustituir configuración de acceso |
 | COG-20261028-compatibilidad-universitaria | Anáhuac Mayab | Sin verificar | Incorporar contrato y acreditar cumplimiento de los casos de aceptación |
+| COG-20261028-resultados-analisis-baterias | Anáhuac Mayab | Sin verificar | Adaptar autorización de análisis e historial a maestro/alumno; no modificar registro ni acceso institucional |
 
 Para nuevas réplicas añadir una fila por ID/destino y clasificar como «compatible y verificado», «requiere adaptación», «sin verificar» o «no aplica» con motivo. No marcar como validada o lista para desplegar una réplica con compatibilidad pendiente.

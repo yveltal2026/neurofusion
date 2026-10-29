@@ -8,10 +8,12 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
+import { linkStepSession } from "@/lib/battery-link";
 
 const bodySchema = z.object({
   consent: z.literal(true),
   protocol: z.enum(["eye-v2", "eye-v3"]).optional(),
+  batterySessionId: z.string().uuid().optional(),
   device: z.object({
     deviceType: z.enum(["desktop", "mobile", "tablet", "unknown"]),
     screenWidth: z.number().int().min(1).max(20_000),
@@ -57,6 +59,10 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/s/[toke
   if (row?.outcome !== "ok" || !row.new_session_id) {
     if (row?.outcome === "already_participated" || row?.outcome === "full" || row?.outcome === "closed") return apiError(row.outcome);
     return apiError("not_available");
+  }
+  if (body.batterySessionId) {
+    const linked = await linkStepSession(admin, row.new_session_id, body.batterySessionId);
+    if (!linked.ok) return apiError(linked.code);
   }
   const response = NextResponse.json({ ok: true, sessionId: row.new_session_id }, { headers: noStore });
   response.cookies.set(cookieName, signDeviceId(deviceId, secret), {

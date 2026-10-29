@@ -7,14 +7,15 @@
 
 /**
  * Herramientas que pueden ser un paso de batería: las que tienen participantes (IAT, variantes del IAT,
- * encuesta) y el análisis de imagen con IA, que entra como paso de exposición (el participante ve las
- * piezas del estudio). La auditoría SEO no tiene participantes y queda fuera.
+ * encuesta, webcam) y el análisis de imagen con IA, que entra como paso de exposición (el participante
+ * ve las piezas del estudio). Webcam conserva su runner calibrado. SEO no tiene participantes.
  */
 export const BATTERY_TOOLS = [
   "iat",
   "iat_variant",
   "survey",
   "visual",
+  "eyetracking",
 ] as const;
 export type BatteryToolType = (typeof BATTERY_TOOLS)[number];
 
@@ -24,7 +25,7 @@ export function isBatteryTool(toolType: string): toolType is BatteryToolType {
 
 /**
  * Familia de medida de un paso. `exposure` es la estimulación (ver las piezas de un estudio de imagen;
- * más adelante, eye tracking y pruebas de estímulos).
+ * o medir la mirada con webcam sobre ellas).
  */
 export type StepFamily = "exposure" | "implicit" | "explicit";
 
@@ -39,6 +40,7 @@ export const FAMILY_BY_TOOL: Record<BatteryToolType, StepFamily> = {
   iat_variant: "implicit",
   survey: "explicit",
   visual: "exposure",
+  eyetracking: "exposure",
 };
 
 /** Nombre corto de cada herramienta, para listas y avisos. */
@@ -47,6 +49,7 @@ export const TOOL_LABEL: Record<BatteryToolType, string> = {
   iat_variant: "Variante del IAT",
   survey: "Encuesta",
   visual: "Imagen con IA",
+  eyetracking: "Eye tracking con webcam",
 };
 
 /** Segundos mínimos que se muestra cada pieza en un paso de exposición antes de poder continuar. */
