@@ -14,7 +14,7 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
-| COG-20261028-eyetracking-movil | CognIA, origen | Rama `fix/eyetracking-mobile`, implementación `897ca9f`, [PR #10](https://github.com/yveltal2026/neurofusion/pull/10) en borrador, basada en `main` `19c96bd`; integración pendiente | 104 pruebas, TypeScript, ESLint, build y cuatro pruebas de navegador correctos; dos comprobaciones adicionales tras ajuste de ancho; cámaras físicas pendientes | No realizado |
+| COG-20261028-eyetracking-movil | CognIA, origen | Integrado en `main` el 2026-10-29: `1582999`, [PR #10](https://github.com/yveltal2026/neurofusion/pull/10), implementación `897ca9f` | 104 pruebas, TypeScript, ESLint, build y cuatro pruebas de navegador correctos; dos comprobaciones adicionales tras ajuste de ancho; cámaras físicas pendientes; Vercel preview correcto en `6168dff` | Producción pendiente de verificar tras integración |
 | COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Sin verificar | Sin verificar |
 | COG-20261028-registro-cambios | CognIA, origen | Integrado en `main`: `4097c6b` | Revisión documental y enlaces locales | No verificado |
 | COG-20261028-actividad-analisis-visual | CognIA, origen | Integrado en `main`: `e4bd3fc` | 67 pruebas relevantes, TypeScript y ESLint correctos; sin comprobación en producción | No verificado |

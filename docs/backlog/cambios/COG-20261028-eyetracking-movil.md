@@ -1,12 +1,12 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: implementado en rama de trabajo; integración y despliegue pendientes.
+- Estado: integrado en `main`; despliegue de producción pendiente de verificar.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
 - Rama: `fix/eyetracking-mobile`.
-- Commit de implementación: `897ca9f0b6cf4aed9c0304f2edfcaefd6ab1e1e6`. [PR #10](https://github.com/yveltal2026/neurofusion/pull/10), borrador contra `main`.
+- Commit de implementación: `897ca9f0b6cf4aed9c0304f2edfcaefd6ab1e1e6`. [PR #10](https://github.com/yveltal2026/neurofusion/pull/10), integrado en `main` mediante el merge `15829993470b9d580f86bd19254addc671437191` el 2026-10-29.
 - Dependencias de otros cambios: ninguna.
 
 ## Problema y comportamiento esperado
@@ -60,3 +60,5 @@ Revertir los commits de esta mejora y repetir las pruebas del corredor. No hay m
 ## Historial
 
 - 2026-10-28: implementación a partir del `main` verificado, pruebas locales y registro de pendientes de dispositivos físicos, integración y despliegue.
+
+- 2026-10-29: integración autorizada por el propietario; PR #10 fusionado en `main` (`15829993470b9d580f86bd19254addc671437191`). Vercel y su comprobación de preview fueron correctos en `6168dff`; no constituyen verificación de producción ni de cámaras físicas.
