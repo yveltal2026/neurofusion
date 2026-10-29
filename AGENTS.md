@@ -13,6 +13,12 @@ Para cada cambio o mejora de producto, corrección, configuración, datos, infra
 
 Estas instrucciones cubren este repositorio. Para aplicarlas en otra edición hay que incorporar allí el backlog y esta sección de AGENTS.md; no se asume sincronización automática.
 
+### Compatibilidad obligatoria con ediciones universitarias
+
+Antes de replicar cualquier cambio, consulta [las reglas universitarias](docs/backlog/COMPATIBILIDAD_UNIVERSITARIA.md) y completa el apartado de compatibilidad de la ficha. Las universidades tienen dos tipos de usuarios: **maestros y alumnos**. Sólo los maestros pueden generar su cuenta, usando correo institucional autorizado; los alumnos **no pueden autorregistrarse**. Un dominio institucional por sí solo no demuestra que alguien sea maestro. Conserva el mecanismo del destino para acreditar ese rol y para dar acceso a alumnos; no inventes un flujo de alta.
+
+No sobrescribas autenticación, registro, asignación de roles, permisos o configuración institucional con los de la plataforma madre al replicar mejoras. Si un cambio los afecta, adapta y verifica las restricciones en el destino, incluidos intentos directos al servidor; ocultar un botón no es suficiente. Sin evidencia, registra «sin verificar» y no marques la réplica como validada o lista para desplegar. Estas reglas no cambian automáticamente el registro de la plataforma madre.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

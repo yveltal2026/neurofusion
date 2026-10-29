@@ -9,6 +9,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 | [COG-20261028-registro-cambios](cambios/COG-20261028-registro-cambios.md) | Backlog y protocolo para replicar cambios | Integrado en `main` | Compartido |
 | [COG-20261028-actividad-analisis-visual](cambios/COG-20261028-actividad-analisis-visual.md) | Señales de actividad durante análisis de imágenes | Integrado en `main` | Compartido |
 | [COG-20261028-diagnostico-cascada-gemini](cambios/COG-20261028-diagnostico-cascada-gemini.md) | Confirmar por qué responde Flash Lite | En diagnóstico; requiere acceso al despliegue | Compartido; configuración por edición |
+| [COG-20261028-compatibilidad-universitaria](cambios/COG-20261028-compatibilidad-universitaria.md) | Preservar roles y registro exclusivo de maestros al replicar | Implementado localmente; pendiente de integrar | Proceso compartido; política de ediciones universitarias |
 
 La [matriz de adopción](ADOPCION.md) indica qué se ha verificado en cada edición. Una ficha implementada no implica que esté integrada o desplegada.
 
@@ -23,6 +24,8 @@ La [matriz de adopción](ADOPCION.md) indica qué se ha verificado en cada edici
 Estados del trabajo: **propuesto → en diagnóstico / en curso → implementado localmente → integrado**. También se puede marcar **descartado** con motivo. El despliegue y la adopción se registran por destino en la matriz, de forma independiente.
 
 ## Replicar en otro repositorio
+
+Es obligatorio revisar el [contrato de compatibilidad universitaria](COMPATIBILIDAD_UNIVERSITARIA.md): las ediciones universitarias distinguen alumnos y maestros y sólo permiten autorregistro de maestros con correo institucional. Cada ficha debe documentar su impacto y la evidencia por destino antes de dar una réplica por validada. La plataforma madre no es la fuente de sus reglas de acceso.
 
 1. Confirma la versión del destino, dependencias y personalizaciones; revisa la ficha y el diff completo antes de aplicar. No transfieras secretos, datos, dominios ni identidad institucional.
 2. Si ambos repositorios comparten historial, trae los commits desde el repositorio de origen y aplica los commits de implementación en el orden de la ficha mediante `git cherry-pick -x <SHA>`. Trabaja en una rama de réplica. Si el commit es un merge, revisa sus padres y prefiere los commits de implementación; no elijas un padre automáticamente.
