@@ -1,7 +1,7 @@
 # COG-20261028-actividad-analisis-visual — Actividad visible al analizar imágenes
 
 - Fecha y responsable: 2026-10-28, Codex por solicitud del propietario.
-- Estado: implementado localmente; pendiente de integrar.
+- Estado: integrado en `main`; despliegue sin verificar.
 - Tipo: mejora de interfaz.
 - Alcance: compartido.
 - Origen: `https://github.com/yveltal2026/neurofusion`, `fix/visual-analysis-feedback`, base `f53ec571a2884aab5901872521cb36a82057331e` de `main`.
@@ -49,3 +49,4 @@ Revertir estos cambios de interfaz; no hay datos ni migraciones que revertir. El
 ## Historial
 
 - 2026-10-28: implementación y comprobaciones locales; incorporación al nuevo backlog.
+- 2026-10-28: integrado en `main` por solicitud del propietario; commit de implementación `e4bd3fc`. Despliegue y adopción universitaria sin verificar.

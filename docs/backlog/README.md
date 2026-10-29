@@ -6,8 +6,8 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
-| [COG-20261028-registro-cambios](cambios/COG-20261028-registro-cambios.md) | Backlog y protocolo para replicar cambios | Implementado localmente; pendiente de integrar | Compartido |
-| [COG-20261028-actividad-analisis-visual](cambios/COG-20261028-actividad-analisis-visual.md) | Señales de actividad durante análisis de imágenes | Implementado localmente; pendiente de integrar | Compartido |
+| [COG-20261028-registro-cambios](cambios/COG-20261028-registro-cambios.md) | Backlog y protocolo para replicar cambios | Integrado en `main` | Compartido |
+| [COG-20261028-actividad-analisis-visual](cambios/COG-20261028-actividad-analisis-visual.md) | Señales de actividad durante análisis de imágenes | Integrado en `main` | Compartido |
 | [COG-20261028-diagnostico-cascada-gemini](cambios/COG-20261028-diagnostico-cascada-gemini.md) | Confirmar por qué responde Flash Lite | En diagnóstico; requiere acceso al despliegue | Compartido; configuración por edición |
 
 La [matriz de adopción](ADOPCION.md) indica qué se ha verificado en cada edición. Una ficha implementada no implica que esté integrada o desplegada.
