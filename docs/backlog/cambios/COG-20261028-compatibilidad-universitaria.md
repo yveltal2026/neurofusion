@@ -1,11 +1,11 @@
 # COG-20261028-compatibilidad-universitaria — Preservar acceso universitario
 
 - Fecha y responsable: 2026-10-28, Codex por solicitud del propietario.
-- Estado: implementado localmente; pendiente de integrar.
+- Estado: integrado en `main`; adopción universitaria sin verificar.
 - Tipo: documentación y proceso de réplica.
 - Alcance: proceso compartido; restricciones de acceso exclusivas de ediciones universitarias.
 - Origen: `https://github.com/yveltal2026/neurofusion`, `main`, base `59f1a196a5b77f75ea54defa3a6f0f7b52c88b92`.
-- Commits/PR de implementación: pendientes.
+- Commit de implementación: `5c4d4fd` — `docs(backlog): protect university roles and teacher-only registration`. Integración directa en `main`, fuente central establecida por el propietario.
 - Dependencias: COG-20261028-registro-cambios.
 
 ## Problema y comportamiento esperado
@@ -48,3 +48,4 @@ Revertir la documentación no modifica cuentas ni permisos. Conservar el histori
 ## Historial
 
 - 2026-10-28: restricciones universitarias registradas por indicación del propietario; implementación de cada destino pendiente de verificar.
+- 2026-10-28: integrado el contrato en `main` mediante `5c4d4fd`; adopción de universidades sin verificar.
