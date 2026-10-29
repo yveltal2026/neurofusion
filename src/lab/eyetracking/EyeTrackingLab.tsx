@@ -12,7 +12,6 @@ import {
   checkCdnReachable,
   checkModelAssets,
   createWebEyeTrackEngine,
-  requestCamera,
   type GazeEngine,
 } from "./engine";
 import {
@@ -32,7 +31,7 @@ import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
 import { applyCalibration, assessFixation, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
 import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftSummary, driftTargets, unmeasuredDriftCheck, type DriftCheck, type DriftSummary } from "./drift";
-import { screenWidthCm, type ScreenFormat } from "./screen";
+import { screenWidthCm, screenWidthFromReference, type ScreenFormat } from "./screen";
 
 type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "drift" | "recovery" | "preparing" | "results" | "free" | "stimulus" | "saving" | "done";
 
@@ -84,7 +83,22 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   // Este componente solo se monta en el cliente (EyeTrackingLabClient), así que puede leer `window` al inicializar.
   const [device, setDevice] = useState<DeviceType>(guessDevice);
   const [inches, setInches] = useState("");
+  const [screenMeasurement, setScreenMeasurement] = useState<"reference-card" | "diagonal">("reference-card");
+  const [referenceWidth, setReferenceWidth] = useState(200);
+  const [measuredReferenceWidth, setMeasuredReferenceWidth] = useState(200);
+  const referenceCardRef = useRef<HTMLDivElement | null>(null);
+  const [referenceConfirmed, setReferenceConfirmed] = useState(false);
+  const [referenceGeometry, setReferenceGeometry] = useState("");
+  const screenGeometryKey = () => `${window.screen.width}:${window.screen.height}:${window.devicePixelRatio}:${window.innerWidth}`;
+  useEffect(() => {
+    const invalidate = () => { if (referenceGeometry !== screenGeometryKey()) setReferenceConfirmed(false); };
+    window.addEventListener("resize", invalidate);
+    return () => window.removeEventListener("resize", invalidate);
+  }, [referenceGeometry]);
   const [screenFormat, setScreenFormat] = useState<ScreenFormat>("auto");
+  const physicalScreenWidth = screenMeasurement === "reference-card"
+    ? screenWidthFromReference(measuredReferenceWidth, window.screen.width)
+    : screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height);
   const [distanceCm, setDistanceCm] = useState(() => PRESETS[guessDevice()].distanceCm);
   const [glasses, setGlasses] = useState(false);
   const [lighting, setLighting] = useState<Lighting>("buena");
@@ -100,7 +114,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const [valIndex, setValIndex] = useState(0);
   const [valTargets, setValTargets] = useState<Point[]>([]);
-  const [live, setLive] = useState({ fps: 0, faceOk: false });
+  const [live, setLive] = useState({ fps: 0, faceOk: false, gazeOk: false });
   const [session, setSession] = useState<ExportedSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -115,6 +129,30 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [diagnosticsEnabled] = useState(() => Boolean(study?.preview) || new URLSearchParams(window.location.search).get("diagnostic") === "1");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoParkingRef = useRef<HTMLDivElement | null>(null);
+  const videoPreviewRef = useRef<HTMLDivElement | null>(null);
+
+  // El mismo elemento conserva el stream al pasar de carga a posición o recuperación.
+  // React administra los contenedores; este efecto administra únicamente el video.
+  useEffect(() => {
+    const video = videoRef.current ?? document.createElement("video");
+    videoRef.current = video;
+    video.id = "webeyetrack-video";
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.width = 640;
+    video.height = 480;
+    const show = stage === "position" || stage === "recovery";
+    video.setAttribute("aria-label", "Vista de tu cámara");
+    video.setAttribute("aria-hidden", String(!show));
+    video.className = show
+      ? "mx-auto aspect-4/3 w-60 max-w-full -scale-x-100 rounded-md border border-border bg-black object-contain"
+      : "pointer-events-none fixed top-0 left-0 size-px opacity-0";
+    (videoPreviewRef.current ?? videoParkingRef.current)?.appendChild(video);
+    if (video.srcObject) void video.play().catch(() => setError("No se pudo reanudar la cámara. Vuelve a iniciarla."));
+  }, [stage]);
+  useEffect(() => () => { videoRef.current?.remove(); }, []);
   const stimulusImgRef = useRef<HTMLImageElement | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
   const observationsRef = useRef<EyeObservation[]>([]);
@@ -229,7 +267,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     const id = setInterval(() => {
       const now = performance.now();
       const recent = framesRef.current.filter((f) => f.t > now - 1000);
-      setLive({ fps: recent.length, faceOk: recent.some((f) => f.x !== null) });
+      setLive({ fps: recent.length, faceOk: recent.some((f) => f.faceDetected ?? (f.x !== null)), gazeOk: recent.some((f) => f.x !== null && f.y !== null) });
     }, 400);
     return () => clearInterval(id);
   }, [stage]);
@@ -258,11 +296,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   async function start() {
     setError(null);
-    const geometryOk = Number.isFinite(screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height))
+    const referenceOk = screenMeasurement !== "reference-card" || (referenceConfirmed && referenceGeometry === screenGeometryKey());
+    const geometryOk = referenceOk && Number.isFinite(physicalScreenWidth)
       && Number.isFinite(Number(distanceCm)) && Number(distanceCm) >= 10 && Number(distanceCm) <= 200;
     if (!study && !participant.trim()) return setError("Escribe un código para la persona (por ejemplo P01). No uses nombres.");
     if (study && !consent) return setError("Debes aceptar el uso de la cámara y el almacenamiento de coordenadas de mirada para participar.");
-    if (!geometryOk) return setError("Indica una diagonal entre 3 y 100 pulgadas y una distancia entre 10 y 200 cm.");
+    if (!geometryOk) return setError(screenMeasurement === "reference-card"
+      ? "Ajusta y confirma la tarjeta con el tamaño actual de pantalla. Indica una distancia entre 10 y 200 cm."
+      : "Indica una diagonal entre 3 y 100 pulgadas y una distancia entre 10 y 200 cm.");
 
     setStage("loading");
     try {
@@ -272,7 +313,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         throw new EngineError("El simulador sólo está disponible en la vista previa del estudio.", "model-missing");
       }
       if (!fake) {
-        await requestCamera();
         await checkModelAssets();
         await checkCdnReachable();
       }
@@ -466,7 +506,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         device,
         glasses,
         lighting,
-        geometry: { screenWidthPx: window.screen.width, screenWidthCm: screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height), distanceCm: Number(distanceCm), diagonalInches: Number(inches), screenFormat },
+        geometry: { screenWidthPx: window.screen.width, screenWidthCm: physicalScreenWidth, distanceCm: Number(distanceCm),
+          measurementMethod: screenMeasurement,
+          ...(screenMeasurement === "reference-card" ? { referenceWidthPx: measuredReferenceWidth } : { diagonalInches: Number(inches), screenFormat }) },
         viewport: { width: vw, height: vh },
         environment: {
           userAgent: navigator.userAgent,
@@ -483,7 +525,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       }),
     );
     setStage("results");
-  }, [participant, device, glasses, lighting, inches, screenFormat, distanceCm, passes]);
+  }, [participant, device, glasses, lighting, inches, screenFormat, distanceCm, passes, physicalScreenWidth, screenMeasurement, measuredReferenceWidth]);
 
   const runDriftCheck = useCallback(async (afterAssetCount: number): Promise<boolean | null> => {
     if (!session) return false;
@@ -758,6 +800,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   function changeDevice(next: DeviceType) {
     setDevice(next);
     setInches("");
+    setReferenceConfirmed(false);
     setScreenFormat("auto");
     setDistanceCm(PRESETS[next].distanceCm);
   }
@@ -801,24 +844,47 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               </select>
             </Field>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Tamaño de pantalla (pulgadas)" hint="Diagonal del monitor que estás usando, por ejemplo 27 o 34. No el tamaño de la ventana.">
-                <Input type="number" inputMode="decimal" step="0.1" min="3" max="100" placeholder={PRESETS[device].inches} value={inches} onChange={(e) => setInches(e.target.value)} />
-              </Field>
-              <Field label="Distancia a los ojos (cm)" hint="Aproximada, con la postura de uso normal.">
-                <Input type="number" inputMode="decimal" step="1" min="10" value={distanceCm} onChange={(e) => setDistanceCm(e.target.value)} />
-              </Field>
-            </div>
-
-            <Field label="Formato de pantalla" hint="Selecciona ultrawide si corresponde. El modo automático usa la proporción de la pantalla completa.">
-              <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
-                <option value="auto">Detectar formato de la pantalla</option>
-                <option value="16:9">Estándar 16:9</option>
-                <option value="16:10">Estándar 16:10</option>
-                <option value="4:3">Estándar 4:3</option>
-                <option value="21:9">Ultrawide 21:9</option>
-                <option value="32:9">Super ultrawide 32:9</option>
+            <Field label="Cómo ajustar el tamaño de pantalla">
+              <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenMeasurement} onChange={(e) => setScreenMeasurement(e.target.value as "reference-card" | "diagonal")}>
+                <option value="reference-card">Usar una tarjeta (sin saber pulgadas)</option>
+                <option value="diagonal">Conozco las pulgadas de mi pantalla</option>
               </select>
+            </Field>
+            {screenMeasurement === "reference-card" ? (
+              <div className="space-y-4">
+                <p className="text-sm leading-relaxed">Coloca una tarjeta de tamaño bancario en vertical sobre la pantalla. Ajusta el dibujo hasta que coincida con sus bordes. No necesitas mostrarla a la cámara ni enviar sus datos.</p>
+                <div className="grid grid-cols-1 justify-items-center" aria-hidden="true">
+                  <div ref={referenceCardRef} className="flex items-center justify-center rounded-xl border-2 border-dashed border-control bg-background text-center text-sm text-muted" style={{ width: referenceWidth, maxWidth: "calc(100vw - 8px)", aspectRatio: "53.98 / 85.6" }}>
+                    Tarjeta en vertical
+                  </div>
+                </div>
+                <Field label="Ajustar tarjeta" hint="Usa el control hasta que el dibujo tenga el mismo tamaño que la tarjeta real.">
+                  <input className="w-full" type="range" min="80" max={Math.max(80, Math.min(520, document.documentElement.clientWidth - 8))} step="1" value={referenceWidth} onChange={(e) => { setReferenceWidth(Number(e.target.value)); setReferenceConfirmed(false); }} />
+                </Field>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" className="size-4" checked={referenceConfirmed} onChange={(e) => { setReferenceConfirmed(e.target.checked); setReferenceGeometry(screenGeometryKey()); setMeasuredReferenceWidth(referenceCardRef.current?.getBoundingClientRect().width ?? 0); }} />
+                  El dibujo coincide con mi tarjeta
+                </label>
+              </div>
+            ) : (
+              <>
+                <Field label="Tamaño de pantalla (pulgadas)" hint="Diagonal de la pantalla completa, no de la ventana.">
+                  <Input type="number" inputMode="decimal" step="0.1" min="3" max="100" placeholder={PRESETS[device].inches} value={inches} onChange={(e) => setInches(e.target.value)} />
+                </Field>
+                <Field label="Formato de pantalla" hint="El modo automático usa la proporción de la pantalla completa.">
+                  <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
+                    <option value="auto">Detectar formato de la pantalla</option>
+                    <option value="16:9">Estándar 16:9</option>
+                    <option value="16:10">Estándar 16:10</option>
+                    <option value="4:3">Estándar 4:3</option>
+                    <option value="21:9">Ultrawide 21:9</option>
+                    <option value="32:9">Super ultrawide 32:9</option>
+                  </select>
+                </Field>
+              </>
+            )}
+            <Field label="Distancia a los ojos (cm)" hint="Aproximada, con la postura de uso normal.">
+              <Input type="number" inputMode="decimal" step="1" min="10" max="200" value={distanceCm} onChange={(e) => setDistanceCm(e.target.value)} />
             </Field>
     </>
   );
@@ -855,24 +921,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     </>
   );
 
-  const showPreview = stage === "position" || stage === "recovery";
-
   return (
     <>
-      {/* El video debe seguir montado y “visible” para el navegador (iOS no decodifica con display:none). */}
-      <video
-        ref={videoRef}
-        id="webeyetrack-video"
-        autoPlay
-        playsInline
-        muted
-        aria-hidden={!showPreview}
-        className={
-          showPreview
-            ? "mx-auto mb-4 aspect-4/3 w-60 -scale-x-100 rounded-md border border-border bg-black object-cover"
-            : "pointer-events-none fixed top-0 left-0 size-px opacity-0"
-        }
-      />
+      <div ref={videoParkingRef} />
 
       {stage === "setup" || stage === "loading" ? (
         study ? (
@@ -992,13 +1043,16 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
             <span className="text-sm text-muted">Lecturas por segundo: {live.fps}</span>
           </p>
+          {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
+          <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={startCalibration} disabled={!live.faceOk}>
+            <Button size="lg" onClick={startCalibration} disabled={!live.gazeOk}>
               Comenzar calibración
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.faceOk}>
+            <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.gazeOk}>
               Ver mi punto de mirada
             </Button>
+            <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, faceOk: false, gazeOk: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
           </div>
         </ParticipantScreen>
       ) : null}
@@ -1023,6 +1077,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           {lastDriftCheck ? <p className="text-sm text-muted">
             Error mediano: {lastDriftCheck.medianErrorDeg !== null ? `${lastDriftCheck.medianErrorDeg.toFixed(1)}°` : "sin medición"} · Lecturas/s: {lastDriftCheck.fps.toFixed(0)} · Detección durante fijación: {Math.round(lastDriftCheck.validRatio * 100)} %
           </p> : null}
+          <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
             <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
             <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>

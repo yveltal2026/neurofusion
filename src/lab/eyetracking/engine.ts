@@ -1,4 +1,5 @@
 import type { GazeFrame } from "./metrics";
+import { createCameraSource } from "./camera";
 
 /**
  * Contrato mínimo que el resto del módulo exige a un motor de mirada. Existe para que cambiar de
@@ -29,30 +30,16 @@ export class EngineError extends Error {
 /** Ruta fija desde la que WebEyeTrack 0.0.2 carga sus pesos (está escrita en el bundle de la librería). */
 export const WEBEYETRACK_MODEL_URL = "/web/model.json";
 
-/**
- * Pide permiso de cámara por su cuenta. WebcamClient de la librería captura el error y solo lo imprime
- * en consola, así que sin este paso un permiso denegado se vería como «nunca llega ninguna lectura».
- */
-export async function requestCamera(): Promise<void> {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new EngineError(
-      "Este navegador no permite usar la cámara aquí. La página debe abrirse por HTTPS (o localhost) y en un navegador reciente.",
-      "camera-error",
-    );
+/** Conserva mensajes accionables sin abrir una cámara adicional como comprobación. */
+function cameraError(error: unknown): EngineError {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return new EngineError("Permiso de cámara denegado. Actívalo en los ajustes del navegador y vuelve a intentar.", "camera-denied");
   }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
-    stream.getTracks().forEach((t) => t.stop());
-  } catch (err) {
-    const name = err instanceof DOMException ? err.name : "";
-    if (name === "NotAllowedError" || name === "SecurityError") {
-      throw new EngineError("Permiso de cámara denegado. Actívalo en los ajustes del navegador y vuelve a intentar.", "camera-denied");
-    }
-    if (name === "NotFoundError" || name === "OverconstrainedError") {
-      throw new EngineError("No se encontró una cámara frontal en este dispositivo.", "camera-missing");
-    }
-    throw new EngineError(`No se pudo abrir la cámara (${name || "error desconocido"}).`, "camera-error");
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return new EngineError("No se encontró una cámara frontal en este dispositivo.", "camera-missing");
   }
+  return new EngineError(error instanceof Error ? `No se pudo procesar la cámara: ${error.message}` : "No se pudo procesar la cámara. Vuelve a iniciarla.", "camera-error");
 }
 
 /** Verifica que los pesos estén servidos como JSON (si el proxy de auth los redirige, devuelve HTML). */
@@ -107,9 +94,21 @@ const FIRST_FRAME_TIMEOUT_MS = 45_000;
 
 export function createWebEyeTrackEngine(): GazeEngine {
   let webcam: { stopWebcam(): void } | null = null;
-  let videoElement: HTMLVideoElement | null = null;
   let worker: Worker | null = null;
   let active = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let rejectStart: ((error: EngineError) => void) | null = null;
+  let generation = 0;
+
+  function release() {
+    active = false;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    webcam?.stopWebcam();
+    webcam = null;
+    worker?.terminate();
+    worker = null;
+  }
 
   return {
     id: "webeyetrack@0.0.2",
@@ -117,28 +116,42 @@ export function createWebEyeTrackEngine(): GazeEngine {
 
     async start(video, onFrame) {
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
+      if (!navigator.mediaDevices?.getUserMedia) throw new EngineError(
+        "Este navegador no permite usar la cámara aquí. Abre la página por HTTPS (o localhost) en un navegador reciente.", "camera-error",
+      );
+      const run = ++generation;
       const { WebcamClient, WebEyeTrackProxy } = await import("webeyetrack");
+      if (run !== generation) throw new EngineError("Se canceló el inicio de la cámara.", "camera-error");
       if (!video.id) video.id = "webeyetrack-video";
-      videoElement = video;
       active = true;
       const startedAt = performance.now();
 
-      const client = new WebcamClient(video.id);
-      webcam = client;
-      const proxy = new WebEyeTrackProxy(client);
-      // v0.0.2 no expone destroy(); el worker existe en runtime aunque el tipo lo marque private.
-      worker = (proxy as unknown as { worker?: Worker }).worker ?? null;
-
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-          active = false;
-          reject(
-            new EngineError(
-              "No llegó ninguna lectura de mirada. Puede que el modelo de MediaPipe no se haya descargado (CDN bloqueado) o que no se detecte una cara.",
-              "timeout",
-            ),
-          );
-        }, FIRST_FRAME_TIMEOUT_MS);
+        rejectStart = reject;
+        const fail = (error: EngineError) => {
+          if (!active) return;
+          rejectStart?.(error);
+          rejectStart = null;
+          release();
+          // También invalida la lectura si el fallo ocurre después del arranque.
+          onFrame({ t: performance.now(), x: null, y: null, inferenceMs: null, faceDetected: false });
+        };
+        const source = createCameraSource(video, (error) => fail(cameraError(error)));
+        // La API pública acepta WebcamClient; sustituimos su transporte para esperar play(),
+        // reintentar frames no decodificados y cancelar el bucle al terminar en iOS/Android.
+        const client = new WebcamClient(video.id);
+        client.startWebcam = source.startWebcam;
+        client.stopWebcam = source.stopWebcam;
+        webcam = client;
+        const proxy = new WebEyeTrackProxy(client);
+        worker = (proxy as unknown as { worker?: Worker }).worker ?? null;
+        worker?.addEventListener("error", () => fail(new EngineError(
+          "El detector se interrumpió. Vuelve a iniciar la cámara y revisa tu conexión.", "model-missing",
+        )));
+        timer = setTimeout(() => fail(new EngineError(
+          "No llegó ninguna lectura de mirada. Revisa tu conexión y vuelve a iniciar la cámara con el rostro centrado e iluminado.",
+          "timeout",
+        )), FIRST_FRAME_TIMEOUT_MS);
         let first = true;
 
         proxy.onGazeResults = (result) => {
@@ -146,7 +159,9 @@ export function createWebEyeTrackEngine(): GazeEngine {
           const t = performance.now();
           if (first) {
             first = false;
-            clearTimeout(timer);
+            if (timer) clearTimeout(timer);
+            timer = null;
+            rejectStart = null;
             resolve({ readyMs: t - startedAt });
           }
           const open = result.gazeState === "open";
@@ -158,24 +173,17 @@ export function createWebEyeTrackEngine(): GazeEngine {
             x: valid ? (nx + 0.5) * window.innerWidth : null,
             y: valid ? (ny + 0.5) * window.innerHeight : null,
             inferenceMs: result.durations?.total ?? null,
+            faceDetected: result.facialLandmarks.length > 0,
           });
         };
       });
     },
 
     stop() {
-      active = false;
-      // Al terminar el worker sus listeners globales no pueden seguir alterando la calibración.
-      // La librería conserva un listener de clic (sin API para quitarlo), pero postMessage a
-      // un Worker terminado es inocuo hasta que se abandona la página.
-      webcam?.stopWebcam();
-      webcam = null;
-      worker?.terminate();
-      worker = null;
-      // WebcamClient sólo detiene los tracks; su bucle de frames sale cuando el video se pausa.
-      videoElement?.pause();
-      if (videoElement) videoElement.srcObject = null;
-      videoElement = null;
+      generation++;
+      rejectStart?.(new EngineError("Se canceló el inicio de la cámara.", "camera-error"));
+      rejectStart = null;
+      release();
     },
   };
 }

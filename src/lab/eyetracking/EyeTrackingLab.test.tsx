@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EyeTrackingLab } from "./EyeTrackingLab";
 import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+const control = vi.hoisted(() => ({ eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
-  return { ...actual, requestCamera: vi.fn(), checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
+  return { ...actual, checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
     createWebEyeTrackEngine: () => {
       let timer: ReturnType<typeof setInterval>;
       let count = 0;
@@ -15,7 +15,7 @@ vi.mock("./engine", async (original) => {
       let driftSince = 0;
       let firstDriftAt: number | null = null;
       return { id: "webeyetrack@0.0.2", calibration: "global-click",
-        start: async (_video: unknown, onFrame: (f: { t: number; x: number | null; y: number | null; inferenceMs: number }) => void) => {
+        start: async (_video: unknown, onFrame: (f: { t: number; x: number | null; y: number | null; inferenceMs: number; faceDetected?: boolean }) => void) => {
           timer = setInterval(() => {
             const dot = document.querySelector<HTMLElement>('button[aria-label^="Punto de calibración"], [data-testid="validation-target"], [data-testid="drift-target"]');
             let x = dot ? Number.parseFloat(dot.style.left) : window.innerWidth / 2;
@@ -33,7 +33,7 @@ vi.mock("./engine", async (original) => {
             if (key && firstDriftAt === null) firstDriftAt = performance.now();
             const lost = key && ((control.loseDuringSettle && performance.now() - driftSince < 950)
               || (control.dropFirstDriftMeasurement && firstDriftAt !== null && performance.now() - firstDriftAt >= 975 && performance.now() - firstDriftAt < 1975));
-            onFrame({ t: performance.now(), x: lost ? null : x, y: lost ? null : y, inferenceMs: 10 });
+            onFrame({ t: performance.now(), x: lost || control.eyesClosed ? null : x, y: lost || control.eyesClosed ? null : y, inferenceMs: 10, faceDetected: true });
           }, 25);
           return { readyMs: 1 };
         }, stop: () => clearInterval(timer) };
@@ -77,6 +77,7 @@ async function calibrate() {
 async function setup(currentStudy = study) {
   activeAssets = currentStudy.assets;
   render(<EyeTrackingLab study={currentStudy} />);
+  fireEvent.change(screen.getByLabelText("Cómo ajustar el tamaño de pantalla"), { target: { value: "diagonal" } });
   fireEvent.change(screen.getByLabelText("Tamaño de pantalla (pulgadas)"), { target: { value: "27" } });
   fireEvent.change(screen.getByLabelText("Calibración"), { target: { value: "1" } });
   fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
@@ -91,7 +92,7 @@ async function piece() { await tick(20); await tick(5000); }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
-  control.startError = false;
+  control.startError = false; control.eyesClosed = false;
   control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
   starts = 0; completed = null; activeAssets = assets;
@@ -296,3 +297,44 @@ async function calibrateFromResults() {
   await tick(3000);
   for (let i = 0; i < 8; i++) await tick(2500);
 }
+
+
+describe("preparación móvil y tamaño de pantalla", () => {
+  it("permite medir con tarjeta sin preguntar pulgadas y conserva el video al calibrar", async () => {
+    render(<EyeTrackingLab study={study} />);
+    expect(screen.queryByLabelText("Tamaño de pantalla (pulgadas)")).toBeNull();
+    const video = document.getElementById("webeyetrack-video");
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    click("Iniciar cámara y cargar modelos");
+    expect(screen.getByText(/Ajusta y confirma la tarjeta/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos");
+    await tick(0); await tick(500);
+    const preview = screen.getByTestId("camera-preview");
+    expect(preview.querySelector("video")).toBe(video);
+    const button = screen.getByRole("button", { name: "Comenzar calibración" });
+    expect(preview.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    click("Comenzar calibración");
+    expect(document.getElementById("webeyetrack-video")).toBe(video);
+  });
+
+  it("invalida la confirmación al ajustar de nuevo la referencia", () => {
+    render(<EyeTrackingLab study={study} />);
+    const checkbox = screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }) as HTMLInputElement;
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+    fireEvent.change(screen.getByLabelText("Ajustar tarjeta"), { target: { value: "180" } });
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("no confunde rostro visible con mirada disponible ni permite calibrar sin mirada", async () => {
+    control.eyesClosed = true;
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    expect(screen.getByText("Cara detectada: sí")).toBeTruthy();
+    expect(screen.getByText(/Vemos tu rostro/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});

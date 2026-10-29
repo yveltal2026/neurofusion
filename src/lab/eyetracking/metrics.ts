@@ -14,6 +14,8 @@ export interface Point {
 
 /** Una lectura de mirada. `x`/`y` son null cuando el parpadeo o la pérdida de cara la invalidan. */
 export interface GazeFrame {
+  /** Separado de la mirada válida: puede haber rostro con ojos cerrados o sin estimación. */
+  faceDetected?: boolean;
   /** performance.now() al recibirla en el hilo principal (no el timestamp del video). */
   t: number;
   x: number | null;
@@ -25,6 +27,8 @@ export interface GazeFrame {
 export type DeviceType = "laptop" | "phone" | "tablet";
 
 export interface Geometry {
+  measurementMethod?: "reference-card" | "diagonal";
+  referenceWidthPx?: number;
   diagonalInches?: number;
   screenFormat?: string;
   /** Ancho de `window.screen` en píxeles CSS. */

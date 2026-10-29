@@ -14,6 +14,8 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
+| COG-20261028-eyetracking-movil | CognIA, origen | Rama `fix/eyetracking-mobile`, implementación `897ca9f`, [PR #10](https://github.com/yveltal2026/neurofusion/pull/10) en borrador, basada en `main` `19c96bd`; integración pendiente | 104 pruebas, TypeScript, ESLint, build y cuatro pruebas de navegador correctos; dos comprobaciones adicionales tras ajuste de ancho; cámaras físicas pendientes | No realizado |
+| COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Sin verificar | Sin verificar |
 | COG-20261028-registro-cambios | CognIA, origen | Integrado en `main`: `4097c6b` | Revisión documental y enlaces locales | No verificado |
 | COG-20261028-actividad-analisis-visual | CognIA, origen | Integrado en `main`: `e4bd3fc` | 67 pruebas relevantes, TypeScript y ESLint correctos; sin comprobación en producción | No verificado |
 | COG-20261028-diagnostico-cascada-gemini | CognIA, origen | Diagnóstico; sin cambio de modelos | Orden del código inspeccionado; configuración y registros de producción pendientes | No aplica todavía |
@@ -37,6 +39,7 @@ Al verificar una integración, sustituye «local» o «sin verificar» por el co
 
 | ID | Destino | Evaluación de compatibilidad | Evidencia / siguiente paso |
 | --- | --- | --- | --- |
+| COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Revisar adaptación del corredor y conservar política institucional; probar cámara real y controles de acceso vigentes |
 | COG-20261028-registro-cambios | Anáhuac Mayab | Sin verificar | Incorporar instrucciones y revisar perfil universitario |
 | COG-20261028-actividad-analisis-visual | Anáhuac Mayab | Sin verificar | El parche de origen es de interfaz visual; revisar diff adaptado y verificación de acceso vigente del destino |
 | COG-20261028-diagnostico-cascada-gemini | Anáhuac Mayab | Sin verificar | Diagnosticar configuración de IA propia sin sustituir configuración de acceso |
