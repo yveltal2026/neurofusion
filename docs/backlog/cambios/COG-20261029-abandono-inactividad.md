@@ -6,7 +6,7 @@
 - Alcance: compartido; verificar políticas institucionales antes de replicar.
 - Origen: `yveltal2026/neurofusion`, `main`, base `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
 - Rama: `fix/participation-inactivity`.
-- Referencias de implementación: commit y PR pendientes.
+- Referencias de implementación: `9d3f7eb925daa4c663ca59bcfc4a875ee03f8397`; [PR #11](https://github.com/yveltal2026/neurofusion/pull/11), borrador hacia `main`, sin integrar ni desplegar.
 - Dependencias: migraciones previas de estudios y baterías; `COG-20261028-compatibilidad-universitaria` para réplica. Independiente del PR #9 de resultados/análisis, todavía no integrado en la base inspeccionada.
 
 ## Problema y comportamiento final
@@ -44,7 +44,7 @@ Ahora:
 ## Réplica
 
 1. Revisar versión, contrato universitario y configuración de acceso del destino; conservar su identidad, dominios y políticas.
-2. Revisar el diff de implementación; referencias de commit pendientes. Si no comparten arquitectura, adaptar los cinco runners y los equivalentes de carga/resumen.
+2. Revisar el diff de `9d3f7eb925daa4c663ca59bcfc4a875ee03f8397`. Si comparten historial y la compatibilidad está verificada, aplicar con `git cherry-pick -x 9d3f7eb925daa4c663ca59bcfc4a875ee03f8397`. Si no comparten arquitectura, adaptar los cinco runners y los equivalentes de carga/resumen. El PR de origen sigue en borrador; conservar y actualizar esta ficha en el destino.
 3. Aplicar la migración antes del código. Comprobar cookies y rutas por dominio del destino; no transferir secretos.
 4. Ejecutar `npm run typecheck`, `npm run lint`, `npm test -- --maxWorkers=2` y `scripts/verify-sql.sh` en una base desechable. La suite SQL incluye rechazo de otro dispositivo/organización, señales duplicadas, vencimiento, cupo y reanudación.
 5. En el destino, iniciar por liga, cerrar/ocultar y comprobar Inactiva; volver antes de 30 minutos y comprobar actividad; dejar vencer y comprobar Abandonada por inactividad y cupo libre. Probar recarga/reanudación de batería conservando pasos terminados, cierre después de completar y vista previa sin escrituras.
@@ -72,3 +72,4 @@ Revertir el código no restaura los motivos/estados anteriores a la migración n
 ## Historial
 
 - 2026-10-29: implementación y comprobaciones locales sobre `main`; sin cambios en producción.
+- 2026-10-29: commit `9d3f7eb925daa4c663ca59bcfc4a875ee03f8397` publicado, PR #11 creado en borrador; verificaciones locales y de migración histórica correctas.
