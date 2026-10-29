@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ page }) => {
+test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ page }, testInfo) => {
   test.setTimeout(130_000);
   await page.goto("/lab/eyetracking?engine=fake");
   await page.evaluate(() => {
@@ -9,6 +9,7 @@ test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ p
     state.calibrationLeaks = 0;
     window.addEventListener("click", () => { state.calibrationLeaks = (state.calibrationLeaks ?? 0) + 1; });
   });
+  await page.getByLabel("Cómo ajustar el tamaño de pantalla").selectOption("diagonal");
   await page.getByLabel("Tamaño de pantalla (pulgadas)").fill("34");
   await page.getByLabel("Formato de pantalla").selectOption("21:9");
   await page.getByLabel("Código de la persona").fill("E2E");
@@ -39,7 +40,7 @@ test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ p
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Descargar JSON" }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toContain("eyetracking-E2E-laptop");
+  expect(download.suggestedFilename()).toContain(`eyetracking-E2E-${testInfo.project.name === "mobile" ? "phone" : "laptop"}`);
   const session = JSON.parse(await readFile((await download.path())!, "utf8"));
   expect(session.calibration.layout).toBe("v5-weighted-refinement");
   expect(session.calibration.pairs).toHaveLength(18);
@@ -56,4 +57,29 @@ test("el laboratorio simulado calibra, valida y exporta una sesión", async ({ p
   await page.mouse.move(5, 5);
   await expect(page.getByText(/La mirada perdió precisión/)).toBeVisible({ timeout: 12_000 });
   await expect(page.getByRole("button", { name: "Comprobar deriva" })).toBeDisabled();
+});
+
+
+test("ajusta pantalla sin pulgadas y coloca la cámara antes de calibrar", async ({ page }) => {
+  await page.goto("/lab/eyetracking?engine=fake");
+  await expect(page.getByLabel("Tamaño de pantalla (pulgadas)")).toHaveCount(0);
+  await page.getByLabel("Código de la persona").fill("REFERENCE");
+  const ruler = page.getByLabel("Ajustar tarjeta");
+  await ruler.focus();
+  await ruler.press("End");
+  const referenceBox = await page.getByText("Tarjeta en vertical", { exact: true }).boundingBox();
+  expect(referenceBox!.width).toBeCloseTo(Number(await ruler.inputValue()), 0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }).check();
+  await page.getByRole("button", { name: "Iniciar cámara y cargar modelos" }).click();
+  const video = page.getByTestId("camera-preview").locator("video");
+  await expect(video).toBeVisible();
+  const calibration = page.getByRole("button", { name: "Comenzar calibración" });
+  await expect(calibration).toBeEnabled();
+  const cameraBox = await video.boundingBox();
+  const buttonBox = await calibration.boundingBox();
+  const titleBox = await page.getByRole("heading", { name: "Acomódate frente a la cámara" }).boundingBox();
+  expect(cameraBox!.y).toBeGreaterThan(titleBox!.y + titleBox!.height);
+  expect(cameraBox!.y + cameraBox!.height).toBeLessThanOrEqual(buttonBox!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
