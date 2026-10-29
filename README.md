@@ -1,4 +1,8 @@
-# NeuroFusion
+# CognIA
+
+Nombre oficial de la aplicación, anteriormente NeuroFusion. El repositorio y algunos identificadores técnicos conservan el nombre anterior.
+
+Los cambios y mejoras se registran en el [backlog de CognIA](docs/backlog/README.md), con una [matriz de adopción por universidad](docs/backlog/ADOPCION.md) e instrucciones para replicarlos entre repositorios. Cada entrega debe incluir su ficha y actualizar su estado real de integración y validación.
 
 Plataforma para diseñar, aplicar y analizar estudios de neuromarketing. Hoy es de uso educativo/demostrativo; la arquitectura (organizaciones, RLS, herramientas registrables) está pensada para convertirse en un SaaS. Herramientas disponibles:
 
