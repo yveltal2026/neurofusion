@@ -1,3 +1,4 @@
+import { StudyParticipationSummary } from "@/components/study-participation-summary";
 import { deleteStudy, regenerateLink } from "@/app/(app)/studies/[id]/actions";
 import { CopyLink } from "@/components/copy-link";
 import { DuplicateStudyForm } from "@/components/duplicate-study-form";
@@ -36,6 +37,7 @@ export function VariantOverview({
   return (
     <div className="space-y-8">
       <StudyHeader study={study} projectName={projectName} active="overview" variant="variant" subtitle={STATUS_LABEL[study.status]} />
+      <StudyParticipationSummary studyId={study.id} />
 
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}

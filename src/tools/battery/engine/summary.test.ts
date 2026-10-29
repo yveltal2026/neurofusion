@@ -27,6 +27,16 @@ const child = (
 ): SummaryChild => ({ batterySessionId, studyId, status });
 
 describe("resumen de la batería", () => {
+  it("separa participantes activos, inactivos y vencidos sin alterar pasos completados", () => {
+    const now = Date.now();
+    const result = summarizeBattery(["a"], [
+      session("active", "started", { lastActivityAt: new Date(now).toISOString() }),
+      session("inactive", "started", { lastActivityAt: new Date(now - 3 * 60_000).toISOString() }),
+      session("expired", "started", { lastActivityAt: new Date(now - 31 * 60_000).toISOString() }),
+    ], [child("expired", "a", "completed")]);
+    expect(result).toMatchObject({ inProgress: 1, inactive: 1, abandoned: 1 });
+    expect(result.participants.find((p) => p.id === "expired")?.steps[0]?.status).toBe("completed");
+  });
   const sessions = [
     session("s1", "completed", { startedAt: "2026-10-14T10:00:00Z" }),
     session("s2", "started", { startedAt: "2026-10-14T10:05:00Z" }),
@@ -104,6 +114,7 @@ describe("resumen de la batería", () => {
       total: 0,
       completed: 0,
       inProgress: 0,
+      inactive: 0,
       abandoned: 0,
       excluded: 0,
       byStep: [{ studyId: "a", completed: 0, inProgress: 0 }],

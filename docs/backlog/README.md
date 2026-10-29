@@ -10,6 +10,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 | [COG-20261028-actividad-analisis-visual](cambios/COG-20261028-actividad-analisis-visual.md) | Señales de actividad durante análisis de imágenes | Integrado en `main` | Compartido |
 | [COG-20261028-diagnostico-cascada-gemini](cambios/COG-20261028-diagnostico-cascada-gemini.md) | Confirmar por qué responde Flash Lite | En diagnóstico; requiere acceso al despliegue | Compartido; configuración por edición |
 | [COG-20261028-compatibilidad-universitaria](cambios/COG-20261028-compatibilidad-universitaria.md) | Preservar roles y registro exclusivo de maestros al replicar | Integrado en `main` | Proceso compartido; política de ediciones universitarias |
+| [COG-20261029-abandono-inactividad](cambios/COG-20261029-abandono-inactividad.md) | Presencia, inactividad y abandono en participaciones por liga | Implementado localmente; integración pendiente | Compartido; permisos por edición |
 
 La [matriz de adopción](ADOPCION.md) indica qué se ha verificado en cada edición. Una ficha implementada no implica que esté integrada o desplegada.
 

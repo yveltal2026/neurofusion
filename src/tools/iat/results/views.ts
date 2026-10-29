@@ -2,6 +2,7 @@ import { toCsv } from "@/lib/csv";
 import type { IatConfig } from "../config";
 import type { DeviceType, ExplicitPreference, SessionForStats } from "../engine/stats";
 import { extraFieldColumns, sessionSegments } from "../participant";
+import { participationStatus, type ParticipationStatus } from "@/lib/participation-activity";
 
 /** Filas tal como salen de Supabase. */
 export interface SessionRow {
@@ -19,6 +20,9 @@ export interface SessionRow {
   excluded_reason: string | null;
   started_at: string;
   completed_at: string | null;
+  last_activity_at?: string;
+  inactive_since?: string | null;
+  abandon_reason?: string | null;
 }
 
 export interface ResultRow {
@@ -72,7 +76,7 @@ export function buildSessionViews(config: IatConfig, sessions: SessionRow[], res
 }
 
 export interface ViewFilters {
-  status?: SessionRow["status"] | "all";
+  status?: ParticipationStatus | "all";
   validity?: "valid" | "invalid" | "all";
   device?: DeviceType | "all";
   duplicates?: "only" | "all";
@@ -81,7 +85,7 @@ export interface ViewFilters {
 
 export function filterViews(views: SessionView[], f: ViewFilters): SessionView[] {
   return views.filter((v) => {
-    if (f.status && f.status !== "all" && v.status !== f.status) return false;
+    if (f.status && f.status !== "all" && participationStatus(v) !== f.status) return false;
     if (f.validity === "valid" && v.allValid !== true) return false;
     if (f.validity === "invalid" && v.allValid !== false) return false;
     if (f.device && f.device !== "all" && v.device_type !== f.device) return false;

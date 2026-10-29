@@ -1,5 +1,8 @@
 "use client";
 
+import { useParticipationActivity } from "@/components/use-participation-activity";
+import { ParticipationExpired } from "@/components/participation-expired";
+
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Callout, ConsentCheck, FactList, ParticipantScreen, Prose, ReadingPanel, ScreenHeader, Section, StatusScreen } from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
@@ -60,6 +63,8 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
   const [saveError, setSaveError] = useState<string | null>(null);
   const [doneTrials, setDoneTrials] = useState(0);
   const recordsRef = useRef<SubmittedTrial[][]>([]);
+
+  const expired = useParticipationActivity(token, session?.id ?? null, !preview && !embedded && stage.kind !== "thanks" && stage.kind !== "blocked");
 
   const nDims = config.dimensions.length;
   const totalTrials = session ? session.plans.reduce((n, dim) => n + dim.reduce((m, b) => m + b.trials.length, 0), 0) : 0;
@@ -208,6 +213,8 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
         "--focus": "var(--heading)",
         "--control": "var(--muted)",
       } as CSSProperties);
+
+  if (expired) return <ParticipationExpired />;
 
   let body: ReactNode = null;
 

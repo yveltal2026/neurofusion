@@ -1,5 +1,8 @@
 "use client";
 
+import { useParticipationActivity } from "@/components/use-participation-activity";
+import { ParticipationExpired } from "@/components/participation-expired";
+
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ConsentCheck,
@@ -75,6 +78,8 @@ export function BatteryRunner({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [steps, setSteps] = useState<StepLink[]>([]);
   const [progress, setProgress] = useState<StepProgress[]>([]);
+
+  const expired = useParticipationActivity(token, sessionId, !preview && stage.kind !== "thanks" && stage.kind !== "blocked", "battery");
 
   // Pre-chequeo: avisa de inmediato si ya participó o la batería cerró.
   useEffect(() => {
@@ -173,6 +178,8 @@ export function BatteryRunner({
     },
     [sessionId, preview, progress, token, finish],
   );
+
+  if (expired) return <ParticipationExpired battery />;
 
   let body: ReactNode = null;
 

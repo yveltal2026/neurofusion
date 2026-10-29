@@ -15,6 +15,7 @@ import type { BatteryDetail } from "../load";
 import { summarizeBattery } from "../engine";
 import { BatteryStepsPanel } from "./BatteryStepsPanel";
 import { TOOL_LABEL, type AvailableStudy } from "./StepsEditor";
+import { ActivityRefresh } from "@/components/activity-refresh";
 
 const STATUS_LABEL = {
   draft: "Borrador",
@@ -23,6 +24,7 @@ const STATUS_LABEL = {
 } as const;
 const SESSION_LABEL = {
   started: "En curso",
+  inactive: "Inactiva",
   completed: "Completó",
   abandoned: "Abandonó",
 } as const;
@@ -67,6 +69,7 @@ export function BatteryOverview({
 
   return (
     <div className="space-y-8">
+      <ActivityRefresh />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Breadcrumbs items={projectCrumbs(battery.project_id, projectName)} />
@@ -135,11 +138,12 @@ export function BatteryOverview({
       <section className="space-y-4" aria-label="Participantes">
         <h2 className="text-xl font-semibold">Participantes</h2>
         <Card>
-          <dl className="grid gap-4 sm:grid-cols-4">
+          <dl className="grid gap-4 sm:grid-cols-5">
             {[
               ["Iniciaron", summary.total],
               ["Completaron", summary.completed],
               ["En curso", summary.inProgress],
+              ["Inactivas", summary.inactive],
               ["Abandonaron", summary.abandoned],
             ].map(([label, value]) => (
               <div key={label}>
@@ -194,7 +198,7 @@ export function BatteryOverview({
                           <span className="ml-2 text-muted">(excluido)</span>
                         ) : null}
                       </td>
-                      <td className="py-1.5 pr-4">{SESSION_LABEL[p.status]}</td>
+                      <td className="py-1.5 pr-4">{p.status === "abandoned" && p.abandonReason === "inactivity" ? "Abandonada por inactividad" : SESSION_LABEL[p.status]}</td>
                       <td className="py-1.5 pr-4">
                         <span className="inline-flex gap-1">
                           {p.steps.map((x) => (
