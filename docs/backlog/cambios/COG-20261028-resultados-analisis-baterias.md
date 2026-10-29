@@ -6,7 +6,7 @@
 - Alcance: compartido; verificar permisos institucionales antes de replicar.
 - Origen: `yveltal2026/neurofusion`, `main`, base `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
 - Rama de implementación: `ajustes-resultados-analisis`.
-- Referencias de implementación: commits y PR pendientes.
+- Referencias de implementación: `17fc2ce3a8d1e182086d031239d3ef03ca0421b0`; [PR #9](https://github.com/yveltal2026/neurofusion/pull/9), borrador hacia `main`. No integrado ni desplegado.
 - Dependencias de otros cambios: `COG-20261028-compatibilidad-universitaria` para réplica.
 
 ## Problema y comportamiento esperado
@@ -43,7 +43,7 @@ Comportamiento final:
 ## Réplica
 
 1. Revisar versión y personalizaciones del destino; consultar el contrato universitario y su mecanismo real de acreditación de maestros y acceso de alumnos.
-2. Revisar el diff completo y adaptar las páginas, el enlace de sesiones y las políticas al destino. Commits de implementación pendientes; todavía no hay cherry-pick documentado ejecutable.
+2. Revisar el diff completo de `17fc2ce3a8d1e182086d031239d3ef03ca0421b0` y adaptar las páginas, el enlace de sesiones y las políticas al destino. Si comparten historial y la compatibilidad está comprobada, aplicar el commit con `git cherry-pick -x 17fc2ce3a8d1e182086d031239d3ef03ca0421b0`; conservar y actualizar esta ficha en el destino. El PR de origen aún es borrador.
 3. Aplicar la migración después de las migraciones base de baterías y webcam. Conservar roles y permisos del destino: no copiar autenticación de la plataforma madre.
 4. Ejecutar tipos, lint, pruebas relevantes y `scripts/verify-sql.sh` en una base desechable.
 5. Verificar con usuario autorizado una batería webcam → IAT/encuesta: calibrar, guardar, continuar, consultar respuestas y mapas por participante, excluir un participante y generar análisis con contexto. Comprobar inaccesibilidad desde otra organización y usuario sin permiso de análisis.
@@ -74,3 +74,4 @@ Revertir el código y restaurar la guarda anterior para impedir nuevas composici
 ## Historial
 
 - 2026-10-28: implementación local sobre `main`, pruebas específicas y SQL temporal correctas; sin intervención en producción.
+- 2026-10-28: rama publicada con commit `17fc2ce3a8d1e182086d031239d3ef03ca0421b0` y PR #9 en borrador. Suite completa, tipos, lint y compilación webpack con fuentes simuladas comprobados; integración y despliegue pendientes.

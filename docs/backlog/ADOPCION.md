@@ -22,7 +22,7 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 | COG-20261028-diagnostico-cascada-gemini | Anáhuac Mayab | Sin verificar | Sin verificar | Sin verificar |
 | COG-20261028-compatibilidad-universitaria | CognIA, origen | Integrado en `main`: `5c4d4fd` | Contrato documental revisado; no cambia acceso de la plataforma madre | No aplica al comportamiento de la app |
 | COG-20261028-compatibilidad-universitaria | Anáhuac Mayab | Sin verificar | Requisito declarado; implementación sin inspeccionar | Sin verificar |
-| COG-20261028-resultados-analisis-baterias | CognIA, origen | Implementado localmente en `ajustes-resultados-analisis`; integración pendiente | Tipos, ESLint, 1,130 pruebas, SQL/RLS temporal y build webpack con fuentes simuladas correctos; proveedor real pendiente | No desplegado |
+| COG-20261028-resultados-analisis-baterias | CognIA, origen | Implementado en `17fc2ce`; [PR #9](https://github.com/yveltal2026/neurofusion/pull/9) en borrador hacia `main`; sin integrar | Tipos, ESLint, 1,130 pruebas, SQL/RLS temporal y build webpack con fuentes simuladas correctos; proveedor real pendiente | No desplegado |
 | COG-20261028-resultados-analisis-baterias | Anáhuac Mayab | Sin verificar | Roles, permisos de análisis y mecanismo de acceso pendientes de inspeccionar | Sin verificar |
 
 Al verificar una integración, sustituye «local» o «sin verificar» por el commit/PR del destino y la fecha. Para un despliegue, añade su referencia y la comprobación realizada. Usa «no aplica» sólo con un motivo documentado. Ningún registro de origen certifica automáticamente Anáhuac Mayab u otra universidad.
