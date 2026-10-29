@@ -42,6 +42,8 @@ interface EyeStudyMode {
   assets: EyeStudyAsset[];
   durationSeconds: number;
   preview: boolean;
+  batterySessionId?: string | null;
+  onComplete?: () => void;
 }
 
 /** Tiempo para que el ojo llegue al punto antes de medir, y ventana de medición, por objetivo. */
@@ -604,7 +606,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         const response = await fetch(`/api/s/${study.token}/eye/start`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ consent: true, protocol: "eye-v3", device: { deviceType, screenWidth: window.screen.width, screenHeight: window.screen.height } }),
+          body: JSON.stringify({ consent: true, protocol: "eye-v3", batterySessionId: study.batterySessionId ?? undefined, device: { deviceType, screenWidth: window.screen.width, screenHeight: window.screen.height } }),
         });
         const result = await response.json();
         if (!response.ok || !result.sessionId) throw new Error(result.message ?? "No se pudo iniciar la sesión.");
@@ -633,6 +635,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     engineRef.current?.stop();
     if (study.preview) {
       setStage("done");
+      study.onComplete?.();
       return;
     }
     if (!studySessionIdRef.current || session.engineId !== "webeyetrack@0.0.2") {
@@ -668,6 +671,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? "No se pudieron guardar las lecturas.");
       setStage("done");
+      study.onComplete?.();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudieron guardar las lecturas.");
     }

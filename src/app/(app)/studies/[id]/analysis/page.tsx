@@ -17,6 +17,7 @@ import type { DimensionAggregate, SegmentBreakdown } from "@/tools/iat/engine";
 import { STRENGTH_LABEL } from "@/tools/iat/results/labels";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import { toStatsSessions } from "@/tools/iat/results/views";
+import { ResearchStudyAnalysis } from "@/tools/research-analysis/study-page";
 
 export const metadata = { title: "Análisis · NeuroFusion" };
 
@@ -127,6 +128,8 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
   const sp = await searchParams;
   const includeInvalid = sp.invalid === "1";
   const { supabase } = await requireUser();
+  const { data: type } = await supabase.from("studies").select("tool_type").eq("id", id).maybeSingle();
+  if (type && type.tool_type !== "iat") return <ResearchStudyAnalysis id={id} supabase={supabase} />;
   const { study, config, projectName } = await loadStudyForResearcher(supabase, id);
 
   const views = await loadSessionViews(supabase, id, config);

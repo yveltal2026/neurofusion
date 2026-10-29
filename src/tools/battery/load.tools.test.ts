@@ -45,16 +45,17 @@ describe("loadAvailableStudies", () => {
   ];
   const assets = [{ study_id: "p1" }, { study_id: "p1" }, { study_id: "p1" }];
 
-  it("ofrece IAT, variantes, encuestas e imágenes en modo piezas; no webcam, journey ni SEO", async () => {
+  it("ofrece IAT, variantes, encuestas, imágenes y webcam; excluye journey y SEO", async () => {
     const f = fakeSupabase({ studies, visual_assets: assets });
     const out = await loadAvailableStudies(f.supabase, "proj");
-    expect(out.map((s) => s.studyId)).toEqual(["i1", "v1", "s1", "p1", "p0"]);
+    expect(out.map((s) => s.studyId)).toEqual(["i1", "v1", "s1", "p1", "p0", "eye"]);
     expect(out.map((s) => s.toolType)).toEqual([
       "iat",
       "iat_variant",
       "survey",
       "visual",
       "visual",
+      "eyetracking",
     ]);
   });
 

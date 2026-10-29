@@ -106,7 +106,8 @@ export type StepLink =
       token: string;
       config: VariantConfig;
     }
-  | { studyId: string; tool: "visual"; pieces: ExposurePiece[] };
+  | { studyId: string; tool: "visual"; pieces: ExposurePiece[] }
+  | { studyId: string; tool: "eyetracking"; token: string; title: string; durationSeconds: number; pieces: ExposurePiece[] };
 
 export interface BatteryProgress {
   /** Estado de la sesión de batería. */
@@ -173,7 +174,7 @@ export async function loadStepLinks(
   if (order.length === 0) return { ok: true, steps: [] };
   const { data, error } = await admin
     .from("studies")
-    .select("id, tool_type, access_token, config")
+    .select("id, name, tool_type, access_token, config")
     .in("id", [...order]);
   if (error) return { ok: false, code: "server_error" };
 
@@ -185,11 +186,14 @@ export async function loadStepLinks(
     // El análisis de imagen no tiene liga propia: su paso se abre por la batería.
     if (s.tool_type === "visual") {
       const config = visualConfigSchema.safeParse(s.config);
-      if (!config.success || config.data.mode !== "pieces" || config.data.eyeTracking)
+      if (!config.success || config.data.mode !== "pieces")
         return { ok: false, code: "server_error" };
       const pieces = await loadExposurePieces(admin, studyId);
       if (!pieces) return { ok: false, code: "server_error" };
-      steps.push({ studyId, tool: "visual", pieces });
+      if (config.data.eyeTracking) {
+        if (!pieces.length || pieces.length > 5 || typeof s.access_token !== "string") return { ok: false, code: "server_error" };
+        steps.push({ studyId, tool: "eyetracking", token: s.access_token, title: s.name ?? "Eye tracking", durationSeconds: config.data.eyeTracking.durationSeconds, pieces });
+      } else steps.push({ studyId, tool: "visual", pieces });
       continue;
     }
     if (typeof s.access_token !== "string")

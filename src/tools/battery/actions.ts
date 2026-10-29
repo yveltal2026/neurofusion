@@ -314,4 +314,5 @@ export async function setParticipantExcluded(formData: FormData) {
     .eq("battery_id", batteryId);
   revalidatePath(`/batteries/${batteryId}`);
   revalidatePath(`/batteries/${batteryId}/report`);
+  revalidatePath(`/batteries/${batteryId}/analysis`);
 }

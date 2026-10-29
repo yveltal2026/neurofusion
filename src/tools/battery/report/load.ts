@@ -148,6 +148,9 @@ export async function loadReportSteps(
           name: s.name,
           variant: c.data.variant,
         });
+    } else if (s.toolType === "eyetracking") {
+      // Measured gaze is aggregated separately with calibration and exclusion checks.
+      continue;
     } else if (s.toolType === "visual") {
       const c = visualConfigSchema.safeParse(raw);
       if (!c.success) unreadable.push(s.name);

@@ -228,6 +228,7 @@ describe("los cuatro tipos de paso", () => {
 
   it("las etiquetas nombran los cuatro tipos", () => {
     expect(TOOL_LABEL).toEqual({
+      eyetracking: "Eye tracking con webcam",
       iat: "IAT",
       iat_variant: "Variante del IAT",
       survey: "Encuesta",

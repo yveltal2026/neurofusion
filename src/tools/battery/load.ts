@@ -40,7 +40,7 @@ export async function pieceCounts(
 
 /**
  * Estudios del proyecto que se pueden usar como paso: IAT, variantes del IAT, encuestas y análisis de
- * imagen con IA en modo piezas (el journey es un panel modelado: no hay nada que mostrarle a una persona).
+ * imagen en modo piezas, incluidas mediciones webcam (el journey es un panel modelado).
  */
 export async function loadAvailableStudies(
   supabase: SupabaseClient,
@@ -62,7 +62,7 @@ export async function loadAvailableStudies(
   const usable = rows.filter(
     (s) =>
       isBatteryTool(s.tool_type) &&
-      (s.tool_type !== "visual" || (s.mode === "pieces" && !s.eyeTracking)),
+      (s.tool_type !== "visual" || s.mode === "pieces"),
   );
   const pieces = await pieceCounts(
     supabase,
@@ -73,7 +73,7 @@ export async function loadAvailableStudies(
       ? [
           {
             studyId: s.id,
-            toolType: s.tool_type,
+            toolType: s.tool_type === "visual" && s.eyeTracking ? "eyetracking" : s.tool_type,
             name: s.name,
             ...(s.tool_type === "visual"
               ? { pieces: pieces.get(s.id) ?? 0 }
@@ -121,8 +121,8 @@ interface StepJoinRow {
   position: number;
   enabled: boolean;
   studies:
-    | { name: string; tool_type: string }
-    | { name: string; tool_type: string }[]
+    | { name: string; tool_type: string; config?: { eyeTracking?: unknown } }
+    | { name: string; tool_type: string; config?: { eyeTracking?: unknown } }[]
     | null;
 }
 
@@ -141,7 +141,7 @@ export async function loadBatteryDetail(
   const [stepRows, sessionRows] = await Promise.all([
     supabase
       .from("battery_steps")
-      .select("study_id, position, enabled, studies(name, tool_type)")
+      .select("study_id, position, enabled, studies(name, tool_type, config)")
       .eq("battery_id", id)
       .order("position")
       .returns<StepJoinRow[]>(),
@@ -165,7 +165,7 @@ export async function loadBatteryDetail(
     return [
       {
         studyId: r.study_id,
-        toolType: study.tool_type,
+        toolType: study.tool_type === "visual" && study.config?.eyeTracking ? "eyetracking" : study.tool_type,
         name: study.name,
         enabled: r.enabled,
       },

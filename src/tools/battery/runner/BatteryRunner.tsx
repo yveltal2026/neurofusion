@@ -27,6 +27,9 @@ import {
 import type { StepLink } from "../participant";
 import { batteryApi } from "./api";
 import { ExposureRunner } from "./ExposureRunner";
+import dynamic from "next/dynamic";
+
+const EyeTrackingLab = dynamic(() => import("@/lab/eyetracking/EyeTrackingLab").then((m) => m.EyeTrackingLab), { ssr: false });
 
 type Stage =
   | { kind: "welcome" }
@@ -251,6 +254,8 @@ export function BatteryRunner({
               preview={preview}
               embedded={embedded}
             />
+          ) : step.tool === "eyetracking" ? (
+            <EyeTrackingLab key={step.studyId} study={{ token: step.token, title: step.title, assets: step.pieces, durationSeconds: step.durationSeconds, preview, batterySessionId: sessionId, onComplete: embedded.onComplete }} />
           ) : step.tool === "visual" ? (
             <ExposureRunner
               key={step.studyId}

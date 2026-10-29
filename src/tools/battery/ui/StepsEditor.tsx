@@ -226,7 +226,7 @@ export function StepsEditor({
 
       {!readOnly && steps.length > 1 ? (
         <p className="text-xs text-muted">
-          Orden sugerido: exposición (imágenes) → medidas implícitas (IAT y
+          Orden sugerido: exposición (imágenes y eye tracking) → medidas implícitas (IAT y
           variantes) → explícitas (encuestas). Puedes cambiarlo u omitir pasos
           según el objetivo del estudio.
         </p>

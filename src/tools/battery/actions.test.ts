@@ -540,6 +540,7 @@ describe("setParticipantExcluded", () => {
     expect(mocks.revalidated).toEqual([
       `/batteries/${BAT}`,
       `/batteries/${BAT}/report`,
+      `/batteries/${BAT}/analysis`,
     ]);
   });
 
