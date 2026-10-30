@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: primera entrega integrada en `main`; seguimiento del fallo Android con 0 lecturas implementado en `fix/eyetracking-face-detector`, integración pendiente.
+- Estado: primera entrega y seguimiento Android integrados en `main`; detección en el teléfono físico pendiente de confirmar.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -85,6 +85,8 @@ La inspección de WebEyeTrack 0.0.2 confirma dos limitaciones: fuerza MediaPipe 
 - La prueba de contrato ejecuta `initialize()` y `step()` del paquete WebEyeTrack 0.0.2 real, con descargas y resultado de detección sustituidos. No utiliza cámara física ni demuestra sensibilidad del modelo ante un rostro.
 - Pendiente: repetir en el Android/Chrome del propietario y medir detección y frecuencia con cámara real; comprobar Safari de iPhone. CPU puede reducir la frecuencia en teléfonos lentos: se mantienen los umbrales y controles de calidad, sin etiquetar mediciones deficientes como válidas.
 - Compatibilidad universitaria: el seguimiento sigue limitado al cliente de cámara/mirada y sus dependencias. No modifica autenticación, roles, altas ni configuración institucional; otras ediciones continúan sin verificar y deben adaptar y validar el mismo ID antes de declarar una réplica completada.
-- Referencia de implementación del seguimiento: `0484cd56b0843f197345f6a75a06ae1c2103cc0f`, [PR #12](https://github.com/yveltal2026/neurofusion/pull/12). Base verificada: `main` `1d53cf68d257ff9a34bab6038bb3dc7bedb70667`. La autorización del propietario para pasar a `main` para probar se conserva; integración y despliegue se registrarán con evidencia.
+- Referencia de implementación del seguimiento: `0484cd56b0843f197345f6a75a06ae1c2103cc0f`, [PR #12](https://github.com/yveltal2026/neurofusion/pull/12). Base verificada: `main` `1d53cf68d257ff9a34bab6038bb3dc7bedb70667`. Integrado en `main` mediante el merge `474cb986c3dbbd90588a841e154dbed8a03d579e` del PR #12, el 2026-10-29. Vercel preview correcto en `7f7329e`; despliegue de producción del seguimiento pendiente de verificar.
 
 Para replicar, aplicar también el commit de este seguimiento después de `897ca9f` y ejecutar `npm ci` para instalar la dependencia directa. Revertir el seguimiento restaura la ruta anterior; no revierte ni elimina datos de participantes.
+
+- 2026-10-29: PR #12 integrado en `main` (`474cb986c3dbbd90588a841e154dbed8a03d579e`); 113 pruebas, cuatro recorridos simulados, TypeScript, ESLint, build y preview de Vercel correctos. La validación de cámara física continúa pendiente.
