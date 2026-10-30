@@ -2,6 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
+import { createAsyncGazeStep } from "./async-gaze";
 import { selectGazeBackend } from "./gaze-backend";
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -40,7 +41,16 @@ it("el modelo y step de WebEyeTrack reales funcionan con el backend WASM compart
   }
   internals.faceLandmarkerClient = { processFrame: async () => ({ faceLandmarks: [face], faceBlendshapes: [], facialTransformationMatrixes: [] }) };
   vi.spyOn(runtime, "prepareInput").mockReturnValue([new ImageData(512, 128), [0, 0, 1], [0, 0, 60]]);
+  const asyncRuntime = new WebEyeTrack();
+  const asyncInternals = asyncRuntime as unknown as typeof internals;
+  asyncInternals.blazeGaze = internals.blazeGaze;
+  asyncInternals.faceLandmarkerClient = internals.faceLandmarkerClient;
+  vi.spyOn(asyncRuntime, "prepareInput").mockImplementation(runtime.prepareInput);
+  const asyncStep = await createAsyncGazeStep(asyncRuntime, new AbortController().signal);
   const result = await runtime.step(new ImageData(640, 640), 0.04);
+  const candidate = await asyncStep(new ImageData(640, 640), 0.04);
+  expect(candidate.normPog).toEqual(result.normPog);
+  expect(asyncRuntime.latestGazeResult).toBe(candidate);
   expect(result.gazeState).toBe("open");
   expect(result.normPog.every(Number.isFinite)).toBe(true);
   expect(tf.memory().numTensors).toBe(count);

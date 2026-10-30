@@ -1,7 +1,6 @@
 import type { GazeFrame } from "./metrics";
 import { createCameraSource } from "./camera";
-import { createMobileRuntime, needsMobileRuntime, MOBILE_VISION_WASM, type MobileRuntime } from "./mobile-runtime";
-import type { GazeResult } from "webeyetrack";
+import { createMobileRuntime, needsMobileRuntime, MOBILE_VISION_WASM, type MobileRuntime, type MobileGazeReading } from "./mobile-runtime";
 import { STARTUP_TIMEOUT_MS, type LoadingStep } from "./loading";
 
 /**
@@ -106,12 +105,13 @@ export function createWebEyeTrackEngine(): GazeEngine {
   let mobileRuntime: MobileRuntime | null = null;
   let watchdog: ReturnType<typeof setInterval> | null = null;
   let videoForDiagnostics: HTMLVideoElement | null = null;
-  const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], kalmanFilter: [], total: [] };
+  const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], kalmanFilter: [], readback: [], filter: [], total: [] };
   const readingTimes: number[] = [];
   const captureTimes: number[] = [];
   const decodedCounts: Array<number | null> = [];
   const faceSamples: number[] = [];
   const validSamples: number[] = [];
+  const discardReasons: Array<string | null> = [];
   let loadingController: AbortController | null = null;
 
   function release() {
@@ -144,8 +144,10 @@ export function createWebEyeTrackEngine(): GazeEngine {
         detectorWorkerError: mobileRuntime?.workerError ?? null,
         pipeline: mobileRuntime?.pipelined ? "cpu-worker-2-frame" : "serial",
         gazeBackend: mobileRuntime?.gazeBackend ?? null,
+        gazeReadback: mobileRuntime?.gazeReadback ?? "sync",
+        discardedReadings: Object.fromEntries(["no-face", "eyes-closed", "invalid-eye-region", "non-finite-gaze"].map((reason) => [reason, discardReasons.filter((r) => r === reason).length])),
         trackingMode: mobileRuntime?.trackingMode ?? "worker-image",
-        timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering, not isolated filter time.", total: "Worker detection can overlap main gaze processing. Total is per-frame latency, not inverse throughput." },
+        timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering; mobile async readback releases the main thread. See readback and filter separately.", total: "Worker detection can overlap main gaze processing. Total is per-frame latency, not inverse throughput." },
         faceDetectionRatio: faceSamples.length ? faceSamples.reduce((a, b) => a + b, 0) / faceSamples.length : null,
         validGazeRatio: validSamples.length ? validSamples.reduce((a, b) => a + b, 0) / validSamples.length : null,
         detectorBackend: mobileRuntime?.backend ?? (worker ? "worker-gpu" : "not-running"),
@@ -157,6 +159,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
         lastSecond: { analyses: captureTimes.filter((t) => t > now - 1000).length,
           validGaze: captureTimes.reduce((count, t, i) => count + Number(t > now - 1000 && validSamples[i] === 1), 0) },
         meanCaptureToResultMs: readingTimes.length ? readingTimes.reduce((sum, t, i) => sum + t - captureTimes[i], 0) / readingTimes.length : null,
+        validGazeFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (validSamples.slice(1).reduce((a, b) => a + b, 0)) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
         processedFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (readingTimes.length - 1) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
         meanStageMs: Object.fromEntries(Object.entries(timingSamples).map(([key, values]) => [key, values.length ? values.reduce((a, b) => a + b, 0) / values.length : null])),
       };
@@ -166,7 +169,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
       readingTimes.length = 0;
       captureTimes.length = 0;
       decodedCounts.length = 0;
-      faceSamples.length = 0; validSamples.length = 0;
+      faceSamples.length = 0; validSamples.length = 0; discardReasons.length = 0;
       for (const values of Object.values(timingSamples)) values.length = 0;
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
       if (!navigator.mediaDevices?.getUserMedia) throw new EngineError(
@@ -208,7 +211,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
         }, 1000);
         let first = true;
 
-        const receive = (result: Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">, capturedAt?: number) => {
+        const receive = (result: MobileGazeReading, capturedAt?: number) => {
           if (!active) return;
           const t = performance.now();
           lastResult = t;
@@ -233,7 +236,8 @@ export function createWebEyeTrackEngine(): GazeEngine {
           const [nx, ny] = result.normPog;
           const valid = open && Number.isFinite(nx) && Number.isFinite(ny);
           faceSamples.push(Number(result.facialLandmarks.length > 0)); validSamples.push(Number(valid));
-          if (faceSamples.length > 120) { faceSamples.shift(); validSamples.shift(); }
+          discardReasons.push(valid ? null : result.discardReason ?? (!result.facialLandmarks.length ? "no-face" : !open ? "eyes-closed" : "non-finite-gaze"));
+          if (faceSamples.length > 120) { faceSamples.shift(); validSamples.shift(); discardReasons.shift(); }
           onFrame({
             t: captureTimes.at(-1)!,
             // normPog va de −0.5 a 0.5 con origen al centro de la ventana (eje Y hacia abajo).

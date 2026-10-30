@@ -50,6 +50,29 @@ describe("integración del motor", () => {
     expect(engine.diagnostics!()).toMatchObject({ meanCaptureToResultMs: 60 });
     engine.stop();
   });
+  it("cuenta descartes sin presentarlos como mirada válida y limita la ventana a 120 muestras", async () => {
+    control.mobile = true;
+    const engine = createWebEyeTrackEngine();
+    const starting = engine.start(document.createElement("video"), vi.fn());
+    await vi.dynamicImportSettled();
+    for (let i = 0; i < 125; i++) {
+      const reason = i % 4 === 0 ? "invalid-eye-region" : i % 4 === 1 ? "eyes-closed" : null;
+      control.runtimeStep.mockResolvedValue({ facialLandmarks: [{ x: 0, y: 0, z: 0 }], gazeState: reason ? "closed" : "open", normPog: [0, 0], discardReason: reason, durations: { readback: 8, filter: 1 } });
+      await vi.advanceTimersByTimeAsync(50);
+      await control.frame!({} as ImageData, i * 0.05);
+    }
+    await starting;
+    expect(engine.diagnostics!()).toMatchObject({ readings: 120, processedFps: 20,
+      validGazeFps: 60 * 1000 / 5950,
+      discardedReadings: { "invalid-eye-region": 30, "eyes-closed": 30, "no-face": 0, "non-finite-gaze": 0 },
+      meanStageMs: { readback: 8, filter: 1 } });
+    engine.stop();
+    const restart = engine.start(document.createElement("video"), vi.fn());
+    await vi.dynamicImportSettled();
+    await control.frame!({} as ImageData, 0.05); await restart;
+    expect(engine.diagnostics!()).toMatchObject({ readings: 1, discardedReadings: { "invalid-eye-region": 1, "eyes-closed": 0 } });
+    engine.stop();
+  });
   it("distingue un rostro con ojos cerrados de una lectura válida", async () => {
     const engine = createWebEyeTrackEngine();
     const frame = vi.fn();

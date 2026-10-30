@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. PR #18 integrado (`1bb8a46`); diagnóstico físico posterior confirma 9.79 FPS con WebGL retenido. Detección CPU paralela integrada en `main` mediante PR #19 (`e15fa4c`); repetición física pendiente.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. PR #18 integrado (`1bb8a46`); diagnóstico físico posterior confirma 9.79 FPS con WebGL retenido. Detección CPU paralela integrada en `main` mediante PR #19 (`e15fa4c`); JSON físico posterior confirma worker CPU activo y 17.20 análisis/s, pero 80.83 % de mirada válida (aprox. 13.9/s). Lectura GPU asíncrona implementada localmente; integración y despliegue pendientes.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -248,3 +248,28 @@ El segundo JSON del propietario confirma fase `position`, 9.79 FPS de promedio y
 ### Réplica y recuperación
 
 Aplicar este commit después de `c060d4a` y `b0c0c80`; sin dependencias, migraciones, variables, cabeceras ni dominios nuevos. Conservar personalizaciones y verificar que el bundler del destino emita el worker clásico y sirva sus chunks del mismo origen. Mantener JS/WASM de MediaPipe en la misma versión y probar CPU, fallback serial, cancelación y dos imágenes completas con cámara real; repetir estudio/calibración y observar FPS y latencia. Sin cambios de autenticación, registro, roles, permisos o configuración institucional; universidades sin verificar. Revertir PR #19 restaura la ejecución serial y sus tiempos de recepción; no hay datos ni migraciones que revertir.
+
+
+## Seguimiento 2026-10-30 — 13–14 lecturas válidas y espera de GPU
+
+El tercer JSON confirma `worker-cpu`, `cpu-worker-2-frame`, `peakInFlight: 2` y ausencia de error de worker. Registra 17.196 análisis/s, rostro en el 100 % de 120 resultados y mirada válida en el 80.83 %: aproximadamente 13.9 lecturas válidas/s, consistente con el reporte del propietario antes de calibrar. Cámara decodificada 23.84 FPS; captura 9.96 ms; detector 32.59 ms; preparación 14.82 ms; inferencia 3.94 ms; lectura/filtro 14.45 ms; latencia captura–resultado 99.58 ms. El archivo no distingue las causas de los 23 descartes; no se atribuyen a parpadeos, luz o dispositivo sin evidencia. GPU facial sigue fallando en geometría, pero la alternativa CPU paralela sí está operativa.
+
+### Comportamiento y archivos
+
+- `async-gaze.ts` implementa el paso móvil de WebEyeTrack 0.0.2 con `await Tensor.data()` en lugar de `arraySync()`. El hilo principal puede atender captura y mensajes del detector mientras termina la lectura GPU. Conserva `prepareInput`, pesos, entrada normalizada, ajuste afín, EAR 0.2, filtro original y límites de coordenadas; el filtro y `latestGazeResult` avanzan en orden después de la lectura.
+- El tensor de salida se mantiene hasta completar la lectura y se libera en `finally`, incluso ante error. Cancelar no actualiza el filtro ni publica un resultado tardío; el runtime conserva la espera antes de liberar modelos. Las coordenadas no finitas se descartan antes del filtro para no contaminar lecturas posteriores. No hay nuevas inferencias simultáneas ni imágenes reutilizadas.
+- `mobile-runtime.ts` conecta este paso a su detector existente. `engine.ts` registra `gazeReadback: async`, `validGazeFps`, motivos de descarte (`no-face`, `eyes-closed`, `invalid-eye-region`, `non-finite-gaze`) y tiempos separados `readback`/`filter`. Las ventanas se limitan a 120 resultados y se reinician con la cámara. No contiene imágenes ni datos de identidad.
+- La vía de escritorio conserva el paso de la librería. Se mantienen resolución, 18 puntos, mínimo de 15 FPS y controles de precisión/iluminación. Los picos breves no acreditan frecuencia sostenida.
+- Pruebas: `async-gaze.test.ts`, contrato de pesos reales, runtime móvil y motor. Sin dependencias, variables, migraciones ni cambios de interfaz, autenticación, registro o roles.
+
+### Evidencia y límites
+
+- 161 pruebas correctas en 20 archivos (`src/lab/eyetracking` y `src/tools/visual/eye`); TypeScript y ESLint correctos. Comparación con el paso original para secuencias con filtro acumulado y ajuste afín, ojos cerrados y ausencia de rostro; lectura pendiente/cancelación/error sin fugas, descarte no finito sin contaminar filtro y ventana diagnóstica de 120 resultados.
+- Contrato con pesos reales de BlazeGaze y WASM real: coordenadas idénticas entre pasos síncrono y asíncrono; sin aumento de tensores. Detección y preparación se sustituyen en esa prueba, no es cámara real.
+- Chromium real/WebGL con los pesos del repositorio, imagen/pose sintéticas y detector sustituido: cinco comparaciones con diferencia máxima de coordenadas 0 y aumento de tensores 0. Durante cada espera asíncrona se ejecutaron otros callbacks del navegador. El entorno usa renderizado de software y tiempos variables; no acredita aumento de FPS ni precisión en S25 Ultra.
+- Build webpack de producción correcto, con fixture temporal de fuentes fuera del repositorio. En el sandbox inicial Chromium y build fallaron por restricciones de proceso; ambos se completaron con permisos de red del entorno. Sin modificación al bundler de producción.
+- Rama `fix/eyetracking-async-readback`, desde `main` `e22035eef550dae6bbf675b71da05426acf13df5`. Commit/PR, integración y despliegue: pendientes. Rendimiento sostenido y calibración con teléfono físico: pendientes.
+
+### Réplica y recuperación
+
+Aplicar después de PR #19 y mantener WebEyeTrack 0.0.2, TensorFlow compartido y worker CPU. Repetir contrato contra el paquete exacto al actualizar versiones, cancelación con lectura pendiente, diagnóstico y calibración completa en hardware. Sin cambios institucionales; universidades sin verificar. Revertir este seguimiento restaura lectura síncrona sin migrar datos. Verificar en el nuevo JSON `gazeReadback`, `validGazeFps`, motivos de descarte y latencia; no certificar el mínimo por una ráfaga breve.
