@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. Selección de inferencia integrada en `main` mediante PR #18 (`1bb8a46`); repetición física pendiente.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. PR #18 integrado (`1bb8a46`); diagnóstico físico posterior confirma 9.79 FPS con WebGL retenido. Detección CPU paralela implementada en PR #19; integración y repetición física pendientes.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -220,3 +220,31 @@ El JSON nuevo confirma `gpu-detection-error` en `FaceGeometryPipelineCalculator`
 ### Réplica y recuperación
 
 Aplicar ambos commits después de `6806050` y `e77a7ca`, conservar personalizaciones y ejecutar `npm ci`. Copiar los tres binarios y licencia de la misma versión; verificar los SHA-256 del README, su respuesta como WASM y acceso público sin redirección de login. Al actualizar TensorFlow, cambiar juntos dependencias, ruta y binarios y repetir el contrato con pesos reales. No hay cambios de autenticación, roles, registro, permisos ni configuración institucional; otras universidades siguen sin verificar. Revertir este seguimiento restaura la selección anterior de TensorFlow; no hay datos ni migraciones que revertir.
+
+
+## Seguimiento 2026-10-30 — CPU paralela con dos imágenes acotadas
+
+El segundo JSON del propietario confirma fase `position`, 9.79 FPS de promedio y 11 análisis/lecturas válidas en el último segundo. Rostro: 100 %; mirada válida: 90 %. La comparación de PR #18 funcionó: conservó WebGL (6 ms) frente a WASM (18.6 ms). Durante el uso: CPU facial 46.81 ms, captura 12.67 ms, preparación 12.36 ms, inferencia etiquetada 3.94 ms, lectura/filtro 17.11 ms y total del motor 80.22 ms. Cámara decodifica 23.95 FPS. El problema persiste con procesamiento serial; no se fuerza la alternativa más lenta ni se atribuye el informe a un contador mal leído.
+
+### Comportamiento final
+
+- Tras fallo GPU se prefiere un worker clásico con MediaPipe CPU/VIDEO. El cargador oficial puede usar `importScripts`; JS/WASM/modelo y sus opciones mantienen las versiones anteriores. Si el worker no inicializa o el navegador no lo permite, se conserva CPU principal con modo serial y motivo de error en diagnóstico.
+- La cámara procesa una imagen en modo serial y como máximo dos cuando existe worker CPU. Se puede detectar el rostro de la siguiente imagen mientras el hilo principal prepara/estima la mirada anterior. Los buffers ImageData se transfieren al worker y vuelven con su ID, geometría y tiempo de detección. La imagen que consume BlazeGaze es la que produjo esos landmarks; no hay landmarks reutilizados para aumentar el contador.
+- El primer fallo GPU sucede dentro de `WebEyeTrack.step`, que todavía necesita su imagen: sólo esa solicitud clona el buffer. Las siguientes transfieren y recuperan su propiedad. La resolución cuadrada máxima de 640 y el contenido del recorte ocular permanecen iguales.
+- El modelo de mirada y su filtro conservan orden y exclusión mediante una cola. Las lecturas móviles llevan la hora de captura en `GazeFrame.t`, en vez de la hora de recepción: una imagen procesada tarde no se asigna al siguiente punto de calibración. FPS de procesamiento sigue usando entregas reales; `lastSecond` usa captura, igual que la interfaz. Se registra latencia de captura a resultado por separado.
+- Iniciar se limita a 25 s para el worker; cada petición tiene 5 s de timeout. Cancelar termina el worker, rechaza pendientes y libera modelos al terminar la inferencia en curso. Un fallo del worker durante la medición interrumpe el motor y conserva la recuperación del estudio existente; no acepta datos tardíos ni crea una cola sin límite.
+- Diagnóstico: `detectorBackend: worker-cpu`, `pipeline: cpu-worker-2-frame`, `detectorWorkerError`, `capture.peakInFlight` y `meanCaptureToResultMs`. Los tiempos representan latencia por imagen; con etapas solapadas su suma no equivale al inverso de FPS. Sin imágenes, IDs de persona ni video en JSON.
+- Se conservan modelo/pesos, controles de recorte, puntos, filtros y umbrales de calidad. No se garantiza el mínimo de 15 FPS antes de medirlo en hardware.
+
+### Referencias, pruebas y límites
+
+- Implementación `34bc39b7a30b7284dc1349b47e2bd6c00259eabb`, [PR #19](https://github.com/yveltal2026/neurofusion/pull/19), desde `main` `6bce235`. Integración/despliegue pendientes. Archivos: `face-detector-config.ts`, protocolo, worker y cliente con sus pruebas; adaptador móvil, cámara y motor con pruebas. Las constantes previas se reexportan desde el adaptador para conservar consumidores.
+- 157 pruebas correctas en 19 archivos, TypeScript y ESLint correctos. Incluyen dos imágenes distintas sin una tercera en espera, detección adelantada y filtro ordenado, asociación por ID, clonación inicial/transferencia posterior, inicialización tardía, errores, cancelación, timeouts y timestamp de captura en la lectura. Tras el último ajuste de limpieza del timer se repiten siete pruebas de cámara: correctas.
+- Build de producción webpack y dos comprobaciones de interfaz/diagnóstico correctos en escritorio/Pixel 7 simulado; fuentes mediante fixture temporal fuera del repositorio. Turbopack local falla por restricciones de puertos del sandbox, sin cambio a la configuración productiva.
+- Chromium real: cliente con un worker sintético confirma buffers originales separados/detach, retorno de ImageData de 640×640 y marcadores de imagen 17/29 asociados a sus IDs. En la misma fixture, 20 imágenes con detector de tiempo controlado de 47 ms y trabajo principal de 46 ms producen 10.37 FPS serial y 19.46 FPS con dos imágenes. Verifica concurrencia del transporte; no ejecuta el detector facial ni estima velocidad del S25 Ultra.
+- También se ejecuta el worker compilado por webpack con el JS/WASM real de MediaPipe 0.10.35, interceptado desde los archivos del paquete instalado. Un modelo deliberadamente inválido llega al parser y devuelve `Unable to open zip archive`, confirmando arranque/cargador clásico. Esto no acredita inicialización completa con el modelo facial real ni detección; Google Storage no está permitido por la red del entorno. No se ha probado cámara física aquí.
+- Vercel preview correcto para `34bc39b`; estado verificado por GitHub. El conector Vercel no tiene acceso al equipo `neurofusion1` (403), por lo que no certifica inspección de archivos/ejecución del preview remoto. La validación de runtime indicada es local.
+
+### Réplica y recuperación
+
+Aplicar este commit después de `c060d4a` y `b0c0c80`; sin dependencias, migraciones, variables, cabeceras ni dominios nuevos. Conservar personalizaciones y verificar que el bundler del destino emita el worker clásico y sirva sus chunks del mismo origen. Mantener JS/WASM de MediaPipe en la misma versión y probar CPU, fallback serial, cancelación y dos imágenes completas con cámara real; repetir estudio/calibración y observar FPS y latencia. Sin cambios de autenticación, registro, roles, permisos o configuración institucional; universidades sin verificar. Revertir PR #19 restaura la ejecución serial y sus tiempos de recepción; no hay datos ni migraciones que revertir.
