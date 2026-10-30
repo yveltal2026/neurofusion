@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. Optimización integrada en `main` mediante PR #17 (`7679b62`); nueva medición física pendiente.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. Selección de inferencia implementada en PR #18; integración y repetición física pendientes.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -194,3 +194,29 @@ El propietario adjunta una captura del diagnóstico del Samsung S25 Ultra/Chrome
 - Build de producción con webpack correcto y fixture temporal de fuentes fuera del repositorio. Dos comprobaciones de preparación/diagnóstico correctas en navegador de escritorio y Pixel 7 simulado sobre el build de producción. Preview Vercel correcto para `6806050`. Las pruebas de MediaPipe sustituyen el modelo; el contrato con WebEyeTrack usa su código real con descargas/detección sustituidas. No demuestran GPU compatible ni aumento de FPS en el S25 Ultra.
 - Sin dependencias, variables ni migraciones nuevas. Aplicar después de `e77a7ca`, adaptar equivalencias del corredor y repetir cancelación, fallback, disponibilidad de video y diagnóstico. Autenticación, roles, registro e identidad institucional sin cambios; universidades sin verificar.
 - Falta reabrir estudio y descargar diagnóstico nuevo para confirmar backend, error GPU si persiste, frecuencia y calibración completa. No se declara alcanzado el mínimo de calidad. Recuperación: revertir este seguimiento, sin datos ni migraciones que revertir.
+
+
+## Seguimiento 2026-10-30 — Selección de inferencia y caídas antes de calibrar
+
+El JSON nuevo confirma `gpu-detection-error` en `FaceGeometryPipelineCalculator` / `procrustes_solver.cc` (`design_matrix.norm`), seguido de CPU. Registra 120 resultados, rostro en el 100 %, mirada válida en el 93.33 % y promedio de 17.86 FPS; el propietario aclara que sigue viendo 10/s antes de calibrar. Una media de unas 6.7 s no descarta caídas en la ventana de un segundo del indicador. Cámara decodificada: 24.01 FPS; captura: 5.03 ms; detector: 18.02 ms; preparación: 5.63 ms; inferencia etiquetada: 1.75 ms; lectura/filtro: 20.76 ms; total: 46.15 ms. La excepción identifica la geometría GPU como fallo real, pero no demuestra su causa interna. Existe un [reporte upstream abierto para S25 Ultra](https://github.com/google-ai-edge/mediapipe/issues/5908) con pérdida de detección GPU y uso de CPU como alternativa; las hipótesis de driver allí no se tratan como causas verificadas en este teléfono.
+
+### Comportamiento e implementación
+
+- En el arranque móvil se compara inferencia + lectura del mismo modelo BlazeGaze con el backend actual de TensorFlow y WASM. Se ejecutan dos calentamientos y cinco mediciones por candidato, sin guardar esas muestras en el estudio ni tocar el ajuste de calibración. La fixture sintética de imagen/pose es fija; las entradas y resultados temporales se liberan con `tf.tidy`.
+- Sólo se elige WASM si la mediana mejora más de un 15 % y las dos salidas difieren como máximo 0.001 respecto a la referencia. Una alternativa lenta, no equivalente o fallida restaura el backend anterior. Se serializan carga de pesos y selección entre reinicios; cancelar restaura el estado anterior y no permite un inicio tardío. Si el mismo navegador ya tiene WASM seleccionado, se conserva.
+- Se mantienen los pesos del modelo, preparación, filtro original, resolución, validación y mínimo de 15 FPS. La selección no modifica el detector facial CPU/GPU; el diagnóstico distingue ahora ese detector del backend de estimación de mirada.
+- El diagnóstico añade `gazeBackend` (selección y medianas), `lastSecond` (análisis y mirada válida en la ventana de un segundo) y `phase`. Se conserva `processedFps` como media de hasta 120 muestras. No se incluyen imágenes ni identificadores del participante.
+- Se fijan dependencias directas `@tensorflow/tfjs-core` y `@tensorflow/tfjs-backend-wasm` 4.22.0, igual que la versión TensorFlow incluida en WebEyeTrack 0.0.2. JS y motor comparten la instancia global de TensorFlow, comprobada por contrato. Los tres binarios oficiales WASM se sirven desde `/web/tfjs-wasm/4.22.0/`, con licencia Apache 2.0 y SHA-256 en su README (aproximadamente 1.1 MiB en total; se descarga la variante correspondiente). Un hilo; sin nuevas cabeceras de aislamiento, servicios ni CDN. Sin variables ni migraciones nuevas.
+- Archivos: `gaze-backend.ts` y pruebas, adaptador móvil, motor/diagnóstico, corredor, manifiestos y `public/web/tfjs-wasm/4.22.0/`. Implementación `c060d4aee764f936511e5fcbb2de1e716babc40e` y serialización `b0c0c8023a61c72e6d7081f03063fdd19c9c9619`, [PR #18](https://github.com/yveltal2026/neurofusion/pull/18), desde `main` `7ba3762`. Integración/despliegue pendientes.
+
+### Evidencia y limitaciones
+
+- 147 pruebas correctas en 17 archivos, TypeScript y ESLint correctos. Incluyen selección por mediana/paridad, alternativa lenta o divergente, descarga fallida, cancelación inicial/tardía, reinicio serializado y ventana de un segundo que descarta lecturas antiguas.
+- Prueba de contrato nueva: carga pesos reales de `public/web`, inicializa el binario WASM real servido por el repositorio, compara backends y ejecuta `WebEyeTrack.step()` con pose/recorte y detección sustituidos. Verifica mirada finita y ausencia de crecimiento de tensores. No sustituye el modelo de mirada ni su filtro. Los tests previos del detector conservan mocks de MediaPipe.
+- Build webpack de producción correcto con fixture temporal de fuentes fuera del repositorio. Dos pruebas de preparación/diagnóstico correctas en escritorio y Pixel 7 simulado. La interfaz usa el simulador, no certifica detección física.
+- Exploración adicional en Chromium: bundle temporal fuera del repositorio con `gaze-backend.ts` y BlazeGaze reales, pesos y WASM servidos por la aplicación local. Se eligió WASM (medianas locales: WebGL 426.4 ms y WASM 19.8 ms); este navegador usa renderizado de prueba y entrada sintética, sin detector/cámara, y no constituye una medida ni proyección del rendimiento del S25 Ultra.
+- Falta repetir en el teléfono: frecuencia por segundo antes de calibrar, backend de mirada elegido y sus medianas, precisión y estudio completo. La paridad en una fixture de arranque no certifica precisión en todas las condiciones. No se declara corregido el hardware GPU ni una frecuencia mínima estable alcanzada.
+
+### Réplica y recuperación
+
+Aplicar ambos commits después de `6806050` y `e77a7ca`, conservar personalizaciones y ejecutar `npm ci`. Copiar los tres binarios y licencia de la misma versión; verificar los SHA-256 del README, su respuesta como WASM y acceso público sin redirección de login. Al actualizar TensorFlow, cambiar juntos dependencias, ruta y binarios y repetir el contrato con pesos reales. No hay cambios de autenticación, roles, registro, permisos ni configuración institucional; otras universidades siguen sin verificar. Revertir este seguimiento restaura la selección anterior de TensorFlow; no hay datos ni migraciones que revertir.
