@@ -32,6 +32,7 @@ import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
 import { applyCalibration, assessFixation, fixationWindowMs, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
 import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftSummary, driftTargets, unmeasuredDriftCheck, type DriftCheck, type DriftSummary } from "./drift";
+import { observeLighting, LIGHTING_MESSAGES, type LightingStatus } from "./lighting";
 import { LOADING_LABELS, STARTUP_TIMEOUT_MS, type LoadingStep } from "./loading";
 import { screenWidthCm, screenWidthFromReference, type ScreenFormat } from "./screen";
 
@@ -106,8 +107,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     : screenWidthCm(Number(inches), screenFormat, window.screen.width, window.screen.height);
   const [distanceCm, setDistanceCm] = useState(() => PRESETS[guessDevice()].distanceCm);
   const [glasses, setGlasses] = useState(false);
-  const [lighting, setLighting] = useState<Lighting>("buena");
-  const [passes, setPasses] = useState(2);
+  const lighting: Lighting = "buena";
+  const [lightingStatus, setLightingStatus] = useState<LightingStatus>("checking");
+  const passes = 2;
 
   // Progreso
   const [calibPoints, setCalibPoints] = useState<Point[]>([]);
@@ -158,6 +160,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     if (video.srcObject) void video.play().catch(() => setError("No se pudo reanudar la cámara. Vuelve a iniciarla."));
   }, [stage]);
   useEffect(() => () => { videoRef.current?.remove(); }, []);
+  useEffect(() => {
+    if (!["position", "recovery"].includes(stage) || !videoRef.current) return;
+    const simulated = new URLSearchParams(window.location.search).get("engine") === "fake" && (!study || study.preview);
+    return observeLighting(videoRef.current, setLightingStatus, simulated);
+  }, [stage, study]);
   const stimulusImgRef = useRef<HTMLImageElement | null>(null);
   const studySessionIdRef = useRef<string | null>(null);
   const observationsRef = useRef<EyeObservation[]>([]);
@@ -304,6 +311,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   async function start() {
     setError(null);
+    setLightingStatus("checking");
     const referenceOk = screenMeasurement !== "reference-card" || (referenceConfirmed && referenceGeometry === screenGeometryKey());
     const geometryOk = referenceOk && Number.isFinite(physicalScreenWidth)
       && Number.isFinite(Number(distanceCm)) && Number(distanceCm) >= 10 && Number(distanceCm) <= 200;
@@ -380,6 +388,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
   function startCalibration() {
     if (!engineRef.current) { setError("Vuelve a iniciar la cámara antes de calibrar."); return; }
+    if (lightingStatus !== "good") { setError(LIGHTING_MESSAGES[lightingStatus]); setStage("position"); return; }
     calibrationEpochRef.current++;
     setLastDriftCheck(null);
     if (study && recoveringRef.current) {
@@ -936,37 +945,16 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     </>
   );
   const conditionFields = (
-    <>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Iluminación">
-                <select
-                  className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
-                  value={lighting}
-                  onChange={(e) => setLighting(e.target.value as Lighting)}
-                >
-                  <option value="buena">Buena (luz frontal)</option>
-                  <option value="media">Media</option>
-                  <option value="mala">Mala (contraluz / oscuro)</option>
-                </select>
-              </Field>
-              <Field label="Calibración">
-                <select
-                  className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
-                  value={passes}
-                  onChange={(e) => setPasses(Number(e.target.value))}
-                >
-                  <option value={1}>Básica (9 puntos)</option>
-                  <option value={2}>Con ajuste fino (18 puntos · recomendada)</option>
-                </select>
-              </Field>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={glasses} onChange={(e) => setGlasses(e.target.checked)} className="size-4" />
-              Usa lentes
-            </label>
-    </>
+    <div className="space-y-3">
+      <p className="text-sm leading-relaxed">Busca un lugar con buena luz de frente. La prueba incluye una calibración completa de 18 puntos y una comprobación de precisión.</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={glasses} onChange={(e) => setGlasses(e.target.checked)} className="size-4" /> Usa lentes
+      </label>
+    </div>
   );
+  const lightingNotice = <Callout icon={lightingStatus === "good" ? "check" : "alert"} title={lightingStatus === "good" ? "Iluminación revisada" : "Revisa tu iluminación"}>
+    <p role="status">{LIGHTING_MESSAGES[lightingStatus]}</p>
+  </Callout>;
 
   return (
     <>
@@ -1016,11 +1004,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               </ReadingPanel>
             </Section>
 
-            <Section icon="settings" title="Condiciones de la prueba">
-              <ReadingPanel>
-                <div className="space-y-4">{conditionFields}</div>
-              </ReadingPanel>
-            </Section>
+            {conditionFields}
 
             <div className="space-y-4">
               <ConsentCheck checked={consent} onChange={setConsent}>
@@ -1092,16 +1076,18 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
             <span className="text-sm text-muted">Lecturas por segundo: {live.fps}</span>
           </p>
+          {lightingNotice}
+          {device === "phone" ? <Callout icon="device" title="Usa un soporte fijo"><p>Te recomendamos colocar el celular en un soporte o stand fijo para asegurar la mejor calidad de medición. Mantenlo a la altura de tus ojos.</p></Callout> : null}
           {live.faceOk && live.slow ? <Callout icon="alert" title="La lectura va despacio">
             <p>Cierra otras pestañas y aplicaciones para mejorar la velocidad. La validación final requiere al menos {THRESHOLDS.minFps} lecturas por segundo.</p>
           </Callout> : null}
           {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={startCalibration} disabled={!live.gazeOk}>
+            <Button size="lg" onClick={startCalibration} disabled={!live.gazeOk || lightingStatus !== "good"}>
               Comenzar calibración
             </Button>
-            <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.gazeOk}>
+            <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.gazeOk || lightingStatus !== "good"}>
               Ver mi punto de mirada
             </Button>
             <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, faceOk: false, gazeOk: false, slow: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
@@ -1129,10 +1115,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           {lastDriftCheck ? <p className="text-sm text-muted">
             Error mediano: {lastDriftCheck.medianErrorDeg !== null ? `${lastDriftCheck.medianErrorDeg.toFixed(1)}°` : "sin medición"} · Lecturas/s: {lastDriftCheck.fps.toFixed(0)} · Detección durante fijación: {Math.round(lastDriftCheck.validRatio * 100)} %
           </p> : null}
+          {lightingNotice}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
             <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
-            <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
+            <Button size="lg" variant="secondary" onClick={() => { setLightingStatus("checking"); setStage("position"); }} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
             {!engineAvailable ? <Button size="lg" variant="secondary" onClick={() => { teardown(); setStage("setup"); }}>Volver a iniciar cámara</Button> : null}
           </div>
           {limitedReady ? <Callout icon="alert" title="Si el ajuste sigue fallando">
@@ -1151,6 +1138,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             dejar de mirarlo. Mantén la mirada hasta que cambie de posición.
             {dotSampling ? " Registrando mirada… sigue mirando el punto." : ""}
           </p>
+          {device === "phone" && !error ? <p className="pointer-events-none absolute right-4 bottom-2 left-4 text-center text-xs text-muted">Mantén el celular en un soporte o stand fijo durante toda la calibración.</p> : null}
           {error ? <p role="alert" className="absolute right-4 bottom-4 left-4 text-center text-sm text-danger">{error}</p> : null}
           <button
             type="button"
@@ -1228,14 +1216,18 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <ScreenHeader
               icon="alert"
               title="Calibración terminada"
-              lead="La calibración tuvo precisión baja. Repite la calibración antes de mirar las piezas."
+              lead="No pudimos validar la medición. Revisa el motivo antes de volver a calibrar."
             />
           )}
           {error ? <Alert tone="error">{error}</Alert> : null}
+          {!session.verdict.pass ? <Callout icon="alert" title="Por qué no pudiste avanzar">
+            <ul className="list-disc space-y-2 pl-5">{session.verdict.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+            {session.fps < THRESHOLDS.minFps ? <p className="mt-3">La velocidad de lectura es insuficiente, aunque tengas buena luz. Cierra otras pestañas y aplicaciones o prueba en otro dispositivo; recalibrar sin mejorar la velocidad puede dar el mismo resultado.</p> : <p className="mt-3">Revisa que la cámara esté a la altura de los ojos y que mires cada punto sin mover la cabeza. Antes de recalibrar volveremos a comprobar la iluminación.</p>}
+          </Callout> : null}
           <div className="space-y-4">
             <div className="flex flex-wrap gap-3">
               <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>
-              <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
+              <Button size="lg" variant="secondary" onClick={() => { setLightingStatus("checking"); setStage("position"); }} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
               {!engineAvailable ? <Button size="lg" variant="secondary" onClick={() => { teardown(); setStage("setup"); }}>Volver a iniciar cámara</Button> : null}
             </div>
             {resumeCount !== null ? <p className="text-base text-muted">Conservamos {resumeCount} imágenes ya validadas. Continuaremos desde ese punto.</p> : null}
@@ -1269,7 +1261,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <Button variant="secondary" disabled={needsCalibration} onClick={async () => {
                 if (await runDriftCheck(0)) setStage("results");
               }}>Comprobar deriva</Button>
-              <Button variant="secondary" onClick={startCalibration}>
+              <Button variant="secondary" onClick={() => { setLightingStatus("checking"); setStage("position"); }}>
                 Recalibrar
               </Button>
               <Button variant="ghost" onClick={() => setStage("free")}>
