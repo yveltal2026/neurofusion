@@ -873,7 +873,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }
 
   function downloadCameraDiagnostic() {
-    const payload = { version: 1, createdAt: new Date().toISOString(), diagnostics: engineRef.current?.diagnostics?.() ?? null };
+    const payload = { version: 1, createdAt: new Date().toISOString(), phase: stage, diagnostics: engineRef.current?.diagnostics?.() ?? null };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a"); link.href = url; link.download = "diagnostico-camara.json"; link.click(); URL.revokeObjectURL(url);
   }

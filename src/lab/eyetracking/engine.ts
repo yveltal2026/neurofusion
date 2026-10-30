@@ -134,11 +134,13 @@ export function createWebEyeTrackEngine(): GazeEngine {
     calibration: "global-click",
 
     diagnostics() {
+      const now = performance.now();
       const settings = (videoForDiagnostics?.srcObject as MediaStream | null)?.getVideoTracks?.()[0]?.getSettings?.();
       return {
         engine: "webeyetrack@0.0.2",
         detectorFallbackReason: mobileRuntime?.fallbackReason ?? null,
         detectorGpuError: mobileRuntime?.gpuError ?? null,
+        gazeBackend: mobileRuntime?.gazeBackend ?? null,
         trackingMode: mobileRuntime?.trackingMode ?? "worker-image",
         timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering, not isolated filter time." },
         faceDetectionRatio: faceSamples.length ? faceSamples.reduce((a, b) => a + b, 0) / faceSamples.length : null,
@@ -149,6 +151,8 @@ export function createWebEyeTrackEngine(): GazeEngine {
             ? (decodedCounts.at(-1)! - decodedCounts[0]!) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null },
         capture: webcam?.diagnostics?.() ?? null,
         readings: readingTimes.length,
+        lastSecond: { analyses: readingTimes.filter((t) => t > now - 1000).length,
+          validGaze: readingTimes.reduce((count, t, i) => count + Number(t > now - 1000 && validSamples[i] === 1), 0) },
         processedFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (readingTimes.length - 1) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
         meanStageMs: Object.fromEntries(Object.entries(timingSamples).map(([key, values]) => [key, values.length ? values.reduce((a, b) => a + b, 0) / values.length : null])),
       };

@@ -1,6 +1,8 @@
 import type { GazeResult } from "webeyetrack";
 import type { LoadingStep } from "./loading";
 import { InvalidEyeRegionError, isImageAllocationError, validateEyeRegion } from "./eye-region";
+import { selectGazeBackend } from "./gaze-backend";
+import type { Tensor } from "@tensorflow/tfjs-core";
 
 export type MobileGazeReading = Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">;
 
@@ -55,7 +57,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   // aislado y probado contra 0.0.2; nunca se ejecuta su initialize() que fuerza GPU.
   const internals = runtime as unknown as {
     faceLandmarkerClient: { initialize(): Promise<void>; processFrame(frame: ImageData): Promise<ReturnType<typeof detector.detect>> };
-    blazeGaze: { model?: { dispose(): void } };
+    blazeGaze: { model?: { dispose(): void }; predict(image: Tensor, head: Tensor, origin: Tensor): Tensor };
   };
   let detectorClosed = false;
   const closeDetector = () => { if (!detectorClosed) { detectorClosed = true; detector.close(); } };
@@ -65,6 +67,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   let emptyFrames = 0;
   let nextProbeAt = 0;
   let fallbackReason: string | null = backend === "main-cpu" ? "gpu-initialization-failed" : null;
+  let gazeBackend: Awaited<ReturnType<typeof selectGazeBackend>> | null = null;
   try {
     checkCancelled();
     if (!("faceLandmarkerClient" in runtime)) throw new Error("La versión del motor no admite el detector móvil.");
@@ -126,6 +129,8 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     onProgress("loading-gaze");
     await runtime.initialize();
     checkCancelled();
+    gazeBackend = await selectGazeBackend(internals.blazeGaze.predict.bind(internals.blazeGaze), signal);
+    checkCancelled();
   } catch (error) {
     dispose();
     throw error;
@@ -136,6 +141,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     get backend() { return backend; },
     get fallbackReason() { return fallbackReason; },
     get gpuError() { return gpuError; },
+    get gazeBackend() { return gazeBackend; },
     trackingMode: "VIDEO",
     async step(frame: ImageData, timestamp: number): Promise<MobileGazeReading> {
       if (stopped) throw new Error("El detector móvil ya está detenido.");
