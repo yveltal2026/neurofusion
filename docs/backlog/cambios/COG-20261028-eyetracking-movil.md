@@ -273,3 +273,25 @@ El tercer JSON confirma `worker-cpu`, `cpu-worker-2-frame`, `peakInFlight: 2` y 
 ### Réplica y recuperación
 
 Aplicar después de PR #19 y mantener WebEyeTrack 0.0.2, TensorFlow compartido y worker CPU. Repetir contrato contra el paquete exacto al actualizar versiones, cancelación con lectura pendiente, diagnóstico y calibración completa en hardware. Sin cambios institucionales; universidades sin verificar. Revertir este seguimiento restaura lectura síncrona sin migrar datos. Verificar en el nuevo JSON `gazeReadback`, `validGazeFps`, motivos de descarte y latencia; no certificar el mínimo por una ráfaga breve.
+
+
+## Seguimiento 2026-10-30 — Acción de recuperación tras dos imágenes
+
+El propietario confirma que tras PR #20 pudo calibrar y vio dos imágenes; el control siguiente pidió ajustar la mirada, pero el botón no permitió continuar. La pausa de control cada dos imágenes es parte del protocolo. Se reprodujeron dos bloqueos en el código: un cambio de altura mientras se muestra recuperación hacía que `startStudy()` sólo publicara un error y permaneciera en esa pantalla; un cambio detectado durante la presentación dejaba deshabilitada la acción principal por `needsCalibration`. No hay traza del teléfono que confirme cuál ocurrió en esa sesión.
+
+### Comportamiento y archivos
+
+- `EyeTrackingLab.tsx`: la acción principal de recuperación permanece disponible cuando se requiere recalibrar y lleva al paso de posición/iluminación. Si falta el motor, lleva a reiniciar cámara. Si el ajuste sigue siendo válido, ejecuta el control de tres puntos para reanudar. Etiqueta e instrucciones explican la acción correspondiente.
+- Una discrepancia de tamaño detectada al pulsar invalida el ajuste y abre la preparación de recalibración; no se limita a cambiar el mensaje en la misma pantalla. La ruta común también atiende ausencia de sesión/ajuste o validación insuficiente. Cancela comprobaciones anteriores y conserva la comprobación de iluminación.
+- Se mantienen la sesión iniciada, el último bloque validado y el registro de imágenes repetidas. Se repite sólo el bloque sin validar. El botón secundario de recalibración usa la misma preparación; no se muestra duplicado cuando esa ya es la acción principal.
+- No cambian mediciones, puntos, umbrales ni guardado de calidad. Sin dependencias, migraciones, variables, identidad, autenticación, registro o roles nuevos.
+
+### Verificación, referencias y límites
+
+- `EyeTrackingLab.test.tsx`: dos pruebas fallaban antes del cambio y pasan después: cambio de altura en recuperación y cambio de geometría durante presentación. Se completan recalibración, reanudación y guardado con las mismas tres imágenes y una sola sesión de servidor. Otra prueba confirma reinicio de cámara después del bloque validado y continuación desde imagen 3.
+- 163 pruebas correctas en 20 archivos de eyetracking y calidad visual, incluidos fallos persistentes, precisión limitada explícita, cancelación y conservación de bloques. Pruebas de flujo con cámara/API simuladas, no validación física del S25.
+- Rama `fix/eyetracking-recovery-action`, desde `main` `793c37c`. TypeScript, ESLint y build webpack correctos (fixture temporal de fuentes fuera del repositorio). El primer typecheck coincidió con la regeneración de `.next/types` del build; se repitió al terminar y pasó. Commit/PR, integración y despliegue: pendientes de registrar. Repetición física completa pendiente.
+
+### Réplica y recuperación
+
+Aplicar después de PR #20; repetir fallo después de imagen 2, cambio de altura al recuperar, recalibración y guardado sin duplicar sesión ni imágenes. Conservar políticas institucionales; universidades sin verificar. Revertir este seguimiento restaura los controles anteriores sin migrar datos.
