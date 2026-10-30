@@ -6,7 +6,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
-| [COG-20261028-eyetracking-movil](cambios/COG-20261028-eyetracking-movil.md) | Cámara móvil, vista junto a calibración y medición de pantalla con tarjeta | Primera entrega integrada: [PR #10](https://github.com/yveltal2026/neurofusion/pull/10); detección Android confirmada tras [PR #12](https://github.com/yveltal2026/neurofusion/pull/12); recortes y captura a 10 FPS en [PR #13](https://github.com/yveltal2026/neurofusion/pull/13) | Compartido |
+| [COG-20261028-eyetracking-movil](cambios/COG-20261028-eyetracking-movil.md) | Cámara móvil, vista junto a calibración y medición de pantalla con tarjeta | Primera entrega integrada: [PR #10](https://github.com/yveltal2026/neurofusion/pull/10); detección Android confirmada tras [PR #12](https://github.com/yveltal2026/neurofusion/pull/12); recortes y captura a 10 FPS integrados: `c137614`, [PR #13](https://github.com/yveltal2026/neurofusion/pull/13) | Compartido |
 | [COG-20261028-registro-cambios](cambios/COG-20261028-registro-cambios.md) | Backlog y protocolo para replicar cambios | Integrado en `main` | Compartido |
 | [COG-20261028-actividad-analisis-visual](cambios/COG-20261028-actividad-analisis-visual.md) | Señales de actividad durante análisis de imágenes | Integrado en `main` | Compartido |
 | [COG-20261028-diagnostico-cascada-gemini](cambios/COG-20261028-diagnostico-cascada-gemini.md) | Confirmar por qué responde Flash Lite | En diagnóstico; requiere acceso al despliegue | Compartido; configuración por edición |

@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: detección de rostro confirmada por el propietario en Android/Chrome tras PR #12; corrección de recortes, captura a baja frecuencia y preparación en `fix/eyetracking-frame-recovery`, integración pendiente.
+- Estado: detección de rostro confirmada por el propietario en Android/Chrome tras PR #12; corrección de recortes, captura a baja frecuencia y preparación integrada en `main` mediante PR #13; repetición con cámara física pendiente.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -105,7 +105,7 @@ El propietario confirma que los modelos sí terminaron de cargar y que se detect
 
 ### Archivos y réplica
 
-Se añaden `eye-region.ts`, `loading.ts` y pruebas; se actualizan `mobile-runtime.ts`, `engine.ts`, `calibration.ts`, `EyeTrackingLab.tsx`, sus pruebas y `e2e/eyetracking-lab.spec.ts`. Sin dependencias, variables ni migraciones nuevas. El código base de este seguimiento es `main` `94f075d`, después de PR #12. Referencia de implementación: `3bc0e2b75548330b0c9352d93fd3bfb91d7f4d88`, [PR #13](https://github.com/yveltal2026/neurofusion/pull/13).
+Se añaden `eye-region.ts`, `loading.ts` y pruebas; se actualizan `mobile-runtime.ts`, `engine.ts`, `calibration.ts`, `EyeTrackingLab.tsx`, sus pruebas y `e2e/eyetracking-lab.spec.ts`. Sin dependencias, variables ni migraciones nuevas. El código base de este seguimiento es `main` `94f075d`, después de PR #12. Referencia de implementación: `3bc0e2b75548330b0c9352d93fd3bfb91d7f4d88`, [PR #13](https://github.com/yveltal2026/neurofusion/pull/13), integrado en `main` mediante `c137614b0dc9053f057c4bf580bc4e279c6c38f7` el 2026-10-29.
 
 Aplicar el seguimiento después de `0484cd5`, conservar las personalizaciones del corredor del destino y ejecutar los casos de prueba de recorte negativo, descarga fallida, cancelación y captura estable a 10 FPS. La compatibilidad de otras universidades sigue sin verificar; no se modifican registro, roles, permisos, dominios ni mecanismos de alta.
 
@@ -117,3 +117,5 @@ Aplicar el seguimiento después de `0484cd5`, conservar las personalizaciones de
 - Navegador: seis pruebas correctas en escritorio/móvil simulado, incluyendo un fallo de descarga que vuelve al formulario y permite reintentar. El simulador no demuestra la precisión del detector real.
 - Falta repetir con la cámara del Android/Chrome del propietario y comprobar si su frecuencia alcanza el mínimo de calidad. No se ha medido una mejora de FPS en hardware real ni se afirma que se haya alcanzado 15 FPS. Los modelos externos no se descargan en estas pruebas del entorno.
 - Para revertir, revertir el commit de este seguimiento. No hay migraciones ni cambios en datos que revertir.
+
+- 2026-10-29: PR #13 integrado en `main` (`c137614b0dc9053f057c4bf580bc4e279c6c38f7`); Vercel preview correcto en `a029369`. La validación física del recorte y la frecuencia continúa pendiente.
