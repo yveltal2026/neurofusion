@@ -108,6 +108,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
   let videoForDiagnostics: HTMLVideoElement | null = null;
   const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], kalmanFilter: [], total: [] };
   const readingTimes: number[] = [];
+  const captureTimes: number[] = [];
   const decodedCounts: Array<number | null> = [];
   const faceSamples: number[] = [];
   const validSamples: number[] = [];
@@ -140,9 +141,11 @@ export function createWebEyeTrackEngine(): GazeEngine {
         engine: "webeyetrack@0.0.2",
         detectorFallbackReason: mobileRuntime?.fallbackReason ?? null,
         detectorGpuError: mobileRuntime?.gpuError ?? null,
+        detectorWorkerError: mobileRuntime?.workerError ?? null,
+        pipeline: mobileRuntime?.pipelined ? "cpu-worker-2-frame" : "serial",
         gazeBackend: mobileRuntime?.gazeBackend ?? null,
         trackingMode: mobileRuntime?.trackingMode ?? "worker-image",
-        timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering, not isolated filter time." },
+        timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering, not isolated filter time.", total: "Worker detection can overlap main gaze processing. Total is per-frame latency, not inverse throughput." },
         faceDetectionRatio: faceSamples.length ? faceSamples.reduce((a, b) => a + b, 0) / faceSamples.length : null,
         validGazeRatio: validSamples.length ? validSamples.reduce((a, b) => a + b, 0) / validSamples.length : null,
         detectorBackend: mobileRuntime?.backend ?? (worker ? "worker-gpu" : "not-running"),
@@ -151,8 +154,9 @@ export function createWebEyeTrackEngine(): GazeEngine {
             ? (decodedCounts.at(-1)! - decodedCounts[0]!) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null },
         capture: webcam?.diagnostics?.() ?? null,
         readings: readingTimes.length,
-        lastSecond: { analyses: readingTimes.filter((t) => t > now - 1000).length,
-          validGaze: readingTimes.reduce((count, t, i) => count + Number(t > now - 1000 && validSamples[i] === 1), 0) },
+        lastSecond: { analyses: captureTimes.filter((t) => t > now - 1000).length,
+          validGaze: captureTimes.reduce((count, t, i) => count + Number(t > now - 1000 && validSamples[i] === 1), 0) },
+        meanCaptureToResultMs: readingTimes.length ? readingTimes.reduce((sum, t, i) => sum + t - captureTimes[i], 0) / readingTimes.length : null,
         processedFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (readingTimes.length - 1) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
         meanStageMs: Object.fromEntries(Object.entries(timingSamples).map(([key, values]) => [key, values.length ? values.reduce((a, b) => a + b, 0) / values.length : null])),
       };
@@ -160,6 +164,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
     async start(video, onFrame, onError, onProgress) {
       videoForDiagnostics = video;
       readingTimes.length = 0;
+      captureTimes.length = 0;
       decodedCounts.length = 0;
       faceSamples.length = 0; validSamples.length = 0;
       for (const values of Object.values(timingSamples)) values.length = 0;
@@ -189,7 +194,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
           onFrame({ t: performance.now(), x: null, y: null, inferenceMs: null, faceDetected: false });
           if (!starting) onError?.(error);
         };
-        const source = createCameraSource(video, (error) => fail(cameraError(error)), { square: mobile });
+        const source = createCameraSource(video, (error) => fail(cameraError(error)), { square: mobile, maxInFlight: mobile ? () => mobileRuntime?.pipelined ? 2 : 1 : undefined });
         webcam = source;
         timer = setTimeout(() => fail(new EngineError(
           "No llegó ninguna lectura de mirada. Revisa tu conexión y vuelve a iniciar la cámara con el rostro centrado e iluminado.",
@@ -203,15 +208,16 @@ export function createWebEyeTrackEngine(): GazeEngine {
         }, 1000);
         let first = true;
 
-        const receive = (result: Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">) => {
+        const receive = (result: Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">, capturedAt?: number) => {
           if (!active) return;
           const t = performance.now();
           lastResult = t;
           readingTimes.push(t);
+          captureTimes.push(capturedAt !== undefined && Number.isFinite(capturedAt) ? Math.min(capturedAt, t) : t);
           let decoded: number | null = null;
           try { decoded = video.getVideoPlaybackQuality?.().totalVideoFrames ?? null; } catch { /* No todos los navegadores exponen el contador. */ }
           decodedCounts.push(decoded);
-          if (readingTimes.length > 120) { readingTimes.shift(); decodedCounts.shift(); }
+          if (readingTimes.length > 120) { readingTimes.shift(); decodedCounts.shift(); captureTimes.shift(); }
           for (const [key, samples] of Object.entries(timingSamples)) {
             const duration = result.durations?.[key];
             if (Number.isFinite(duration)) { samples.push(duration); if (samples.length > 120) samples.shift(); }
@@ -229,7 +235,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
           faceSamples.push(Number(result.facialLandmarks.length > 0)); validSamples.push(Number(valid));
           if (faceSamples.length > 120) { faceSamples.shift(); validSamples.shift(); }
           onFrame({
-            t,
+            t: captureTimes.at(-1)!,
             // normPog va de −0.5 a 0.5 con origen al centro de la ventana (eje Y hacia abajo).
             x: valid ? (nx + 0.5) * window.innerWidth : null,
             y: valid ? (ny + 0.5) * window.innerHeight : null,
@@ -249,10 +255,10 @@ export function createWebEyeTrackEngine(): GazeEngine {
           });
           // La cámara abre en paralelo: su permiso y reproducción no esperan a las descargas.
           onProgress?.("starting-camera");
-          void source.startWebcam(async (frame, timestamp) => {
+          void source.startWebcam(async (frame, timestamp, capturedAt) => {
               try {
                 const runtime = await runtimePromise;
-                if (runtime && active) receive(await runtime.step(frame, timestamp));
+                if (runtime && active) receive(await runtime.step(frame, timestamp), capturedAt);
               }
               catch (error) { fail(new EngineError(error instanceof Error ? `No se pudo analizar la cámara: ${error.message}` : "Falló el detector móvil.", "camera-error")); }
           }).then(() => { cameraReady = true; if (active && runtimeReady) onProgress?.("waiting-frame"); });
