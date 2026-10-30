@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Recuperación y diagnóstico integrados en `main` mediante PR #16 (`22f5154`); comprobación física pendiente.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Recuperación y diagnóstico integrados en `main` mediante PR #16 (`22f5154`); comprobación física de rostro confirmada por el propietario; frecuencia aún insuficiente (ver seguimiento de rendimiento).
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -174,3 +174,23 @@ El propietario informa de 46 lecturas/s pero «cara no detectada» y confirma qu
 - Validación local: 136 pruebas correctas en 15 archivos, TypeScript y ESLint correctos. Incluyen GPU vacía/CPU con rostro, ambos vacíos sin cambiar backend, liberación de detectores y timestamps crecientes. Build de producción correcto con `npm run build -- --webpack` y fixture temporal de fuentes fuera del repositorio; Turbopack local falló por permisos de puertos del sandbox. Dos pruebas de navegador correctas sobre ese build (escritorio y Pixel 7 simulado), incluido el diagnóstico accesible sin frecuencia baja. Preview de Vercel correcto en `e77a7ca`. El contrato con WebEyeTrack real sustituye las descargas y el detector; no demuestra detección física.
 - Réplica: aplicar este seguimiento después de `5bcf197` y su documentación, adaptar controles y ejecutar las mismas pruebas, incluido el acceso al diagnóstico con frecuencia alta. Sin dependencias, variables ni migraciones nuevas. Autenticación, registro, roles, permisos e identidad institucional no afectados; universidades sin verificar.
 - Pendiente: reabrir el estudio en Samsung S25 Ultra/Chrome, comprobar rostro, lecturas válidas, backend/motivo de fallback y calibración completa. No se afirma detección corregida en hardware ni un mínimo alcanzado de FPS. Para revertir, revertir este seguimiento; no hay cambios de datos.
+
+
+## Seguimiento 2026-10-30 — Diagnóstico real: CPU a 10 FPS tras error GPU
+
+El propietario adjunta una captura del diagnóstico del Samsung S25 Ultra/Chrome después de PR #16. Confirma `detectorBackend: main-cpu`, `detectorFallbackReason: gpu-detection-error`, `trackingMode: VIDEO`, detección facial en el 100 % de 120 muestras y mirada válida en el 95 %. Procesamiento: 10.07 FPS; cámara reporta 30 FPS y decodifica aproximadamente 23.94 FPS. Copia de cámara: 15.55 ms; detector: 48.92 ms; preparación: 12.59 ms; inferencia etiquetada: 3.89 ms; lectura/filtro: 15.85 ms; total del motor: 81.42 ms (excluye copia). El informe acredita detección real y un fallo GPU seguido de CPU, pero no contiene la excepción original ni acredita una calibración válida.
+
+### Implementación y alcance
+
+- MediaPipe recibe explícitamente un `HTMLCanvasElement` propio para GPU, conforme a `VisionTaskOptions.canvas`. No se pide contexto 2D en ese canvas ni se comparte con TensorFlow o la captura. La omisión estaba en el código; no se afirma que sea la causa concreta del error físico sin conocer su excepción.
+- Se desactiva `outputFaceBlendshapes`: el modelo adicional de expresiones no interviene en apertura ocular, pose ni BlazeGaze. Se conservan landmarks, matriz facial, resolución y criterios de calidad, incluido el mínimo de 15 FPS. No se sustituyen lecturas ni se reutilizan landmarks anteriores para aparentar mayor frecuencia.
+- Si ya llegó otro frame durante una inferencia móvil, se cede el control mediante un temporizador sin esperar un ciclo adicional de pantalla. Sólo se procesa video decodificado nuevo, sin inferencias simultáneas; se cancela al detener. Si todavía no hay frame, se conserva el reintento con RAF.
+- El diagnóstico añade `detectorGpuError` (nombre/mensaje acotado, URLs eliminadas, sin stack) y aclara que `kalmanFilter` incluye la lectura síncrona del tensor de TensorFlow, además del filtro. Los 15.85 ms no se atribuyen íntegramente al suavizado. Fallback y protección de regiones oculares se conservan.
+- Archivos: `mobile-runtime.ts`, `camera.ts`, `engine.ts` y pruebas del runtime/cámara. Implementación `68060504dc1ca7642b1406f2825b0f09ec381ed4`, [PR #17](https://github.com/yveltal2026/neurofusion/pull/17), desde `main` `6bb69d2`. Integración/despliegue pendientes.
+
+### Verificación, réplica y límites
+
+- 138 pruebas correctas en 15 archivos, TypeScript y ESLint correctos. Se comprueban canvas propios entre intentos, CPU sin canvas GPU, error de inicialización/ejecución preservado y acotado sin URLs, y procesamiento del frame recibido durante la inferencia sin esperar otro RAF. Tras el último ajuste de disponibilidad del frame se repiten 13 pruebas de cámara/motor: correctas.
+- Build de producción con webpack correcto y fixture temporal de fuentes fuera del repositorio. Dos comprobaciones de preparación/diagnóstico correctas en navegador de escritorio y Pixel 7 simulado sobre el build de producción. Preview Vercel correcto para `6806050`. Las pruebas de MediaPipe sustituyen el modelo; el contrato con WebEyeTrack usa su código real con descargas/detección sustituidas. No demuestran GPU compatible ni aumento de FPS en el S25 Ultra.
+- Sin dependencias, variables ni migraciones nuevas. Aplicar después de `e77a7ca`, adaptar equivalencias del corredor y repetir cancelación, fallback, disponibilidad de video y diagnóstico. Autenticación, roles, registro e identidad institucional sin cambios; universidades sin verificar.
+- Falta reabrir estudio y descargar diagnóstico nuevo para confirmar backend, error GPU si persiste, frecuencia y calibración completa. No se declara alcanzado el mínimo de calidad. Recuperación: revertir este seguimiento, sin datos ni migraciones que revertir.
