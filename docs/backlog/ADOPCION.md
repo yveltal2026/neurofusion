@@ -14,8 +14,8 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
-| COG-20261028-eyetracking-movil | CognIA, origen | Seguimientos PR #10–#22 integrados en `main`; implementación `0f020a4`, [PR #22](https://github.com/yveltal2026/neurofusion/pull/22), merge `96acaa9`. Historial en la ficha | Propietario reporta dos rechazos de ajuste fino. Revisión selectiva previa y conservación de base sólo para validación independiente; 168 pruebas, TypeScript, ESLint y build webpack correctos. Se prueba inicio bloqueado con precisión insuficiente y finalización tras validar. Cámara/API simuladas; repetición física pendiente. Universidades sin verificar | Preview PR #22 correcto en `0f020a4`; estado Vercel de main `96acaa9` correcto, [referencia](https://vercel.com/neurofusion1/neurofusion/7pqyMaRxkW6P4ye9ycCdLK44VVoM). Runtime remoto sin inspeccionar; cámara física pendiente |
-| COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Sin verificar | Sin verificar |
+| COG-20261028-eyetracking-movil | CognIA, origen | Seguimientos PR #10–#22 integrados en `main`; implementación `0f020a4`, [PR #22](https://github.com/yveltal2026/neurofusion/pull/22), merge `96acaa9`. Historial en la ficha | Propietario reporta dos rechazos de ajuste fino. Revisión selectiva previa y conservación de base sólo para validación independiente; 168 pruebas, TypeScript, ESLint y build webpack correctos. Se prueba inicio bloqueado con precisión insuficiente y finalización tras validar. Pruebas con cámara/API simuladas; propietario confirma ahora funcionamiento correcto del origen tras #22. Paquete 2026-10-30.1 verificado por integridad/aplicación sobre base; universidades sin verificar | Preview PR #22 correcto en `0f020a4`; estado Vercel de main `96acaa9` correcto, [referencia](https://vercel.com/neurofusion1/neurofusion/7pqyMaRxkW6P4ye9ycCdLK44VVoM). Runtime remoto sin inspeccionar; cámara física pendiente |
+| COG-20261028-eyetracking-movil | Anáhuac Mayab | Paquete 2026-10-30.1 preparado; [guía](../replicas/eyetracking-anahuac/GUIA.md). Sin aplicar: repositorio aún no vinculado | Sin verificar; requiere adaptación y pruebas en destino | Sin verificar |
 | COG-20261028-registro-cambios | CognIA, origen | Integrado en `main`: `4097c6b` | Revisión documental y enlaces locales | No verificado |
 | COG-20261028-actividad-analisis-visual | CognIA, origen | Integrado en `main`: `e4bd3fc` | 67 pruebas relevantes, TypeScript y ESLint correctos; sin comprobación en producción | No verificado |
 | COG-20261028-diagnostico-cascada-gemini | CognIA, origen | Diagnóstico; sin cambio de modelos | Orden del código inspeccionado; configuración y registros de producción pendientes | No aplica todavía |
@@ -39,7 +39,7 @@ Al verificar una integración, sustituye «local» o «sin verificar» por el co
 
 | ID | Destino | Evaluación de compatibilidad | Evidencia / siguiente paso |
 | --- | --- | --- | --- |
-| COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Revisar adaptación del corredor y conservar política institucional; probar cámara real y controles de acceso vigentes |
+| COG-20261028-eyetracking-movil | Anáhuac Mayab | Sin verificar | Paquete consolidado disponible; identificar repositorio, adaptar corredor y servidor, conservar política institucional y probar cámara real/controles de acceso vigentes |
 | COG-20261028-registro-cambios | Anáhuac Mayab | Sin verificar | Incorporar instrucciones y revisar perfil universitario |
 | COG-20261028-actividad-analisis-visual | Anáhuac Mayab | Sin verificar | El parche de origen es de interfaz visual; revisar diff adaptado y verificación de acceso vigente del destino |
 | COG-20261028-diagnostico-cascada-gemini | Anáhuac Mayab | Sin verificar | Diagnosticar configuración de IA propia sin sustituir configuración de acceso |

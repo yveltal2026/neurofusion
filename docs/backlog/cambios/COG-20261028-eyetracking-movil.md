@@ -318,3 +318,14 @@ El propietario recibe dos veces «El ajuste fino no distingue bien las posicione
 ### Réplica y recuperación
 
 Aplicar después de PR #21 y verificar el layout con las reglas del servidor del destino. Repetir ajuste fino rechazado con validación aprobada y con validación fallida, revisión selectiva, guardado y controles posteriores. Mantener políticas de cada universidad; adopción sin verificar. Revertir este seguimiento devuelve el rechazo previo a validación; no hay datos ni migraciones que revertir.
+
+
+## Entrega 2026-10-30 — Paquete para edición Anáhuac
+
+El propietario confirma: «ahora sí funciona correctamente» después de PR #22, y solicita empaquetar todas las mejoras para la versión Anáhuac. Es confirmación funcional del origen en su dispositivo, sin datos nuevos para certificar precisión universal ni validación de la edición universitaria.
+
+- Paquete `eyetracking-anahuac-2026-10-30.1.zip`, fuente fija `f476cd795e0b033a81ef82301fa9c6136383eb3e` y base `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`. Incluye 64 archivos: parche binario consolidado de 36 cambios, base para comparar, módulo/pesos completos de referencia, contratos de calidad de referencia, dependencias exactas, guía, contrato universitario y verificador SHA-256. Metadatos y hash en `docs/replicas/eyetracking-anahuac/PAQUETE.json`.
+- Generador reproducible `scripts/package-eyetracking.py`; verificador de lectura `scripts/verify-eyetracking-package.py`. Guía en `docs/replicas/eyetracking-anahuac/GUIA.md`. No se incluyen proxy, autenticación, registro, branding, manifiesto/lockfile de aplicación, secretos, datos ni migraciones. Las dependencias se instalan conservando las del destino; recursos externos MediaPipe siguen siendo necesarios.
+- Validación real del paquete: extracción e integridad correctas; `git apply --check` y aplicación sobre archivos de la base; los 36 resultados coinciden byte a byte con el origen. Verificador no altera destino, detecta divergencias (salida 2) y corrupción del paquete (salida 1). Dos reconstrucciones idénticas. Esta entrega no modifica el motor; las 168 pruebas previas corresponden al código de origen empaquetado.
+- Implementación documental y utilidades en rama `chore/eyetracking-anahuac-package`; commit/PR de empaquetado pendientes. El ZIP no se versiona como binario: se reconstruye con el generador y se verifica contra los metadatos versionados.
+- Anáhuac: repositorio/perfil aún no vinculado, sin aplicación ni despliegue. Mantener rol maestro/alumno, registro sólo de maestros acreditados con correo autorizado y acceso de alumnos existente. Revisar y adaptar UI, servidor y recursos sin sustituir políticas institucionales; evidencias y aceptación del destino pendientes.

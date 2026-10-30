@@ -1,0 +1,12 @@
+{
+  "change_id": "COG-20261028-eyetracking-movil",
+  "edition": "2026-10-30.1",
+  "archive": "eyetracking-anahuac-2026-10-30.1.zip",
+  "sha256": "b413cfd6315147b7694a2559da668f52264fe50ad8a5febf435a56cccbc12bbb",
+  "bytes": 1677703,
+  "source_commit": "f476cd795e0b033a81ef82301fa9c6136383eb3e",
+  "base_commit": "19c96bd762cd7a1dfce55fdb8239c33e80870ef7",
+  "files": 64,
+  "changed_product_files": 36,
+  "destination_status": "Anáhuac Mayab: sin aplicar ni verificar"
+}
