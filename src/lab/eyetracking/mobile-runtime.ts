@@ -25,15 +25,25 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   checkCancelled();
   const options = {
     runningMode: "VIDEO" as const, numFaces: 1,
-    outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
+    // El modelo de expresiones no interviene en EAR, pose ni BlazeGaze.
+    outputFaceBlendshapes: false, outputFacialTransformationMatrixes: true,
+  };
+  // VisionTaskOptions exige un canvas GPU. Nunca se pide aquí un contexto 2D
+  // ni se comparte con la copia de cámara o con TensorFlow.
+  const gpuCanvas = document.createElement("canvas");
+  let gpuError: { name: string; message: string } | null = null;
+  const recordGpuError = (error: unknown) => {
+    gpuError = error instanceof Error ? { name: error.name.slice(0, 80), message: error.message.replace(/https?:\/\/\S+/g, "[url]").slice(0, 400) }
+      : { name: "UnknownError", message: "GPU detection failed" };
   };
   let backend: "main-gpu" | "main-cpu" = "main-gpu";
   let detector: Awaited<ReturnType<typeof FaceLandmarker.createFromOptions>>;
   try {
     detector = await FaceLandmarker.createFromOptions(fileset, {
-      ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "GPU" },
+      ...options, canvas: gpuCanvas, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "GPU" },
     });
-  } catch {
+  } catch (error) {
+    recordGpuError(error);
     checkCancelled();
     backend = "main-cpu";
     detector = await FaceLandmarker.createFromOptions(fileset, {
@@ -65,6 +75,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
         try { result = detector.detectForVideo(frame, timestampMs); }
         catch (error) {
           if (backend !== "main-gpu") throw error;
+          recordGpuError(error);
           checkCancelled();
           closeDetector();
           backend = "main-cpu";
@@ -124,6 +135,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   return {
     get backend() { return backend; },
     get fallbackReason() { return fallbackReason; },
+    get gpuError() { return gpuError; },
     trackingMode: "VIDEO",
     async step(frame: ImageData, timestamp: number): Promise<MobileGazeReading> {
       if (stopped) throw new Error("El detector móvil ya está detenido.");

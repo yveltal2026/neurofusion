@@ -27,6 +27,24 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("cámara móvil", () => {
+  it("procesa el frame que llegó durante la inferencia sin esperar otro ciclo de pantalla", async () => {
+    let finish!: () => void;
+    const frame = vi.fn().mockResolvedValue(undefined).mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+    const source = createCameraSource(video, vi.fn(), { square: true });
+    await source.startWebcam(frame);
+    await vi.advanceTimersByTimeAsync(16);
+    expect(frame).toHaveBeenCalledOnce();
+    video.currentTime = 0.04;
+    finish();
+    await vi.advanceTimersByTimeAsync(2);
+    expect(frame).toHaveBeenCalledTimes(2);
+    expect(frame.mock.calls[1][1]).toBe(0.04);
+    source.stopWebcam();
+    video.currentTime = 0.08;
+    await vi.advanceTimersByTimeAsync(50);
+    expect(frame).toHaveBeenCalledTimes(2);
+  });
+
   it("espera play y reintenta si aún no hay frames decodificados", async () => {
     let playing!: () => void;
     vi.mocked(video.play).mockReturnValue(new Promise<void>((resolve) => { playing = resolve; }));

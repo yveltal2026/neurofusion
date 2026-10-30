@@ -37,6 +37,7 @@ describe("detector móvil acelerado", () => {
     expect(control.fileset).toHaveBeenCalledWith(MOBILE_VISION_WASM);
     expect(control.options).toHaveBeenCalledWith({}, expect.objectContaining({
       baseOptions: expect.objectContaining({ delegate: "GPU" }), runningMode: "VIDEO",
+      canvas: expect.any(HTMLCanvasElement), outputFaceBlendshapes: false, outputFacialTransformationMatrixes: true,
     }));
     expect(control.gpuInitialize).not.toHaveBeenCalled();
     const frame = { width: 640, height: 640 } as ImageData;
@@ -78,6 +79,8 @@ describe("detector móvil acelerado", () => {
     control.options.mockRejectedValueOnce(new Error("WebGL unavailable"));
     const runtime = await createMobileRuntime();
     expect(runtime.backend).toBe("main-cpu");
+    expect(runtime.gpuError).toEqual({ name: "Error", message: "WebGL unavailable" });
+    expect(control.options.mock.calls[1][1]).not.toHaveProperty("canvas");
     expect(control.options).toHaveBeenLastCalledWith({}, expect.objectContaining({ baseOptions: expect.objectContaining({ delegate: "CPU" }) }));
     runtime.stop();
   });
@@ -87,6 +90,7 @@ describe("detector móvil acelerado", () => {
     const runtime = await createMobileRuntime();
     await runtime.step({} as ImageData, 1);
     expect(runtime.backend).toBe("main-cpu");
+    expect(runtime.gpuError).toEqual({ name: "Error", message: "GPU context lost" });
     expect(control.options).toHaveBeenCalledTimes(2);
     expect(control.detect).toHaveBeenCalledTimes(2);
     runtime.stop();
@@ -129,6 +133,20 @@ describe("detector móvil acelerado", () => {
     expect(control.detect.mock.calls[1][1]).toBeGreaterThan(control.detect.mock.calls[0][1]);
     expect(control.detect.mock.calls[0][1]).toBe(1000);
     runtime.stop();
+  });
+
+  it("aísla el canvas gráfico entre intentos y limita el error descargable sin URLs", async () => {
+    control.detect.mockImplementationOnce(() => { throw new Error(`GPU https://example.test/private?token=secret ${"x".repeat(500)}`); });
+    const first = await createMobileRuntime();
+    const canvas = control.options.mock.calls[0][1].canvas;
+    await first.step({} as ImageData, 1);
+    expect(first.gpuError?.message).not.toContain("secret");
+    expect(first.gpuError?.message).toHaveLength(400);
+    first.stop();
+    const second = await createMobileRuntime();
+    expect(control.options.mock.calls[2][1].canvas).not.toBe(canvas);
+    expect(second.gpuError).toBeNull();
+    second.stop();
   });
 
 });

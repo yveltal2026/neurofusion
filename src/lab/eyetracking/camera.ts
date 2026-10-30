@@ -3,6 +3,7 @@ export function createCameraSource(video: HTMLVideoElement, onError: (error: unk
   let active = false;
   let stream: MediaStream | null = null;
   let animation = 0;
+  let immediate: ReturnType<typeof setTimeout> | null = null;
   const captureTimes: number[] = [];
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { willReadFrequently: true });
@@ -51,7 +52,12 @@ export function createCameraSource(video: HTMLVideoElement, onError: (error: unk
               if (captureTimes.length > 120) captureTimes.shift();
               await callback?.(pixels, lastTime);
             }
-            if (active) animation = requestAnimationFrame(() => void next());
+            if (active) {
+              // Si la inferencia móvil tardó más que un frame, el siguiente ya
+              // está disponible. Ceder al navegador sin sumar otro ciclo de RAF.
+              if (options.square && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0 && video.currentTime !== lastTime) immediate = setTimeout(() => { immediate = null; void next(); }, 0);
+              else animation = requestAnimationFrame(() => void next());
+            }
           } catch (error) {
             if (active) { active = false; onError(error); }
           }
@@ -64,6 +70,8 @@ export function createCameraSource(video: HTMLVideoElement, onError: (error: unk
     stopWebcam() {
       active = false;
       cancelAnimationFrame(animation);
+      if (immediate !== null) clearTimeout(immediate);
+      immediate = null;
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
       video.pause();
