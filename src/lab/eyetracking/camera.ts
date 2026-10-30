@@ -1,5 +1,5 @@
 /** Transporte de frames para WebEyeTrack; mantiene la proporción real de la cámara frontal. */
-export function createCameraSource(video: HTMLVideoElement, onError: (error: unknown) => void) {
+export function createCameraSource(video: HTMLVideoElement, onError: (error: unknown) => void, options: { square?: boolean } = {}) {
   let active = false;
   let stream: MediaStream | null = null;
   let animation = 0;
@@ -35,9 +35,15 @@ export function createCameraSource(video: HTMLVideoElement, onError: (error: unk
               const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
               const width = Math.max(1, Math.round(video.videoWidth * scale));
               const height = Math.max(1, Math.round(video.videoHeight * scale));
-              if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-              context.drawImage(video, 0, 0, width, height);
-              await callback?.(context.getImageData(0, 0, width, height), lastTime);
+              // WebEyeTrack calcula la apertura ocular en coordenadas normalizadas sin
+              // corregir aspecto. Un frame cuadrado evita declarar cerrados ojos abiertos
+              // en vídeo vertical, conservando la imagen sin estirarla ni recortarla.
+              const outputWidth = options.square ? Math.max(width, height) : width;
+              const outputHeight = options.square ? outputWidth : height;
+              if (canvas.width !== outputWidth || canvas.height !== outputHeight) { canvas.width = outputWidth; canvas.height = outputHeight; }
+              if (options.square) { context.fillStyle = "black"; context.fillRect(0, 0, outputWidth, outputHeight); }
+              context.drawImage(video, (outputWidth - width) / 2, (outputHeight - height) / 2, width, height);
+              await callback?.(context.getImageData(0, 0, outputWidth, outputHeight), lastTime);
             }
             if (active) animation = requestAnimationFrame(() => void next());
           } catch (error) {

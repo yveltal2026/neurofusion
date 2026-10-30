@@ -77,6 +77,7 @@ function buildCalibrationPoints(passes: number): Point[] {
 export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [stage, setStage] = useState<Stage>("setup");
   const [error, setError] = useState<string | null>(null);
+  const [engineAvailable, setEngineAvailable] = useState(false);
 
   // Formulario
   const [participant, setParticipant] = useState("");
@@ -222,6 +223,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     runIdRef.current++;
     engineRef.current?.stop();
     engineRef.current = null;
+    setEngineAvailable(false);
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
   useEffect(() => teardown, [teardown]);
@@ -323,18 +325,31 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       calibrationFitRef.current = null;
       const video = videoRef.current;
       if (!video) throw new EngineError("No se encontró el elemento de video.", "camera-error");
-      const { readyMs } = await engine.start(video, onFrame);
+      const { readyMs } = await engine.start(video, onFrame, (failure) => {
+        runIdRef.current++;
+        engineRef.current?.stop();
+        engineRef.current = null;
+        setEngineAvailable(false);
+        framesRef.current = [];
+        rawFramesRef.current = [];
+        setLive({ fps: 0, faceOk: false, gazeOk: false });
+        if (study && studySessionIdRef.current) recoverStudy(failure.message, true);
+        else { calibrationFitRef.current = null; setNeedsCalibration(true); setError(failure.message); setStage("position"); }
+      });
       readyMsRef.current = readyMs;
+      setEngineAvailable(true);
       setStage("position");
     } catch (err) {
       engineRef.current?.stop();
       engineRef.current = null;
+      setEngineAvailable(false);
       setError(err instanceof Error ? err.message : "No se pudo iniciar el eye tracking.");
       setStage("setup");
     }
   }
 
   function startCalibration() {
+    if (!engineRef.current) { setError("Vuelve a iniciar la cámara antes de calibrar."); return; }
     calibrationEpochRef.current++;
     setLastDriftCheck(null);
     if (study && recoveringRef.current) {
@@ -1080,7 +1095,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
             <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
-            <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+            <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
+            {!engineAvailable ? <Button size="lg" variant="secondary" onClick={() => { teardown(); setStage("setup"); }}>Volver a iniciar cámara</Button> : null}
           </div>
           {limitedReady ? <Callout icon="alert" title="Si el ajuste sigue fallando">
             <p>Puedes terminar. Tu participación quedará marcada con precisión limitada y sus miradas no se incluirán en los mapas válidos.</p>
@@ -1182,7 +1198,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           <div className="space-y-4">
             <div className="flex flex-wrap gap-3">
               <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>
-              <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy}>Recalibrar</Button>
+              <Button size="lg" variant="secondary" onClick={startCalibration} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
+              {!engineAvailable ? <Button size="lg" variant="secondary" onClick={() => { teardown(); setStage("setup"); }}>Volver a iniciar cámara</Button> : null}
             </div>
             {resumeCount !== null ? <p className="text-base text-muted">Conservamos {resumeCount} imágenes ya validadas. Continuaremos desde ese punto.</p> : null}
             {study.preview ? <p className="text-sm text-muted">Vista previa: no se guardarán datos.</p> : null}
