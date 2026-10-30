@@ -7,6 +7,7 @@ const control = vi.hoisted(() => ({
   options: vi.fn(), fileset: vi.fn(), pendingStep: null as Promise<unknown> | null,
   worker: null as null | { detect: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }, stepCalls: [] as ImageData[],
 }));
+vi.mock("./async-gaze", () => ({ createAsyncGazeStep: vi.fn(async (runtime) => runtime.step.bind(runtime)) }));
 vi.mock("./face-detector-client", () => ({ createFaceDetectorWorker: vi.fn(async () => { if (!control.worker) throw new Error("Worker no disponible"); return control.worker; }) }));
 vi.mock("./gaze-backend", () => ({ selectGazeBackend: vi.fn(async (_predict, _signal, _root, initialize) => { await initialize?.(); return { selected: "webgl" }; }) }));
 vi.mock("@mediapipe/tasks-vision", () => ({

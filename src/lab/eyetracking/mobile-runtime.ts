@@ -2,12 +2,13 @@ import type { GazeResult } from "webeyetrack";
 import type { LoadingStep } from "./loading";
 import { InvalidEyeRegionError, isImageAllocationError, validateEyeRegion } from "./eye-region";
 import { selectGazeBackend } from "./gaze-backend";
+import { createAsyncGazeStep, type GazeDiscardReason } from "./async-gaze";
 import type { Tensor } from "@tensorflow/tfjs-core";
 import { createFaceDetectorWorker, type CpuFaceWorker } from "./face-detector-client";
 import { FACE_OPTIONS, FACE_LANDMARKER_MODEL, MOBILE_VISION_WASM } from "./face-detector-config";
 import type { FaceDetection } from "./face-detector-protocol";
 
-export type MobileGazeReading = Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">;
+export type MobileGazeReading = Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations"> & { discardReason?: GazeDiscardReason };
 
 // JS y WASM usan la misma versión. La GPU se usa en el hilo principal, sin el worker de WebEyeTrack.
 export { MOBILE_VISION_WASM, FACE_LANDMARKER_MODEL } from "./face-detector-config";
@@ -83,6 +84,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   let nextProbeAt = 0;
   let fallbackReason: string | null = backend !== "main-gpu" ? "gpu-initialization-failed" : null;
   let gazeBackend: Awaited<ReturnType<typeof selectGazeBackend>> | null = null;
+  let gazeStep = runtime.step.bind(runtime);
   let prepared: FaceDetection["result"] | null = null;
   try {
     checkCancelled();
@@ -147,6 +149,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     };
     onProgress("loading-gaze");
     gazeBackend = await selectGazeBackend(internals.blazeGaze.predict.bind(internals.blazeGaze), controller.signal, undefined, () => runtime.initialize());
+    gazeStep = await createAsyncGazeStep(runtime, controller.signal);
     checkCancelled();
   } catch (error) {
     dispose();
@@ -161,6 +164,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     get fallbackReason() { return fallbackReason; },
     get gpuError() { return gpuError; },
     get gazeBackend() { return gazeBackend; },
+    gazeReadback: "async" as const,
     get workerError() { return workerError; },
     get pipelined() { return cpuWorker !== null; },
     trackingMode: "VIDEO",
@@ -179,11 +183,11 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
         checkCancelled();
         timestampMs = ts; prepared = detected?.result ?? null;
         try {
-          const result = await runtime.step(detected?.frame ?? frame, timestamp);
+          const result = await gazeStep(detected?.frame ?? frame, timestamp);
           return detected ? { ...result, durations: { ...result.durations, faceLandmarker: detected.detectorMs, total: performance.now() - from } } : result;
         } catch (error) {
           if (!(error instanceof InvalidEyeRegionError) && !isImageAllocationError(error)) throw error;
-          return { facialLandmarks: lastLandmarks, gazeState: "closed", normPog: [0, 0], durations: { total: performance.now() - from } };
+          return { discardReason: "invalid-eye-region", facialLandmarks: lastLandmarks, gazeState: "closed", normPog: [0, 0], durations: { total: performance.now() - from } };
         } finally { prepared = null; }
       });
       gazeQueue = pending.catch(() => {});
