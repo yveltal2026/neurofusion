@@ -5,7 +5,8 @@ import { EyeTrackingLab } from "./EyeTrackingLab";
 import { EngineError, checkModelAssets } from "./engine";
 import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ frameIntervalMs: 25, runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+const control = vi.hoisted(() => ({ light: "good" as import("./lighting").LightingStatus, frameIntervalMs: 25, runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+vi.mock("./lighting", async (original) => ({ ...(await original<typeof import("./lighting")>()), observeLighting: (_video: unknown, callback: (s: import("./lighting").LightingStatus) => void) => { const id = setInterval(() => callback(control.light), 100); return () => clearInterval(id); } }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
   return { ...actual, checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
@@ -54,7 +55,7 @@ function click(name: string) { act(() => { fireEvent.click(screen.getByRole("but
 async function calibrate() {
   const expectsReview = control.noisy;
   click("Comenzar calibración");
-  for (let i = 1; i <= 9; i++) {
+  for (let i = 1; i <= 18; i++) {
     await tick(1200);
     click(`Punto de calibración ${i}`);
     await tick(1100);
@@ -81,7 +82,6 @@ async function setup(currentStudy = study) {
   render(<EyeTrackingLab study={currentStudy} />);
   fireEvent.change(screen.getByLabelText("Cómo ajustar el tamaño de pantalla"), { target: { value: "diagonal" } });
   fireEvent.change(screen.getByLabelText("Tamaño de pantalla (pulgadas)"), { target: { value: "27" } });
-  fireEvent.change(screen.getByLabelText("Calibración"), { target: { value: "1" } });
   fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
   click("Iniciar cámara y cargar modelos");
   await tick(0);
@@ -94,7 +94,7 @@ async function piece() { await tick(20); await tick(5000); }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
-  control.startError = false; control.eyesClosed = false; control.frameIntervalMs = 25; control.runtimeError = null;
+  control.light = "good"; control.startError = false; control.eyesClosed = false; control.frameIntervalMs = 25; control.runtimeError = null;
   control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
   starts = 0; completed = null; activeAssets = assets;
@@ -294,8 +294,8 @@ describe("estudios con control de calidad", () => {
 
 async function calibrateFromResults() {
   // El botón de resultados inicia el mismo recorrido que el de posición.
-  click("Recalibrar");
-  for (let i = 1; i <= 9; i++) { await tick(1200); click(`Punto de calibración ${i}`); await tick(1100); }
+  click("Recalibrar"); await tick(500); click("Comenzar calibración");
+  for (let i = 1; i <= 18; i++) { await tick(1200); click(`Punto de calibración ${i}`); await tick(1100); }
   await tick(3000);
   for (let i = 0; i < 8; i++) await tick(2500);
 }
@@ -378,6 +378,40 @@ describe("preparación móvil y tamaño de pantalla", () => {
     click("Punto de calibración 1"); await tick(1600);
     expect(screen.getByRole("button", { name: "Punto de calibración 2" })).toBeTruthy();
     expect(screen.queryByText(/No se obtuvo una fijación estable/)).toBeNull();
+  });
+
+  it("fija el protocolo completo y bloquea la calibración cuando la cámara detecta poca luz", async () => {
+    control.light = "dark";
+    render(<EyeTrackingLab study={study} />);
+    expect(screen.queryByLabelText("Iluminación")).toBeNull();
+    expect(screen.queryByLabelText("Calibración")).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    expect(screen.getByText(/Hay poca luz en tu rostro/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
+    control.light = "good"; await tick(500);
+    click("Comenzar calibración");
+    expect(screen.getByText(/Punto 1 de 18/)).toBeTruthy();
+  });
+
+  it("explica el fallo de validación en lugar de mostrar sólo baja calidad", async () => {
+    control.validationBiasPx = 300;
+    await setup();
+    expect(screen.getByText("Por qué no pudiste avanzar")).toBeTruthy();
+    expect(screen.getByText(/Error mediano/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Comenzar presentación" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("recomienda un stand fijo durante la calibración del celular", async () => {
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.change(screen.getByLabelText("Dispositivo"), { target: { value: "phone" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    expect(screen.getByText(/Te recomendamos colocar el celular/)).toBeTruthy();
+    click("Comenzar calibración");
+    expect(screen.getByText(/Mantén el celular en un soporte o stand fijo durante toda la calibración/)).toBeTruthy();
   });
 
 });
