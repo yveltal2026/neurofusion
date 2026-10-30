@@ -30,7 +30,7 @@ import { buildSession, recordDriftChecks, type ExportedSession, type Lighting } 
 import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
-import { applyCalibration, assessFixation, fixationWindowMs, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
+import { applyCalibration, assessFixation, fixationWindowMs, fitCalibration, moveSaturatedTarget, finalizeCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
 import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftSummary, driftTargets, unmeasuredDriftCheck, type DriftCheck, type DriftSummary } from "./drift";
 import { observeLighting, LIGHTING_MESSAGES, type LightingStatus } from "./lighting";
 import { LOADING_LABELS, STARTUP_TIMEOUT_MS, type LoadingStep } from "./loading";
@@ -493,9 +493,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       if (calibClicksRef.current >= 9) {
         calibrationFitRef.current = fitCalibration(calibrationPairsRef.current.slice(0, 9));
       }
-      if (calibClicksRef.current === 18 && calibrationFitRef.current) {
-        calibrationFitRef.current = refineCalibration(calibrationFitRef.current, calibrationPairsRef.current.slice(9));
-      }
     } catch (cause) {
       calibrationFitRef.current = null;
       setError(cause instanceof Error ? cause.message : "No se pudo calibrar la mirada.");
@@ -514,6 +511,17 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     }
     const next = calibrationQueueRef.current.shift();
     if (next === undefined) {
+      // Revisar primero las fijaciones débiles; una corrección fina rechazada no
+      // debe impedir comprobar el ajuste base en objetivos independientes.
+      if (passes === 2) {
+        try { calibrationFitRef.current = finalizeCalibration(calibrationPairsRef.current); }
+        catch (cause) {
+          calibrationFitRef.current = null;
+          setError(cause instanceof Error ? cause.message : "No se pudo calibrar la mirada.");
+          setStage("position");
+          return;
+        }
+      }
       calibDurationRef.current = performance.now() - calibStartRef.current;
       setCountdown(COUNTDOWN_S);
       setStage("countdown");
@@ -575,7 +583,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         },
         engineId: engineRef.current?.id ?? "desconocido",
         readyMs: readyMsRef.current,
-        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current), layout: passes === 2 ? "v5-weighted-refinement" : "v5-weighted-base", pairs: calibrationPairsRef.current, fit: calibrationFitRef.current ?? undefined, attempts: calibrationAttemptsRef.current, reviewedPoints: reviewedPointsRef.current, relocatedPoints: relocatedPointsRef.current },
+        calibration: { passes, clicks: calibClicksRef.current, durationMs: Math.round(calibDurationRef.current), layout: passes === 2 ? calibrationFitRef.current?.refinement ? "v5-weighted-refinement" : "v5-weighted-base-fallback" : "v5-weighted-base", pairs: calibrationPairsRef.current, fit: calibrationFitRef.current ?? undefined, attempts: calibrationAttemptsRef.current, reviewedPoints: reviewedPointsRef.current, relocatedPoints: relocatedPointsRef.current },
         validation: { results, stream: frameStats(framesRef.current, startedAt, endedAt), durationMs: Math.round(endedAt - startedAt) },
         createdAt: new Date(),
       }),
@@ -888,7 +896,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   }
 
   function downloadCameraDiagnostic() {
-    const payload = { version: 1, createdAt: new Date().toISOString(), phase: stage, diagnostics: engineRef.current?.diagnostics?.() ?? null };
+    const payload = { version: 1, createdAt: new Date().toISOString(), phase: stage, calibration: { collectedPoints: calibrationPairsRef.current.filter(Boolean).length, reviewedPoints: reviewedPointsRef.current, refinement: calibrationFitRef.current?.refinementAssessment ?? null }, diagnostics: engineRef.current?.diagnostics?.() ?? null };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
     const link = document.createElement("a"); link.href = url; link.download = "diagnostico-camara.json"; link.click(); URL.revokeObjectURL(url);
   }
@@ -1187,7 +1195,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
       {stage === "countdown" ? (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-background px-6 text-center select-none">
-          <p className="text-lg font-medium text-heading">Calibración lista</p>
+          <p className="text-lg font-medium text-heading">Comprobemos la precisión</p>
           <p className="max-w-sm text-sm text-muted">
             Ahora solo mira cada punto que aparezca, <strong>sin tocar la pantalla</strong>. Son 8 puntos, unos 20 segundos.
           </p>

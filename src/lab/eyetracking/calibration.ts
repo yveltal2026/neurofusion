@@ -41,12 +41,27 @@ export function moveSaturatedTarget(target: Point, saturation: Point): Point | n
   return Math.hypot(next.x - target.x, next.y - target.y) < 0.01 ? null : next;
 }
 export interface AxisCorrection { gain: number; offset: number; r2: number }
+export interface RefinementAxisAssessment {
+  gain: number | null;
+  r2: number | null;
+  reason: "no-variation" | "non-finite" | "inverted" | "gain-out-of-range" | "low-correlation" | null;
+}
+export interface RefinementAssessment {
+  status: "applied" | "base-only";
+  axes: { x: RefinementAxisAssessment; y: RefinementAxisAssessment };
+}
+class UnreliableRefinementError extends Error {
+  constructor(readonly assessment: RefinementAssessment) {
+    super("El ajuste fino no distingue bien las posiciones. Recolócate frente a la cámara y vuelve a calibrar.");
+  }
+}
 export interface CalibrationFit {
   center: Point;
   scale: Point;
   x: number[];
   y: number[];
   refinement?: { x: AxisCorrection; y: AxisCorrection };
+  refinementAssessment?: RefinementAssessment;
 }
 
 /** Puntos de ajuste interiores distintos de todos los objetivos de validación. */
@@ -114,7 +129,7 @@ export function refineCalibration(base: CalibrationFit, pairs: CalibrationPair[]
   const weights = pairs.map(fixationWeight);
   if (weights.some((w) => w === 0)) throw new Error("Repite las fijaciones saturadas antes del ajuste fino.");
   const total = weights.reduce((a, b) => a + b, 0);
-  const fitAxis = (axis: "x" | "y"): AxisCorrection => {
+  const fitAxis = (axis: "x" | "y") => {
     const mean = mapped.reduce((n, p, i) => n + weights[i] * p[axis], 0) / total;
     const targetMean = pairs.reduce((n, p, i) => n + weights[i] * p.target[axis], 0) / total;
     const variance = mapped.reduce((n, p, i) => n + weights[i] * (p[axis] - mean) ** 2, 0);
@@ -122,12 +137,29 @@ export function refineCalibration(base: CalibrationFit, pairs: CalibrationPair[]
     const covariance = mapped.reduce((n, p, i) => n + weights[i] * (p[axis] - mean) * (pairs[i].target[axis] - targetMean), 0);
     const gain = covariance / variance;
     const r2 = covariance ** 2 / (variance * targetVariance);
-    if (![gain, r2].every(Number.isFinite) || gain < 0.25 || gain > 4 || r2 < 0.5) {
-      throw new Error("El ajuste fino no distingue bien las posiciones. Recolócate frente a la cámara y vuelve a calibrar.");
-    }
-    return { gain, offset: targetMean - gain * mean, r2 };
+    const reason: RefinementAxisAssessment["reason"] = ![gain, r2].every(Number.isFinite)
+      ? variance === 0 ? "no-variation" : "non-finite"
+      : gain < 0 ? "inverted" : gain < 0.25 || gain > 4 ? "gain-out-of-range" : r2 < 0.5 ? "low-correlation" : null;
+    return { correction: { gain, offset: targetMean - gain * mean, r2 }, assessment: {
+      gain: Number.isFinite(gain) ? gain : null, r2: Number.isFinite(r2) ? r2 : null, reason,
+    } };
   };
-  return { ...base, refinement: { x: fitAxis("x"), y: fitAxis("y") } };
+  const x = fitAxis("x"), y = fitAxis("y");
+  const assessment: RefinementAssessment = { status: x.assessment.reason || y.assessment.reason ? "base-only" : "applied", axes: { x: x.assessment, y: y.assessment } };
+  if (assessment.status === "base-only") throw new UnreliableRefinementError(assessment);
+  return { ...base, refinement: { x: x.correction, y: y.correction }, refinementAssessment: assessment };
+}
+
+/** El ajuste fino es opcional; la validación independiente sigue siendo obligatoria. */
+export function finalizeCalibration(pairs: CalibrationPair[]): CalibrationFit {
+  if (pairs.length !== 18) throw new Error("Faltan puntos de calibración.");
+  const base = fitCalibration(pairs.slice(0, 9));
+  try { return refineCalibration(base, pairs.slice(9)); }
+  catch (error) {
+    if (!(error instanceof UnreliableRefinementError)) throw error;
+    // No reutilizar datos de validación ni aplicar parcialmente una corrección rechazada.
+    return { ...base, refinementAssessment: error.assessment };
+  }
 }
 
 /** Calidad de una ventana reciente de fijación, en coordenadas normalizadas del viewport. */

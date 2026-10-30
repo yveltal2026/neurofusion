@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCalibration, assessFixation, fitCalibration, fixationWindowMs, fixationMedian, fixationWeight, moveSaturatedTarget, refineCalibration, refinementGrid, stableFixation, weakCalibrationPoints, type CalibrationFit, type FixationQuality } from "./calibration";
+import { applyCalibration, assessFixation, fitCalibration, finalizeCalibration, fixationWindowMs, fixationMedian, fixationWeight, moveSaturatedTarget, refineCalibration, refinementGrid, stableFixation, weakCalibrationPoints, type CalibrationFit, type FixationQuality } from "./calibration";
 import { calibrationGrid, validationTargets } from "./metrics";
 import { screenWidthCm } from "./screen";
 
@@ -136,4 +136,34 @@ it("reúne las mismas diez muestras a 10 FPS ampliando la ventana, sin aprobar r
   expect(assessFixation(frames.map((f, i) => ({ ...f, x: f.x + (i % 2 ? 100 : -100) })), 200, 1400, viewport).ok).toBe(false);
   expect(fixationWindowMs(30)).toBe(800);
   expect(fixationWindowMs(0)).toBeLessThanOrEqual(2200);
+});
+
+
+describe("validación después de un ajuste fino no fiable", () => {
+  const basePairs = calibrationGrid(1, 1).map((target) => ({ target, gaze: target }));
+  it("conserva exactamente el ajuste base y registra ambos ejes sin aplicar una corrección inválida", () => {
+    const fine = refinementGrid(1, 1).map((target) => ({ target, gaze: { x: 0.5, y: target.y } }));
+    const result = finalizeCalibration([...basePairs, ...fine]);
+    const base = fitCalibration(basePairs);
+    expect(result.refinement).toBeUndefined();
+    expect(result.refinementAssessment?.status).toBe("base-only");
+    expect(result.refinementAssessment?.axes.x.reason).not.toBeNull();
+    expect(result.refinementAssessment?.axes.y.reason).toBeNull();
+    for (const target of validationTargets(1, 1)) expect(applyCalibration(result, target)).toEqual(applyCalibration(base, target));
+    expect(JSON.parse(JSON.stringify(result)).refinementAssessment).toEqual(result.refinementAssessment);
+  });
+  it("aplica el ajuste fino fiable sólo después de reunir las dos rondas completas", () => {
+    const fine = refinementGrid(1, 1).map((target) => ({ target, gaze: { x: target.x * 1.1, y: target.y * 0.9 } }));
+    const result = finalizeCalibration([...basePairs, ...fine]);
+    expect(result.refinementAssessment?.status).toBe("applied");
+    expect(result.refinement).toBeDefined();
+    expect(() => finalizeCalibration([...basePairs, ...fine.slice(1)])).toThrow("Faltan puntos");
+  });
+  it("no recupera una calibración base degenerada ni oculta fijaciones saturadas", () => {
+    const fine = refinementGrid(1, 1).map((target) => ({ target, gaze: target }));
+    expect(() => finalizeCalibration([...basePairs.map((p) => ({ ...p, gaze: { x: 0.5, y: 0.5 } })), ...fine])).toThrow("quedó fija");
+    expect(() => finalizeCalibration([...basePairs, ...fine.map((p) => ({ ...p, quality: {
+      samples: 20, durationMs: 800, validRatio: 1, dispersion: { x: 0, y: 0 }, drift: { x: 0, y: 0 }, saturation: { x: 1, y: 0 },
+    } }))])).toThrow("saturadas");
+  });
 });

@@ -5,7 +5,7 @@ import { EyeTrackingLab } from "./EyeTrackingLab";
 import { EngineError, checkModelAssets } from "./engine";
 import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ light: "good" as import("./lighting").LightingStatus, frameIntervalMs: 25, runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+const control = vi.hoisted(() => ({ constantRefinement: false, light: "good" as import("./lighting").LightingStatus, frameIntervalMs: 25, runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
 vi.mock("./lighting", async (original) => ({ ...(await original<typeof import("./lighting")>()), observeLighting: (_video: unknown, callback: (s: import("./lighting").LightingStatus) => void) => { const id = setInterval(() => callback(control.light), 100); return () => clearInterval(id); } }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
@@ -28,6 +28,8 @@ vi.mock("./engine", async (original) => {
               x += noise * window.innerWidth;
               y += noise * window.innerHeight;
             }
+            const calibrationIndex = Number(dot?.getAttribute("aria-label")?.replace("Punto de calibración ", ""));
+            if (control.constantRefinement && calibrationIndex > 9) { x = window.innerWidth / 2; y = window.innerHeight / 2; }
             if (control.saturateLower && y > window.innerHeight * 0.85) y = window.innerHeight;
             if (control.failDrift && dot?.dataset.testid === "drift-target") { x = 0; y = 0; }
             if (dot?.dataset.testid === "validation-target") x += control.validationBiasPx;
@@ -93,7 +95,7 @@ async function piece() { await tick(20); await tick(5000); }
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
-  control.failDrift = false; control.noisy = false; control.saturateLower = false;
+  control.constantRefinement = false; control.failDrift = false; control.noisy = false; control.saturateLower = false;
   control.light = "good"; control.startError = false; control.eyesClosed = false; control.frameIntervalMs = 25; control.runtimeError = null;
   control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
@@ -126,6 +128,32 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("estudios con control de calidad", () => {
+  it("revisa las fijaciones débiles antes de descartar el ajuste fino y exige validación para usar la base", async () => {
+    control.constantRefinement = true;
+    control.noisy = true;
+    await setup(); // También exige y completa la revisión selectiva.
+    expect(screen.queryByText(/El ajuste fino no distingue/)).toBeNull();
+    expect((screen.getByRole("button", { name: "Comenzar presentación" }) as HTMLButtonElement).disabled).toBe(false);
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece(); await drift(); await piece(); await drift();
+    expect(completed!.quality.calibrationLayout).toBe("v5-weighted-base-fallback");
+    expect(completed!.quality.calibrationClicks).toBe(18);
+    expect(completed!.quality.passed).toBe(true);
+    expect(requiredDriftChecksPass(completed!.quality, "desktop", 3, true)).toBe(true);
+    expect(completed!.observations).toHaveLength(3);
+    expect(starts).toBe(1);
+  });
+
+  it("un ajuste fino fallido nunca permite iniciar si la base falla la validación independiente", async () => {
+    control.constantRefinement = true;
+    control.validationBiasPx = 300;
+    await setup();
+    expect(screen.getByText("Por qué no pudiste avanzar")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Comenzar presentación" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(starts).toBe(0);
+    expect(completed).toBeNull();
+  });
+
   it("no rechaza el control por perder lecturas mientras los ojos cambian de objetivo", async () => {
     control.loseDuringSettle = true;
     await setup();
