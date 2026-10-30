@@ -119,3 +119,25 @@ Aplicar el seguimiento después de `0484cd5`, conservar las personalizaciones de
 - Para revertir, revertir el commit de este seguimiento. No hay migraciones ni cambios en datos que revertir.
 
 - 2026-10-29: PR #13 integrado en `main` (`c137614b0dc9053f057c4bf580bc4e279c6c38f7`); Vercel preview correcto en `a029369`. La validación física del recorte y la frecuencia continúa pendiente.
+
+## Seguimiento 2026-10-29 — Preparación guiada, exposición de cámara y motivos de rechazo
+
+El propietario informa de dos calibraciones con buena luz y teléfono inmóvil que no permiten avanzar. La pantalla del participante sólo decía «precisión baja»: no mostraba `session.verdict.reasons`. Se desconoce cuál de los criterios falló en esas dos ejecuciones; no se atribuye automáticamente a iluminación. La frecuencia anterior de unas 10 lecturas/s puede incumplir por sí sola el mínimo de validación de 15.
+
+### Comportamiento
+
+- Se eliminan los selectores de iluminación y rigor, en escritorio y celular. Se exige buena luz frontal y se fija la calibración completa de 18 puntos (base y ajuste fino). Se conserva la indicación de lentes.
+- Antes de calibrar se estima exposición con una muestra local de cámara de 64×48, independiente de las bandas del frame de inferencia. Se buscan oscuridad marcada, contraluz y sobreexposición en la zona central donde se pide colocar el rostro. Cuatro muestras consecutivas (un segundo) evitan reaccionar a una oscilación breve de exposición automática.
+- La calibración está bloqueada mientras se comprueba la exposición o se detecta un problema. Se solicita cambiar de lugar/buscar luz frontal o reducir luz directa según el caso. La comprobación se repite al volver a posición y antes de recalibrar. Si no se puede leer el video, se informa y se ofrece reiniciar.
+- En celular se recomienda un soporte o stand fijo en la pantalla de posición y se mantiene una leyenda durante los puntos de calibración.
+- Un rechazo de validación muestra los motivos concretos calculados, con indicaciones distintas para frecuencia insuficiente o problemas de precisión/cobertura. Recalibrar conduce primero a posición e iluminación. Se conservan los criterios de calidad y el bloqueo de mediciones no validadas.
+
+### Implementación, réplica y validación
+
+- Implementación: `e3ab6e9801cea7828cdc766327fb75a155549f7a`, rama `fix/eyetracking-guided-quality`, basada en `main` `0d8ac9c`; [PR #14](https://github.com/yveltal2026/neurofusion/pull/14). Archivos: `lighting.ts`, `lighting.test.ts`, `EyeTrackingLab.tsx` y sus pruebas.
+- Sin dependencias, variables ni migraciones nuevas. Los píxeles de comprobación se procesan localmente, no se almacenan ni se envían. La condición `buena` representa el requisito del protocolo después de superar la comprobación, no una medición de lux.
+- Para replicar, aplicar después de `3bc0e2b`, conservar identidad/flujo propios y repetir casos de exposición, 18 puntos, motivos de rechazo y soporte móvil. Sin cambios de autenticación, registro, roles o permisos; otras ediciones permanecen sin verificar.
+- 130 pruebas correctas en 15 archivos, TypeScript y ESLint correctos. Incluyen protocolo completo de 18 puntos en los flujos de estudio, bloqueo por poca luz, recuperación al mejorar exposición, mensajes concretos de validación y leyenda móvil. Build correcto con fixture temporal de fuentes fuera del repositorio.
+- Navegador: seis recorridos simulados en ejecución. El simulador omite la comprobación de video real sólo en laboratorio o preview permitido; no habilita el simulador en participaciones reales.
+- Limitaciones: la evaluación de exposición es una heurística de imagen, no identifica todas las condiciones físicas de luz ni garantiza precisión ocular. Se prueba en imágenes sintéticas de distintas intensidades; falta validación con la cámara del propietario y más condiciones reales. No se afirma que la velocidad haya aumentado ni que las dos calibraciones reportadas ya superen el criterio.
+- Recuperación: revertir este seguimiento devuelve los selectores y comportamiento anteriores; no hay cambios de datos que revertir.
