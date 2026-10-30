@@ -64,3 +64,15 @@ it("restaura el backend si se cancela justo al terminar la prueba del candidato"
   await expect(selectGazeBackend(cancel as never, controller.signal)).rejects.toMatchObject({ name: "AbortError" });
   expect(control.backend).toBe("webgl");
 });
+
+it("serializa también la carga de pesos de un reinicio con la selección anterior", async () => {
+  let finish!: () => void;
+  const loading = new Promise<void>((resolve) => { finish = resolve; });
+  const secondInitialize = vi.fn(async () => {});
+  const first = selectGazeBackend(predict as never, undefined, undefined, () => loading);
+  const second = selectGazeBackend(predict as never, undefined, undefined, secondInitialize);
+  await Promise.resolve(); await Promise.resolve();
+  expect(secondInitialize).not.toHaveBeenCalled();
+  finish(); await first; await second;
+  expect(secondInitialize).toHaveBeenCalledOnce();
+});

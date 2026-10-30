@@ -13,13 +13,18 @@ const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floo
 let selection: Promise<unknown> = Promise.resolve();
 
 /** Compara inferencia + lectura reales antes de medir; no modifica la calibración. */
-export function selectGazeBackend(predict: Predict, signal?: AbortSignal, wasmRoot = WASM_ROOT): Promise<GazeBackendReport> {
+export function selectGazeBackend(predict: Predict, signal?: AbortSignal, wasmRoot = WASM_ROOT, initialize?: () => Promise<void>): Promise<GazeBackendReport> {
   const run = selection.catch(() => {}).then(async () => {
+    const check = () => { if (signal?.aborted) throw new DOMException("Carga cancelada", "AbortError"); };
+    check();
+    // La carga de pesos también usa el motor global de TF. Un reinicio espera
+    // a que termine/restaure el cambio de backend del intento anterior.
+    await initialize?.();
+    check();
     const tf = await import("@tensorflow/tfjs-core");
     await tf.ready();
     const baseline = tf.getBackend();
     const report: GazeBackendReport = { selected: baseline, baseline, baselineMedianMs: null, wasmMedianMs: null, status: "retained" };
-    const check = () => { if (signal?.aborted) throw new DOMException("Carga cancelada", "AbortError"); };
     // Una selección anterior ya comprobó esta ruta en el mismo navegador.
     if (baseline === "wasm") { check(); return report; }
     const patch = new ImageData(512, 128);

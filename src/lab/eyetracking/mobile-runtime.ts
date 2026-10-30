@@ -127,9 +127,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
       return prepareInput(frame, result);
     };
     onProgress("loading-gaze");
-    await runtime.initialize();
-    checkCancelled();
-    gazeBackend = await selectGazeBackend(internals.blazeGaze.predict.bind(internals.blazeGaze), signal);
+    gazeBackend = await selectGazeBackend(internals.blazeGaze.predict.bind(internals.blazeGaze), signal, undefined, () => runtime.initialize());
     checkCancelled();
   } catch (error) {
     dispose();
