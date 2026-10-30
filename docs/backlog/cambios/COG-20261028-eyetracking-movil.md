@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: integrado en `main`; despliegue de producción pendiente de verificar.
+- Estado: primera entrega integrada en `main`; seguimiento del fallo Android con 0 lecturas implementado en `fix/eyetracking-face-detector`, integración pendiente.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -62,3 +62,29 @@ Revertir los commits de esta mejora y repetir las pruebas del corredor. No hay m
 - 2026-10-28: implementación a partir del `main` verificado, pruebas locales y registro de pendientes de dispositivos físicos, integración y despliegue.
 
 - 2026-10-29: integración autorizada por el propietario; PR #10 fusionado en `main` (`15829993470b9d580f86bd19254addc671437191`). Vercel y su comprobación de preview fueron correctos en `6168dff`; no constituyen verificación de producción ni de cámaras físicas.
+
+## Seguimiento 2026-10-29 — Android/Chrome con 0 lecturas
+
+El propietario confirma que la primera entrega no resolvió el síntoma en Android con Chrome: la cámara muestra imagen pero el indicador marca 0 lecturas/s. Esto acredita la persistencia del fallo; las pruebas con motor simulado de la primera entrega no demostraban detección real.
+
+La inspección de WebEyeTrack 0.0.2 confirma dos limitaciones: fuerza MediaPipe con `delegate: GPU` dentro de su worker y carece de una ruta alternativa; además calcula la apertura ocular con coordenadas normalizadas sin corregir la proporción del frame. No se ha capturado una traza del teléfono que permita atribuir el fallo a una excepción concreta de ese dispositivo.
+
+### Corrección de seguimiento
+
+- En Android, iOS y dispositivos táctiles se usa MediaPipe por CPU en el hilo principal, sin instanciar el proxy/worker GPU de WebEyeTrack. Se conserva BlazeGaze 0.0.2 para la estimación de mirada y el ajuste propio existente. El adaptador a su detector interno está aislado en `mobile-runtime.ts` y tiene una prueba de contrato con el paquete WebEyeTrack real.
+- Se fija `@mediapipe/tasks-vision` 0.10.35 como dependencia directa; JS y WASM usan la misma versión. No hay migraciones ni nuevas variables de producción. Los CDN/modelos externos siguen siendo necesarios.
+- El frame móvil se centra en un canvas cuadrado con bandas negras, sin deformarlo ni recortarlo, para que la proporción vertical no altere la razón de apertura de los ojos. El video visible conserva su imagen original.
+- Si pasan más de 8 segundos sin resultados tras el arranque, el motor libera recursos y muestra una interrupción del análisis. Se descartan las lecturas antiguas del indicador, se bloquea la calibración sobre un motor detenido y se ofrece reiniciar la cámara. En un estudio se conservan los bloques ya validados mediante la recuperación existente.
+- Archivos adicionales: `mobile-runtime.ts`, sus pruebas unitarias y de contrato; cambios en `engine.ts`, `camera.ts`, `EyeTrackingLab.tsx`, sus pruebas y manifiestos de dependencias.
+
+### Validación del seguimiento
+
+- 113 pruebas correctas en 13 archivos con `npm test -- src/lab/eyetracking src/tools/visual/eye --maxWorkers=2 --testTimeout=20000`.
+- TypeScript, ESLint de los archivos afectados y build de producción correctos. El build usa una fixture temporal de fuentes locales, fuera del repositorio, por las restricciones de red del entorno.
+- Navegador: cuatro pruebas correctas en escritorio y Pixel 7 simulado sobre el build de producción; no certifican el nuevo detector facial.
+- La prueba de contrato ejecuta `initialize()` y `step()` del paquete WebEyeTrack 0.0.2 real, con descargas y resultado de detección sustituidos. No utiliza cámara física ni demuestra sensibilidad del modelo ante un rostro.
+- Pendiente: repetir en el Android/Chrome del propietario y medir detección y frecuencia con cámara real; comprobar Safari de iPhone. CPU puede reducir la frecuencia en teléfonos lentos: se mantienen los umbrales y controles de calidad, sin etiquetar mediciones deficientes como válidas.
+- Compatibilidad universitaria: el seguimiento sigue limitado al cliente de cámara/mirada y sus dependencias. No modifica autenticación, roles, altas ni configuración institucional; otras ediciones continúan sin verificar y deben adaptar y validar el mismo ID antes de declarar una réplica completada.
+- Referencia de implementación del seguimiento: `0484cd56b0843f197345f6a75a06ae1c2103cc0f`, [PR #12](https://github.com/yveltal2026/neurofusion/pull/12). Base verificada: `main` `1d53cf68d257ff9a34bab6038bb3dc7bedb70667`. La autorización del propietario para pasar a `main` para probar se conserva; integración y despliegue se registrarán con evidencia.
+
+Para replicar, aplicar también el commit de este seguimiento después de `897ca9f` y ejecutar `npm ci` para instalar la dependencia directa. Revertir el seguimiento restaura la ruta anterior; no revierte ni elimina datos de participantes.
