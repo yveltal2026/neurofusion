@@ -109,6 +109,8 @@ export function createWebEyeTrackEngine(): GazeEngine {
   const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], kalmanFilter: [], total: [] };
   const readingTimes: number[] = [];
   const decodedCounts: Array<number | null> = [];
+  const faceSamples: number[] = [];
+  const validSamples: number[] = [];
   let loadingController: AbortController | null = null;
 
   function release() {
@@ -135,6 +137,10 @@ export function createWebEyeTrackEngine(): GazeEngine {
       const settings = (videoForDiagnostics?.srcObject as MediaStream | null)?.getVideoTracks?.()[0]?.getSettings?.();
       return {
         engine: "webeyetrack@0.0.2",
+        detectorFallbackReason: mobileRuntime?.fallbackReason ?? null,
+        trackingMode: mobileRuntime?.trackingMode ?? "worker-image",
+        faceDetectionRatio: faceSamples.length ? faceSamples.reduce((a, b) => a + b, 0) / faceSamples.length : null,
+        validGazeRatio: validSamples.length ? validSamples.reduce((a, b) => a + b, 0) / validSamples.length : null,
         detectorBackend: mobileRuntime?.backend ?? (worker ? "worker-gpu" : "not-running"),
         camera: { width: videoForDiagnostics?.videoWidth ?? 0, height: videoForDiagnostics?.videoHeight ?? 0, requestedFps: 30, reportedFps: settings?.frameRate ?? null,
           decodedFps: readingTimes.length > 1 && decodedCounts[0] !== null && decodedCounts.at(-1) != null && readingTimes.at(-1)! > readingTimes[0]
@@ -149,6 +155,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
       videoForDiagnostics = video;
       readingTimes.length = 0;
       decodedCounts.length = 0;
+      faceSamples.length = 0; validSamples.length = 0;
       for (const values of Object.values(timingSamples)) values.length = 0;
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
       if (!navigator.mediaDevices?.getUserMedia) throw new EngineError(
@@ -213,6 +220,8 @@ export function createWebEyeTrackEngine(): GazeEngine {
           const open = result.gazeState === "open";
           const [nx, ny] = result.normPog;
           const valid = open && Number.isFinite(nx) && Number.isFinite(ny);
+          faceSamples.push(Number(result.facialLandmarks.length > 0)); validSamples.push(Number(valid));
+          if (faceSamples.length > 120) { faceSamples.shift(); validSamples.shift(); }
           onFrame({
             t,
             // normPog va de −0.5 a 0.5 con origen al centro de la ventana (eje Y hacia abajo).

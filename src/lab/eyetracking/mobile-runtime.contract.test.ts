@@ -9,7 +9,7 @@ const detector = vi.hoisted(() => ({
 }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: vi.fn(async () => ({})) },
-  FaceLandmarker: { createFromOptions: vi.fn(async () => detector) },
+  FaceLandmarker: { createFromOptions: vi.fn(async () => ({ ...detector, detectForVideo: detector.detect })) },
 }));
 beforeEach(() => { vi.clearAllMocks(); detector.detect.mockReturnValue({ faceLandmarks: [], faceBlendshapes: [], facialTransformationMatrixes: [] }); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -28,7 +28,7 @@ it("el adaptador es compatible con WebEyeTrack 0.0.2 real, sin instanciar su wor
   const frame = new ImageData(64, 64);
   const result = await runtime.step(frame, 0.04);
   expect(gpu).not.toHaveBeenCalled();
-  expect(detector.detect).toHaveBeenCalledWith(frame);
+  expect(detector.detect).toHaveBeenCalledWith(frame, 40);
   expect(result.facialLandmarks).toEqual([]);
   expect(result.gazeState).toBe("closed");
   runtime.stop();

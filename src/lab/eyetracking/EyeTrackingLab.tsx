@@ -121,7 +121,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const [valIndex, setValIndex] = useState(0);
   const [valTargets, setValTargets] = useState<Point[]>([]);
-  const [live, setLive] = useState({ fps: 0, faceOk: false, gazeOk: false, slow: false });
+  const [live, setLive] = useState({ fps: 0, validFps: 0, faceOk: false, gazeOk: false, slow: false });
   const [session, setSession] = useState<ExportedSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -282,7 +282,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     const id = setInterval(() => {
       const now = performance.now();
       const recent = framesRef.current.filter((f) => f.t > now - 1000);
-      setLive({ fps: recent.length, faceOk: recent.some((f) => f.faceDetected ?? (f.x !== null)), gazeOk: recent.some((f) => f.x !== null && f.y !== null), slow: now - (framesRef.current[0]?.t ?? now) >= 2000 && recent.length < THRESHOLDS.minFps });
+      setLive({ fps: recent.length, validFps: recent.filter((f) => f.x !== null && f.y !== null).length, faceOk: recent.some((f) => f.faceDetected ?? (f.x !== null)), gazeOk: recent.some((f) => f.x !== null && f.y !== null), slow: now - (framesRef.current[0]?.t ?? now) >= 2000 && recent.length < THRESHOLDS.minFps });
     }, 400);
     return () => clearInterval(id);
   }, [stage]);
@@ -365,7 +365,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         setEngineAvailable(false);
         framesRef.current = [];
         rawFramesRef.current = [];
-        setLive({ fps: 0, faceOk: false, gazeOk: false, slow: false });
+        setLive({ fps: 0, validFps: 0, faceOk: false, gazeOk: false, slow: false });
         if (study && studySessionIdRef.current) recoverStudy(failure.message, true);
         else { calibrationFitRef.current = null; setNeedsCalibration(true); setError(failure.message); setStage("position"); }
       }, report);
@@ -1080,14 +1080,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           {error ? <Alert tone="error">{error}</Alert> : null}
           <p role="status" className="flex flex-wrap items-center gap-2 text-base">
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
-            <span className="text-sm text-muted">Lecturas por segundo: {live.fps}</span>
+            <span className="text-sm text-muted">Análisis por segundo: {live.fps} · Lecturas de mirada válidas: {live.validFps}/s</span>
           </p>
           {lightingNotice}
           {device === "phone" ? <Callout icon="device" title="Usa un soporte fijo"><p>Te recomendamos colocar el celular en un soporte o stand fijo para asegurar la mejor calidad de medición. Mantenlo a la altura de tus ojos.</p></Callout> : null}
           {live.faceOk && live.slow ? <Callout icon="alert" title="La lectura va despacio">
             <p>El procesamiento no alcanza la frecuencia necesaria. Descarga el diagnóstico para revisar qué etapa lo limita. La validación final requiere al menos {THRESHOLDS.minFps} lecturas por segundo.</p>
           </Callout> : null}
-          {live.slow ? <details className="text-sm text-muted"><summary>Ayuda si la lectura va despacio</summary><p className="mt-2">El diagnóstico permite revisar la velocidad de cámara y el tiempo de análisis. No incluye imágenes ni video.</p><Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button></details> : null}
+          <details className="text-sm text-muted"><summary>Ayuda con la cámara</summary><p className="mt-2">El diagnóstico permite revisar la velocidad de cámara y el tiempo de análisis. No incluye imágenes ni video.</p><Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button></details>
           {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
@@ -1097,7 +1097,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.gazeOk || lightingStatus !== "good"}>
               Ver mi punto de mirada
             </Button>
-            <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, faceOk: false, gazeOk: false, slow: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
+            <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, validFps: 0, faceOk: false, gazeOk: false, slow: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
           </div>
         </ParticipantScreen>
       ) : null}
