@@ -7,6 +7,7 @@ const detector = vi.hoisted(() => ({
   detect: vi.fn(() => ({ faceLandmarks: [], faceBlendshapes: [], facialTransformationMatrixes: [] } as FaceLandmarkerResult)),
   close: vi.fn(),
 }));
+vi.mock("./gaze-backend", () => ({ selectGazeBackend: vi.fn(async (_predict, _signal, _root, initialize) => { await initialize?.(); return { selected: "webgl" }; }) }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: vi.fn(async () => ({})) },
   FaceLandmarker: { createFromOptions: vi.fn(async () => ({ ...detector, detectForVideo: detector.detect })) },

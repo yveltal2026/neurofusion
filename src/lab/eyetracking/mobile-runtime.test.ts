@@ -6,6 +6,7 @@ const control = vi.hoisted(() => ({
   detect: vi.fn(), close: vi.fn(), dispose: vi.fn(), gpuInitialize: vi.fn(), failModel: false,
   options: vi.fn(), fileset: vi.fn(), pendingStep: null as Promise<unknown> | null,
 }));
+vi.mock("./gaze-backend", () => ({ selectGazeBackend: vi.fn(async (_predict, _signal, _root, initialize) => { await initialize?.(); return { selected: "webgl" }; }) }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: control.fileset },
   FaceLandmarker: { createFromOptions: control.options },
@@ -13,7 +14,7 @@ vi.mock("@mediapipe/tasks-vision", () => ({
 vi.mock("webeyetrack", () => ({
   WebEyeTrack: class {
     faceLandmarkerClient = { initialize: control.gpuInitialize, processFrame: control.detect };
-    blazeGaze = { model: { dispose: control.dispose } };
+    blazeGaze = { model: { dispose: control.dispose }, predict: vi.fn() };
     prepareInput = vi.fn();
     async initialize() {
       await this.faceLandmarkerClient.initialize();

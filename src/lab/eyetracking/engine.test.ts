@@ -128,7 +128,9 @@ describe("integración del motor", () => {
     control.result!(result); await starting;
     await vi.advanceTimersByTimeAsync(100); decoded = 33; control.result!(result);
     const diagnostic = engine.diagnostics!();
-    expect(diagnostic).toMatchObject({ camera: { reportedFps: 30, decodedFps: 30 }, processedFps: 10, faceDetectionRatio: 0, validGazeRatio: 0, meanStageMs: { faceLandmarker: 20, prepareInput: 10, total: 40 } });
+    expect(diagnostic).toMatchObject({ camera: { reportedFps: 30, decodedFps: 30 }, processedFps: 10, lastSecond: { analyses: 2, validGaze: 0 }, faceDetectionRatio: 0, validGazeRatio: 0, meanStageMs: { faceLandmarker: 20, prepareInput: 10, total: 40 } });
+    await vi.advanceTimersByTimeAsync(1001);
+    expect(engine.diagnostics!()).toMatchObject({ lastSecond: { analyses: 0, validGaze: 0 } });
     expect(JSON.stringify(diagnostic)).not.toContain("private-camera-id");
     engine.stop();
   });
