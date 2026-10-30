@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Recuperación y diagnóstico integrados en `main` mediante PR #16 (`22f5154`); comprobación física de rostro confirmada por el propietario; frecuencia aún insuficiente (ver seguimiento de rendimiento).
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. Optimización integrada en `main` mediante PR #17 (`7679b62`); nueva medición física pendiente.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -186,7 +186,7 @@ El propietario adjunta una captura del diagnóstico del Samsung S25 Ultra/Chrome
 - Se desactiva `outputFaceBlendshapes`: el modelo adicional de expresiones no interviene en apertura ocular, pose ni BlazeGaze. Se conservan landmarks, matriz facial, resolución y criterios de calidad, incluido el mínimo de 15 FPS. No se sustituyen lecturas ni se reutilizan landmarks anteriores para aparentar mayor frecuencia.
 - Si ya llegó otro frame durante una inferencia móvil, se cede el control mediante un temporizador sin esperar un ciclo adicional de pantalla. Sólo se procesa video decodificado nuevo, sin inferencias simultáneas; se cancela al detener. Si todavía no hay frame, se conserva el reintento con RAF.
 - El diagnóstico añade `detectorGpuError` (nombre/mensaje acotado, URLs eliminadas, sin stack) y aclara que `kalmanFilter` incluye la lectura síncrona del tensor de TensorFlow, además del filtro. Los 15.85 ms no se atribuyen íntegramente al suavizado. Fallback y protección de regiones oculares se conservan.
-- Archivos: `mobile-runtime.ts`, `camera.ts`, `engine.ts` y pruebas del runtime/cámara. Implementación `68060504dc1ca7642b1406f2825b0f09ec381ed4`, [PR #17](https://github.com/yveltal2026/neurofusion/pull/17), desde `main` `6bb69d2`. Integración/despliegue pendientes.
+- Archivos: `mobile-runtime.ts`, `camera.ts`, `engine.ts` y pruebas del runtime/cámara. Implementación `68060504dc1ca7642b1406f2825b0f09ec381ed4`, [PR #17](https://github.com/yveltal2026/neurofusion/pull/17), desde `main` `6bb69d2`. Integrado en `main` mediante `7679b62697d75c1ea82b10b0dea9f4dbc4b2c1aa`. Preview correcto en `85ba524`; estado Vercel de `main` correcto: https://vercel.com/neurofusion1/neurofusion/BmWTKU66713xP1zRPJpSgqUBF4SD. Rendimiento y flujo físico de esta optimización pendientes de comprobar.
 
 ### Verificación, réplica y límites
 
