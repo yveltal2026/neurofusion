@@ -295,3 +295,26 @@ El propietario confirma que tras PR #20 pudo calibrar y vio dos imágenes; el co
 ### Réplica y recuperación
 
 Aplicar después de PR #20; repetir fallo después de imagen 2, cambio de altura al recuperar, recalibración y guardado sin duplicar sesión ni imágenes. Conservar políticas institucionales; universidades sin verificar. Revertir este seguimiento restaura los controles anteriores sin migrar datos.
+
+
+## Seguimiento 2026-10-30 — Ajuste fino rechazado en dos intentos
+
+El propietario recibe dos veces «El ajuste fino no distingue bien las posiciones» tras completar la calibración. El mensaje corresponde a una corrección por eje con ganancia no finita/fuera de 0.25–4 o R² inferior a 0.5. Sin las fijaciones de esos intentos no se puede atribuir el fallo a un eje, iluminación o movimiento concretos. El flujo anterior además intentaba ese ajuste antes de la revisión selectiva y, al fallar, descartaba el ajuste inicial sin medir su precisión en los ocho objetivos independientes.
+
+### Comportamiento y archivos
+
+- `EyeTrackingLab.tsx`: completa las 18 fijaciones y la revisión acotada de puntos débiles antes de decidir el ajuste fino. `finalizeCalibration()` conserva el ajuste inicial cuando exclusivamente la corrección fina no es fiable, y pasa a la validación independiente. No intenta varias calibraciones con los datos de validación ni escoge la que mejor se adapte a ellos.
+- `calibration.ts`: conserva los criterios de ganancia/R² de `refineCalibration()`. Registra ambos ejes con ganancia, R² y motivo (`no-variation`, `non-finite`, `inverted`, `gain-out-of-range`, `low-correlation`) y estado `applied` o `base-only`. Rechazar un eje descarta toda la corrección fina; la base no cambia. Errores de base degenerada, puntos faltantes o saturación no se convierten en alternativa válida.
+- Se mantienen la validación de ocho objetivos, frecuencia mínima de 15 FPS, límites de precisión/cobertura, controles de deriva y restricciones del servidor. La participación no empieza si la base falla esa validación. No se relajan los criterios ni se etiqueta automáticamente como medición válida.
+- El layout `v5-weighted-base-fallback` distingue las 18 fijaciones con corrección fina descartada de una corrección aplicada (`v5-weighted-refinement`). Mantiene el prefijo de protocolo requerido por el servidor; no se omiten sus controles. El informe de calibración queda en el fit exportable y en el diagnóstico de cámara, con número de puntos/revisiones, sin imágenes ni identificadores personales añadidos.
+- Cuenta regresiva: «Comprobemos la precisión» evita anunciar éxito antes de validarlo. Sin dependencias, migraciones, variables ni cambios de autenticación, registro, roles o identidad.
+
+### Validación y referencias
+
+- Pruebas nuevas en `calibration.test.ts`: base conservada exactamente al fallar un eje, corrección fiable aplicada, reporte serializable y rechazo de base constante, puntos faltantes y saturación. Pruebas de interfaz: la revisión selectiva ocurre antes de resolver un ajuste fino constante; la base pasa por validación y controles de deriva antes de completar las tres imágenes con una sola sesión. Otra prueba mantiene bloqueado el inicio cuando la validación tiene error excesivo.
+- 168 pruebas correctas en 20 archivos de eyetracking/calidad visual. TypeScript y ESLint correctos; build webpack correcto con fixture temporal de fuentes fuera del repositorio. Las pruebas de captura y API son simuladas; no prueban precisión física en S25 Ultra.
+- Rama `fix/eyetracking-refinement-validation`, desde `main` `d0e6707`. Commit/PR, integración y despliegue pendientes. Repetición física pendiente.
+
+### Réplica y recuperación
+
+Aplicar después de PR #21 y verificar el layout con las reglas del servidor del destino. Repetir ajuste fino rechazado con validación aprobada y con validación fallida, revisión selectiva, guardado y controles posteriores. Mantener políticas de cada universidad; adopción sin verificar. Revertir este seguimiento devuelve el rechazo previo a validación; no hay datos ni migraciones que revertir.
