@@ -5,7 +5,9 @@ import { createMobileRuntime, MOBILE_VISION_WASM, needsMobileRuntime } from "./m
 const control = vi.hoisted(() => ({
   detect: vi.fn(), close: vi.fn(), dispose: vi.fn(), gpuInitialize: vi.fn(), failModel: false,
   options: vi.fn(), fileset: vi.fn(), pendingStep: null as Promise<unknown> | null,
+  worker: null as null | { detect: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }, stepCalls: [] as ImageData[],
 }));
+vi.mock("./face-detector-client", () => ({ createFaceDetectorWorker: vi.fn(async () => { if (!control.worker) throw new Error("Worker no disponible"); return control.worker; }) }));
 vi.mock("./gaze-backend", () => ({ selectGazeBackend: vi.fn(async (_predict, _signal, _root, initialize) => { await initialize?.(); return { selected: "webgl" }; }) }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: control.fileset },
@@ -20,12 +22,13 @@ vi.mock("webeyetrack", () => ({
       await this.faceLandmarkerClient.initialize();
       if (control.failModel) throw new Error("Modelo ausente");
     }
-    async step(frame: ImageData) { return control.pendingStep ? await control.pendingStep : this.faceLandmarkerClient.processFrame(frame); }
+    async step(frame: ImageData) { control.stepCalls.push(frame); const pending = control.pendingStep; const result = await this.faceLandmarkerClient.processFrame(frame); return pending ? await pending : result; }
   },
 }));
 
 beforeEach(() => {
   vi.clearAllMocks(); control.failModel = false; control.pendingStep = null;
+  control.worker = null; control.stepCalls.length = 0;
   control.options.mockResolvedValue({ detect: control.detect, detectForVideo: control.detect, close: control.close });
   control.fileset.mockResolvedValue({});
   control.detect.mockReturnValue({ faceLandmarks: [] });
@@ -54,6 +57,7 @@ describe("detector móvil acelerado", () => {
     control.pendingStep = new Promise((resolve) => { finish = resolve; });
     const runtime = await createMobileRuntime();
     const pending = runtime.step({} as ImageData, 1);
+    await Promise.resolve();
     runtime.stop();
     expect(control.close).not.toHaveBeenCalled();
     finish({ faceLandmarks: [] }); await pending; await Promise.resolve();
@@ -148,6 +152,33 @@ describe("detector móvil acelerado", () => {
     expect(control.options.mock.calls[2][1].canvas).not.toBe(canvas);
     expect(second.gpuError).toBeNull();
     second.stop();
+  });
+
+  it("solapa detección CPU con mirada sin mezclar imágenes ni reordenar el filtro", async () => {
+    let face1!: (value: unknown) => void, face2!: (value: unknown) => void, gaze!: (value: unknown) => void;
+    const detecting1 = new Promise((resolve) => { face1 = resolve; });
+    const detecting2 = new Promise((resolve) => { face2 = resolve; });
+    control.pendingStep = new Promise((resolve) => { gaze = resolve; });
+    control.worker = { detect: vi.fn().mockReturnValueOnce(detecting1).mockReturnValueOnce(detecting2), close: vi.fn() };
+    control.options.mockRejectedValueOnce(new Error("GPU no disponible"));
+    const runtime = await createMobileRuntime();
+    expect(runtime.backend).toBe("worker-cpu");
+    const original1 = {} as ImageData, original2 = {} as ImageData;
+    const returned1 = { width: 640 } as ImageData, returned2 = { width: 640 } as ImageData;
+    const first = runtime.step(original1, 1), second = runtime.step(original2, 2);
+    expect(control.worker.detect).toHaveBeenNthCalledWith(1, original1, 1000);
+    expect(control.worker.detect).toHaveBeenNthCalledWith(2, original2, 2000);
+    const result1 = { faceLandmarks: [[{ x: 0.3, y: 0.4, z: 0 }]] }, result2 = { faceLandmarks: [[{ x: 0.6, y: 0.5, z: 0 }]] };
+    face2({ frame: returned2, result: result2, detectorMs: 47 });
+    await Promise.resolve(); expect(control.stepCalls).toHaveLength(0);
+    face1({ frame: returned1, result: result1, detectorMs: 47 });
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(control.stepCalls).toEqual([returned1]);
+    control.pendingStep = null; gaze(result1);
+    await first; const last = await second;
+    expect(control.stepCalls).toEqual([returned1, returned2]);
+    expect(last).toMatchObject({ ...result2, durations: { faceLandmarker: 47 } });
+    runtime.stop(); expect(control.worker.close).toHaveBeenCalled();
   });
 
 });

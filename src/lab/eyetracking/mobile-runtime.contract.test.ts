@@ -8,6 +8,7 @@ const detector = vi.hoisted(() => ({
   close: vi.fn(),
 }));
 vi.mock("./gaze-backend", () => ({ selectGazeBackend: vi.fn(async (_predict, _signal, _root, initialize) => { await initialize?.(); return { selected: "webgl" }; }) }));
+vi.mock("./face-detector-client", () => ({ createFaceDetectorWorker: vi.fn(async () => { throw new Error("Worker no disponible en este contrato"); }) }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: vi.fn(async () => ({})) },
   FaceLandmarker: { createFromOptions: vi.fn(async () => ({ ...detector, detectForVideo: detector.detect })) },

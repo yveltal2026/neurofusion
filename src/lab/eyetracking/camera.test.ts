@@ -27,6 +27,25 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 describe("cámara móvil", () => {
+  it("limita a dos imágenes distintas y conserva timestamp/hora de captura", async () => {
+    const finish: Array<() => void> = [];
+    const frame = vi.fn<(pixels: ImageData, time: number, capturedAt?: number) => Promise<void>>(() => new Promise<void>((resolve) => { finish.push(resolve); }));
+    const source = createCameraSource(video, vi.fn(), { square: true, maxInFlight: () => 2 });
+    await source.startWebcam(frame);
+    await vi.advanceTimersByTimeAsync(16);
+    video.currentTime = 0.04; await vi.advanceTimersByTimeAsync(16);
+    video.currentTime = 0.08; await vi.advanceTimersByTimeAsync(32);
+    expect(frame).toHaveBeenCalledTimes(2);
+    expect(frame.mock.calls[0][0]).not.toBe(frame.mock.calls[1][0]);
+    expect(frame.mock.calls[0][1]).toBe(0); expect(frame.mock.calls[1][1]).toBe(0.04);
+    expect(frame.mock.calls[1][2]).toBeGreaterThan(frame.mock.calls[0][2]!);
+    finish[0](); await vi.advanceTimersByTimeAsync(2);
+    expect(frame).toHaveBeenCalledTimes(3);
+    expect(source.diagnostics()).toMatchObject({ peakInFlight: 2 });
+    source.stopWebcam(); finish[1](); finish[2]();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(frame).toHaveBeenCalledTimes(3);
+  });
   it("procesa el frame que llegó durante la inferencia sin esperar otro ciclo de pantalla", async () => {
     let finish!: () => void;
     const frame = vi.fn().mockResolvedValue(undefined).mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));

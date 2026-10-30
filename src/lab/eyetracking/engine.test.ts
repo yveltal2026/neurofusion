@@ -5,7 +5,7 @@ import { createWebEyeTrackEngine } from "./engine";
 
 const control = vi.hoisted(() => ({
   mobile: false,
-  frame: null as null | ((frame: ImageData, timestamp: number) => Promise<void>),
+  frame: null as null | ((frame: ImageData, timestamp: number, capturedAt?: number) => Promise<void>),
   runtimeStop: vi.fn(),
   runtimeStep: vi.fn(),
   result: null as null | ((result: GazeResult) => void),
@@ -39,6 +39,17 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("integración del motor", () => {
+  it("asigna una lectura móvil a su captura para no moverla al siguiente punto", async () => {
+    control.mobile = true;
+    control.runtimeStep.mockResolvedValue({ facialLandmarks: [{ x: 0, y: 0, z: 0 }], gazeState: "open", normPog: [0, 0], durations: { total: 10 } });
+    const engine = createWebEyeTrackEngine(); const frame = vi.fn();
+    const starting = engine.start(document.createElement("video"), frame);
+    await vi.dynamicImportSettled(); await vi.advanceTimersByTimeAsync(100);
+    await control.frame!({} as ImageData, 0.04, 40); await starting;
+    expect(frame).toHaveBeenLastCalledWith(expect.objectContaining({ t: 40, faceDetected: true }));
+    expect(engine.diagnostics!()).toMatchObject({ meanCaptureToResultMs: 60 });
+    engine.stop();
+  });
   it("distingue un rostro con ojos cerrados de una lectura válida", async () => {
     const engine = createWebEyeTrackEngine();
     const frame = vi.fn();
