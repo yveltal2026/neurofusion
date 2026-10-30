@@ -4,7 +4,7 @@ import { InvalidEyeRegionError, isImageAllocationError, validateEyeRegion } from
 
 export type MobileGazeReading = Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">;
 
-// JS y WASM deben usar la misma versión. No se usa el inicializador GPU de WebEyeTrack.
+// JS y WASM usan la misma versión. La GPU se usa en el hilo principal, sin el worker de WebEyeTrack.
 export const MOBILE_VISION_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
 export const FACE_LANDMARKER_MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
 
@@ -23,11 +23,23 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   onProgress("loading-detector");
   const fileset = await FilesetResolver.forVisionTasks(MOBILE_VISION_WASM);
   checkCancelled();
-  const detector = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
-    runningMode: "IMAGE", numFaces: 1,
+  const options = {
+    runningMode: "IMAGE" as const, numFaces: 1,
     outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
-  });
+  };
+  let backend: "main-gpu" | "main-cpu" = "main-gpu";
+  let detector: Awaited<ReturnType<typeof FaceLandmarker.createFromOptions>>;
+  try {
+    detector = await FaceLandmarker.createFromOptions(fileset, {
+      ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "GPU" },
+    });
+  } catch {
+    checkCancelled();
+    backend = "main-cpu";
+    detector = await FaceLandmarker.createFromOptions(fileset, {
+      ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
+    });
+  }
   const runtime = new WebEyeTrack();
   // El paquete no ofrece inyección pública de detector. Este único acceso interno está
   // aislado y probado contra 0.0.2; nunca se ejecuta su initialize() que fuerza GPU.
@@ -35,7 +47,9 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     faceLandmarkerClient: { initialize(): Promise<void>; processFrame(frame: ImageData): Promise<ReturnType<typeof detector.detect>> };
     blazeGaze: { model?: { dispose(): void } };
   };
-  const dispose = () => { detector.close(); internals.blazeGaze?.model?.dispose(); };
+  let detectorClosed = false;
+  const closeDetector = () => { if (!detectorClosed) { detectorClosed = true; detector.close(); } };
+  const dispose = () => { closeDetector(); internals.blazeGaze?.model?.dispose(); };
   let lastLandmarks: GazeResult["facialLandmarks"] = [];
   try {
     checkCancelled();
@@ -43,7 +57,20 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
     internals.faceLandmarkerClient = {
       initialize: async () => {},
       processFrame: async (frame) => {
-        const result = detector.detect(frame);
+        let result;
+        try { result = detector.detect(frame); }
+        catch (error) {
+          if (backend !== "main-gpu") throw error;
+          checkCancelled();
+          closeDetector();
+          backend = "main-cpu";
+          detector = await FaceLandmarker.createFromOptions(fileset, {
+            ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
+          });
+          detectorClosed = false;
+          checkCancelled();
+          result = detector.detect(frame);
+        }
         lastLandmarks = result.faceLandmarks[0] ?? [];
         return result;
       },
@@ -63,6 +90,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   let stopped = false;
   let pending: Promise<GazeResult> | null = null;
   return {
+    get backend() { return backend; },
     async step(frame: ImageData, timestamp: number): Promise<MobileGazeReading> {
       if (stopped) throw new Error("El detector móvil ya está detenido.");
       const from = performance.now();

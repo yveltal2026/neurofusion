@@ -872,6 +872,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     }
   }
 
+  function downloadCameraDiagnostic() {
+    const payload = { version: 1, createdAt: new Date().toISOString(), diagnostics: engineRef.current?.diagnostics?.() ?? null };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = "diagnostico-camara.json"; link.click(); URL.revokeObjectURL(url);
+  }
+
   function downloadJson() {
     if (!session) return;
     const blob = new Blob([JSON.stringify(session, null, 2)], { type: "application/json" });
@@ -1079,8 +1085,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           {lightingNotice}
           {device === "phone" ? <Callout icon="device" title="Usa un soporte fijo"><p>Te recomendamos colocar el celular en un soporte o stand fijo para asegurar la mejor calidad de medición. Mantenlo a la altura de tus ojos.</p></Callout> : null}
           {live.faceOk && live.slow ? <Callout icon="alert" title="La lectura va despacio">
-            <p>Cierra otras pestañas y aplicaciones para mejorar la velocidad. La validación final requiere al menos {THRESHOLDS.minFps} lecturas por segundo.</p>
+            <p>El procesamiento no alcanza la frecuencia necesaria. Descarga el diagnóstico para revisar qué etapa lo limita. La validación final requiere al menos {THRESHOLDS.minFps} lecturas por segundo.</p>
           </Callout> : null}
+          {live.slow ? <details className="text-sm text-muted"><summary>Ayuda si la lectura va despacio</summary><p className="mt-2">El diagnóstico permite revisar la velocidad de cámara y el tiempo de análisis. No incluye imágenes ni video.</p><Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button></details> : null}
           {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
@@ -1220,9 +1227,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             />
           )}
           {error ? <Alert tone="error">{error}</Alert> : null}
+          {!session.verdict.pass ? <Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button> : null}
           {!session.verdict.pass ? <Callout icon="alert" title="Por qué no pudiste avanzar">
             <ul className="list-disc space-y-2 pl-5">{session.verdict.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-            {session.fps < THRESHOLDS.minFps ? <p className="mt-3">La velocidad de lectura es insuficiente, aunque tengas buena luz. Cierra otras pestañas y aplicaciones o prueba en otro dispositivo; recalibrar sin mejorar la velocidad puede dar el mismo resultado.</p> : <p className="mt-3">Revisa que la cámara esté a la altura de los ojos y que mires cada punto sin mover la cabeza. Antes de recalibrar volveremos a comprobar la iluminación.</p>}
+            {session.fps < THRESHOLDS.minFps ? <p className="mt-3">La velocidad de procesamiento es insuficiente. Descarga el diagnóstico de cámara para distinguir la frecuencia de captura del tiempo de análisis antes de repetir la calibración.</p> : <p className="mt-3">Revisa que la cámara esté a la altura de los ojos y que mires cada punto sin mover la cabeza. Antes de recalibrar volveremos a comprobar la iluminación.</p>}
           </Callout> : null}
           <div className="space-y-4">
             <div className="flex flex-wrap gap-3">

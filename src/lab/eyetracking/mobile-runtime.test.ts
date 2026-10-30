@@ -31,12 +31,12 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); });
 
-describe("detector móvil por CPU", () => {
-  it("usa CPU en el hilo principal sin ejecutar el inicializador GPU de la biblioteca", async () => {
+describe("detector móvil acelerado", () => {
+  it("prefiere GPU en el hilo principal sin ejecutar el inicializador del worker", async () => {
     const runtime = await createMobileRuntime();
     expect(control.fileset).toHaveBeenCalledWith(MOBILE_VISION_WASM);
     expect(control.options).toHaveBeenCalledWith({}, expect.objectContaining({
-      baseOptions: expect.objectContaining({ delegate: "CPU" }), runningMode: "IMAGE",
+      baseOptions: expect.objectContaining({ delegate: "GPU" }), runningMode: "IMAGE",
     }));
     expect(control.gpuInitialize).not.toHaveBeenCalled();
     const frame = { width: 640, height: 640 } as ImageData;
@@ -74,4 +74,23 @@ describe("detector móvil por CPU", () => {
     Object.defineProperty(navigator, "maxTouchPoints", { value: 0, configurable: true });
     expect(needsMobileRuntime()).toBe(false);
   });
+  it("recurre a CPU si la GPU del navegador no permite inicializar el detector", async () => {
+    control.options.mockRejectedValueOnce(new Error("WebGL unavailable"));
+    const runtime = await createMobileRuntime();
+    expect(runtime.backend).toBe("main-cpu");
+    expect(control.options).toHaveBeenLastCalledWith({}, expect.objectContaining({ baseOptions: expect.objectContaining({ delegate: "CPU" }) }));
+    runtime.stop();
+  });
+
+  it("cambia a CPU si el contexto GPU falla durante la detección, sin cambiar los controles de calidad", async () => {
+    control.detect.mockImplementationOnce(() => { throw new Error("GPU context lost"); });
+    const runtime = await createMobileRuntime();
+    await runtime.step({} as ImageData, 1);
+    expect(runtime.backend).toBe("main-cpu");
+    expect(control.options).toHaveBeenCalledTimes(2);
+    expect(control.detect).toHaveBeenCalledTimes(2);
+    runtime.stop();
+    expect(control.close).toHaveBeenCalledTimes(2);
+  });
+
 });

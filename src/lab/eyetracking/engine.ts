@@ -18,6 +18,7 @@ export interface GazeEngine {
   /** Carga modelos y abre la cámara sobre `video`. Resuelve con la primera lectura recibida. */
   start(video: HTMLVideoElement, onFrame: (frame: GazeFrame) => void, onError?: (error: EngineError) => void, onProgress?: (step: LoadingStep) => void): Promise<{ readyMs: number }>;
   stop(): void;
+  diagnostics?(): unknown;
 }
 
 export class EngineError extends Error {
@@ -104,6 +105,10 @@ export function createWebEyeTrackEngine(): GazeEngine {
   let generation = 0;
   let mobileRuntime: MobileRuntime | null = null;
   let watchdog: ReturnType<typeof setInterval> | null = null;
+  let videoForDiagnostics: HTMLVideoElement | null = null;
+  const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], total: [] };
+  const readingTimes: number[] = [];
+  const decodedCounts: Array<number | null> = [];
   let loadingController: AbortController | null = null;
 
   function release() {
@@ -126,7 +131,24 @@ export function createWebEyeTrackEngine(): GazeEngine {
     id: "webeyetrack@0.0.2",
     calibration: "global-click",
 
+    diagnostics() {
+      const settings = (videoForDiagnostics?.srcObject as MediaStream | null)?.getVideoTracks?.()[0]?.getSettings?.();
+      return {
+        engine: "webeyetrack@0.0.2",
+        detectorBackend: mobileRuntime?.backend ?? (worker ? "worker-gpu" : "not-running"),
+        camera: { width: videoForDiagnostics?.videoWidth ?? 0, height: videoForDiagnostics?.videoHeight ?? 0, requestedFps: 30, reportedFps: settings?.frameRate ?? null,
+          decodedFps: readingTimes.length > 1 && decodedCounts[0] !== null && decodedCounts.at(-1) != null && readingTimes.at(-1)! > readingTimes[0]
+            ? (decodedCounts.at(-1)! - decodedCounts[0]!) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null },
+        readings: readingTimes.length,
+        processedFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (readingTimes.length - 1) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
+        meanStageMs: Object.fromEntries(Object.entries(timingSamples).map(([key, values]) => [key, values.length ? values.reduce((a, b) => a + b, 0) / values.length : null])),
+      };
+    },
     async start(video, onFrame, onError, onProgress) {
+      videoForDiagnostics = video;
+      readingTimes.length = 0;
+      decodedCounts.length = 0;
+      for (const values of Object.values(timingSamples)) values.length = 0;
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
       if (!navigator.mediaDevices?.getUserMedia) throw new EngineError(
         "Este navegador no permite usar la cámara aquí. Abre la página por HTTPS (o localhost) en un navegador reciente.", "camera-error",
@@ -171,6 +193,15 @@ export function createWebEyeTrackEngine(): GazeEngine {
           if (!active) return;
           const t = performance.now();
           lastResult = t;
+          readingTimes.push(t);
+          let decoded: number | null = null;
+          try { decoded = video.getVideoPlaybackQuality?.().totalVideoFrames ?? null; } catch { /* No todos los navegadores exponen el contador. */ }
+          decodedCounts.push(decoded);
+          if (readingTimes.length > 120) { readingTimes.shift(); decodedCounts.shift(); }
+          for (const [key, samples] of Object.entries(timingSamples)) {
+            const duration = result.durations?.[key];
+            if (Number.isFinite(duration)) { samples.push(duration); if (samples.length > 120) samples.shift(); }
+          }
           if (first) {
             first = false;
             if (timer) clearTimeout(timer);

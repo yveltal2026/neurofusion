@@ -15,7 +15,7 @@ export function createCameraSource(video: HTMLVideoElement, onError: (error: unk
         video.autoplay = true;
         video.playsInline = true;
         const opened = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "user" }, width: { ideal: 640 }, height: { ideal: 480 } },
+          video: { facingMode: { ideal: "user" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
           audio: false,
         });
         if (!active) { opened.getTracks().forEach((track) => track.stop()); return; }
