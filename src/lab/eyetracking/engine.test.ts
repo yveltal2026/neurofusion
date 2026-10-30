@@ -116,4 +116,21 @@ describe("integración del motor", () => {
     expect(control.worker!.terminate).toHaveBeenCalledOnce();
   });
 
+  it("distingue FPS de cámara de FPS de procesamiento y no expone identificadores", async () => {
+    const video = document.createElement("video");
+    let decoded = 30;
+    Object.defineProperties(video, { videoWidth: { value: 640 }, videoHeight: { value: 480 }, getVideoPlaybackQuality: { value: () => ({ totalVideoFrames: decoded }) } });
+    video.srcObject = { getVideoTracks: () => [{ getSettings: () => ({ frameRate: 30, deviceId: "private-camera-id" }) }] } as unknown as MediaStream;
+    const engine = createWebEyeTrackEngine();
+    const starting = engine.start(video, vi.fn());
+    await vi.dynamicImportSettled();
+    const result = { facialLandmarks: [], gazeState: "closed", normPog: [0, 0], durations: { faceLandmarker: 20, prepareInput: 10, blazeGaze: 5, total: 40 } } as unknown as GazeResult;
+    control.result!(result); await starting;
+    await vi.advanceTimersByTimeAsync(100); decoded = 33; control.result!(result);
+    const diagnostic = engine.diagnostics!();
+    expect(diagnostic).toMatchObject({ camera: { reportedFps: 30, decodedFps: 30 }, processedFps: 10, meanStageMs: { faceLandmarker: 20, prepareInput: 10, total: 40 } });
+    expect(JSON.stringify(diagnostic)).not.toContain("private-camera-id");
+    engine.stop();
+  });
+
 });
