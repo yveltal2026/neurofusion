@@ -138,7 +138,9 @@ export function createWebEyeTrackEngine(): GazeEngine {
       return {
         engine: "webeyetrack@0.0.2",
         detectorFallbackReason: mobileRuntime?.fallbackReason ?? null,
+        detectorGpuError: mobileRuntime?.gpuError ?? null,
         trackingMode: mobileRuntime?.trackingMode ?? "worker-image",
+        timingNotes: { kalmanFilter: "Includes TensorFlow result readback and filtering, not isolated filter time." },
         faceDetectionRatio: faceSamples.length ? faceSamples.reduce((a, b) => a + b, 0) / faceSamples.length : null,
         validGazeRatio: validSamples.length ? validSamples.reduce((a, b) => a + b, 0) / validSamples.length : null,
         detectorBackend: mobileRuntime?.backend ?? (worker ? "worker-gpu" : "not-running"),
