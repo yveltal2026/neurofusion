@@ -2,6 +2,7 @@ import type { GazeFrame } from "./metrics";
 import { createCameraSource } from "./camera";
 import { createMobileRuntime, needsMobileRuntime, MOBILE_VISION_WASM, type MobileRuntime } from "./mobile-runtime";
 import type { GazeResult } from "webeyetrack";
+import { STARTUP_TIMEOUT_MS, type LoadingStep } from "./loading";
 
 /**
  * Contrato mínimo que el resto del módulo exige a un motor de mirada. Existe para que cambiar de
@@ -15,7 +16,7 @@ export interface GazeEngine {
    */
   readonly calibration: "global-click" | "explicit";
   /** Carga modelos y abre la cámara sobre `video`. Resuelve con la primera lectura recibida. */
-  start(video: HTMLVideoElement, onFrame: (frame: GazeFrame) => void, onError?: (error: EngineError) => void): Promise<{ readyMs: number }>;
+  start(video: HTMLVideoElement, onFrame: (frame: GazeFrame) => void, onError?: (error: EngineError) => void, onProgress?: (step: LoadingStep) => void): Promise<{ readyMs: number }>;
   stop(): void;
 }
 
@@ -48,7 +49,7 @@ function cameraError(error: unknown): EngineError {
 export async function checkModelAssets(url: string = WEBEYETRACK_MODEL_URL): Promise<void> {
   let res: Response;
   try {
-    res = await fetch(url, { cache: "no-store" });
+    res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(10_000) });
   } catch {
     throw new EngineError(`No se pudo descargar el modelo (${url}). Revisa la conexión.`, "model-missing");
   }
@@ -92,7 +93,7 @@ export async function checkCdnReachable(urls: string[] = needsMobileRuntime() ? 
 }
 
 /** Segundos que esperamos la primera lectura antes de declarar fallo (descarga de modelos incluida). */
-const FIRST_FRAME_TIMEOUT_MS = 45_000;
+const FIRST_FRAME_TIMEOUT_MS = STARTUP_TIMEOUT_MS;
 
 export function createWebEyeTrackEngine(): GazeEngine {
   let webcam: { stopWebcam(): void } | null = null;
@@ -103,9 +104,12 @@ export function createWebEyeTrackEngine(): GazeEngine {
   let generation = 0;
   let mobileRuntime: MobileRuntime | null = null;
   let watchdog: ReturnType<typeof setInterval> | null = null;
+  let loadingController: AbortController | null = null;
 
   function release() {
     active = false;
+    loadingController?.abort();
+    loadingController = null;
     if (timer) clearTimeout(timer);
     timer = null;
     if (watchdog) clearInterval(watchdog);
@@ -122,7 +126,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
     id: "webeyetrack@0.0.2",
     calibration: "global-click",
 
-    async start(video, onFrame, onError) {
+    async start(video, onFrame, onError, onProgress) {
       // Import dinámico: el bundle de la librería toca `window`/`Worker` y no debe evaluarse en SSR.
       if (!navigator.mediaDevices?.getUserMedia) throw new EngineError(
         "Este navegador no permite usar la cámara aquí. Abre la página por HTTPS (o localhost) en un navegador reciente.", "camera-error",
@@ -134,6 +138,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
       if (run !== generation) throw new EngineError("Se canceló el inicio de la cámara.", "camera-error");
       if (!video.id) video.id = "webeyetrack-video";
       active = true;
+      loadingController = new AbortController();
       const startedAt = performance.now();
 
       return new Promise((resolve, reject) => {
@@ -162,7 +167,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
         }, 1000);
         let first = true;
 
-        const receive = (result: GazeResult) => {
+        const receive = (result: Pick<GazeResult, "facialLandmarks" | "gazeState" | "normPog" | "durations">) => {
           if (!active) return;
           const t = performance.now();
           lastResult = t;
@@ -186,17 +191,29 @@ export function createWebEyeTrackEngine(): GazeEngine {
           });
         };
         if (mobile) {
-          void createMobileRuntime().then(async (runtime) => {
+          let cameraReady = false;
+          let runtimeReady = false;
+          const runtimePromise = createMobileRuntime((step) => { if (active) onProgress?.(step); }, loadingController!.signal).then((runtime) => {
             if (!active || run !== generation) { runtime.stop(); return; }
             mobileRuntime = runtime;
-            await source.startWebcam(async (frame, timestamp) => {
-              try { receive(await runtime.step(frame, timestamp)); }
+            runtimeReady = true;
+            onProgress?.(cameraReady ? "waiting-frame" : "starting-camera");
+            return runtime;
+          });
+          // La cámara abre en paralelo: su permiso y reproducción no esperan a las descargas.
+          onProgress?.("starting-camera");
+          void source.startWebcam(async (frame, timestamp) => {
+              try {
+                const runtime = await runtimePromise;
+                if (runtime && active) receive(await runtime.step(frame, timestamp));
+              }
               catch (error) { fail(new EngineError(error instanceof Error ? `No se pudo analizar la cámara: ${error.message}` : "Falló el detector móvil.", "camera-error")); }
-            });
-          }).catch((error) => fail(new EngineError(
+          }).then(() => { cameraReady = true; if (active && runtimeReady) onProgress?.("waiting-frame"); });
+          void runtimePromise.catch((error) => fail(new EngineError(
             error instanceof Error ? `No se pudo cargar el detector móvil: ${error.message}` : "No se pudo cargar el detector móvil.", "model-missing",
           )));
         } else if (library) {
+          onProgress?.("loading-detector");
           const client = new library.WebcamClient(video.id);
           client.startWebcam = source.startWebcam;
           client.stopWebcam = source.stopWebcam;

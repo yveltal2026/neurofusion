@@ -1,5 +1,10 @@
 import { median, percentile, type GazeFrame, type Point } from "./metrics";
 
+/** A 10 lecturas/s una ventana fija de 800 ms nunca reúne las 10 muestras exigidas. */
+export function fixationWindowMs(fps: number): number {
+  return Math.max(800, Math.min(2200, Math.ceil(12_000 / (Number.isFinite(fps) && fps > 0 ? fps : 10))));
+}
+
 export interface FixationQuality {
   samples: number;
   durationMs: number;

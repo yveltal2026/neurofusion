@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: primera entrega y seguimiento Android integrados en `main`; detección en el teléfono físico pendiente de confirmar.
+- Estado: detección de rostro confirmada por el propietario en Android/Chrome tras PR #12; corrección de recortes, captura a baja frecuencia y preparación en `fix/eyetracking-frame-recovery`, integración pendiente.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -90,3 +90,30 @@ La inspección de WebEyeTrack 0.0.2 confirma dos limitaciones: fuerza MediaPipe 
 Para replicar, aplicar también el commit de este seguimiento después de `897ca9f` y ejecutar `npm ci` para instalar la dependencia directa. Revertir el seguimiento restaura la ruta anterior; no revierte ni elimina datos de participantes.
 
 - 2026-10-29: PR #12 integrado en `main` (`474cb986c3dbbd90588a841e154dbed8a03d579e`); 113 pruebas, cuatro recorridos simulados, TypeScript, ESLint, build y preview de Vercel correctos. La validación de cámara física continúa pendiente.
+
+## Seguimiento 2026-10-29 — Recortes ImageData, calibración a 10 FPS y preparación
+
+El propietario confirma que los modelos sí terminaron de cargar y que se detecta el rostro en Android/Chrome. Observa unas 10 lecturas/s, fijación inestable y, más tarde, `Failed to construct ImageData: the requested image size exceeds the supported range`. No se atribuye este informe a una descarga que nunca finalizó.
+
+### Causas verificadas y comportamiento final
+
+- `obtainEyePatch()` de WebEyeTrack 0.0.2 obtiene la altura de una región de ojos a partir de una homografía y la pasa a `ImageData(512, alto)` sin acotarla. La prueba de contrato reproduce la excepción usando `prepareInput()` real, una matriz facial válida y landmarks cuyo recorte tiene altura negativa.
+- `eye-region.ts` verifica geometría, finitud, homografía y límites del recorte antes de que el paquete asigne memoria. Un frame degenerado o un error concreto de asignación se convierte en lectura inválida, con coordenadas nulas; no cierra el motor ni reinicia el estudio. Otros errores siguen propagándose. No se corrigen ni se inventan coordenadas para aprobar esa lectura.
+- La ventana anterior de 800 ms no podía reunir las diez muestras exigidas a 10 lecturas/s. Ahora se adapta entre 800 y 2200 ms y mantiene el mínimo de muestras, proporción válida, dispersión, deriva y frescura existentes. La prueba verifica que una fijación estable a 10 FPS avanza y que una señal ruidosa sigue siendo rechazada.
+- La frecuencia mínima de validación final permanece en 15 lecturas/s. Si el equipo sigue entregando sólo 10, los resultados no se consideran válidos por reunir más muestras durante la calibración. La pantalla de posición informa de la baja velocidad tras el arranque.
+- La preparación muestra su fase real, abre la cámara en paralelo a los modelos y limita la comprobación del modelo local a 10 s y la preparación completa a 90 s. Un intento cancelado no puede arrancar tarde, y los recursos que terminan de inicializar después de cancelar se liberan. La preparación lenta no se presenta como rostro ausente.
+
+### Archivos y réplica
+
+Se añaden `eye-region.ts`, `loading.ts` y pruebas; se actualizan `mobile-runtime.ts`, `engine.ts`, `calibration.ts`, `EyeTrackingLab.tsx`, sus pruebas y `e2e/eyetracking-lab.spec.ts`. Sin dependencias, variables ni migraciones nuevas. El código base de este seguimiento es `main` `94f075d`, después de PR #12. Referencia de implementación: `3bc0e2b75548330b0c9352d93fd3bfb91d7f4d88`, [PR #13](https://github.com/yveltal2026/neurofusion/pull/13).
+
+Aplicar el seguimiento después de `0484cd5`, conservar las personalizaciones del corredor del destino y ejecutar los casos de prueba de recorte negativo, descarga fallida, cancelación y captura estable a 10 FPS. La compatibilidad de otras universidades sigue sin verificar; no se modifican registro, roles, permisos, dominios ni mecanismos de alta.
+
+### Validación y límites
+
+- 125 pruebas correctas en 14 archivos mediante `npm test -- src/lab/eyetracking src/tools/visual/eye --maxWorkers=2 --testTimeout=20000`.
+- Regresión con el paquete WebEyeTrack real: reproduce la asignación inválida original; con el adaptador no se intenta esa asignación y se procesa un siguiente frame.
+- TypeScript, ESLint y build de producción correctos; para el build se usa la fixture temporal de fuentes fuera del repositorio.
+- Navegador: seis pruebas correctas en escritorio/móvil simulado, incluyendo un fallo de descarga que vuelve al formulario y permite reintentar. El simulador no demuestra la precisión del detector real.
+- Falta repetir con la cámara del Android/Chrome del propietario y comprobar si su frecuencia alcanza el mínimo de calidad. No se ha medido una mejora de FPS en hardware real ni se afirma que se haya alcanzado 15 FPS. Los modelos externos no se descargan en estas pruebas del entorno.
+- Para revertir, revertir el commit de este seguimiento. No hay migraciones ni cambios en datos que revertir.

@@ -15,6 +15,7 @@ import {
   type GazeEngine,
 } from "./engine";
 import {
+  THRESHOLDS,
   calibrationGrid,
   evaluateTarget,
   frameStats,
@@ -29,8 +30,9 @@ import { buildSession, recordDriftChecks, type ExportedSession, type Lighting } 
 import { collectEyeObservation } from "@/tools/visual/eye/samples";
 import type { EyeObservation, EyeQuality } from "@/tools/visual/eye/schema";
 import type { EyeStudyAsset } from "@/tools/visual/eye/participant.server";
-import { applyCalibration, assessFixation, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
+import { applyCalibration, assessFixation, fixationWindowMs, fitCalibration, moveSaturatedTarget, refineCalibration, refinementGrid, weakCalibrationPoints, type CalibrationFit, type CalibrationPair } from "./calibration";
 import { buildDriftCheck, driftCheckpoints, driftFailures, driftFrameStats, driftSummary, driftTargets, unmeasuredDriftCheck, type DriftCheck, type DriftSummary } from "./drift";
+import { LOADING_LABELS, STARTUP_TIMEOUT_MS, type LoadingStep } from "./loading";
 import { screenWidthCm, screenWidthFromReference, type ScreenFormat } from "./screen";
 
 type Stage = "setup" | "loading" | "position" | "calibration" | "countdown" | "validation" | "drift" | "recovery" | "preparing" | "results" | "free" | "stimulus" | "saving" | "done";
@@ -78,6 +80,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [stage, setStage] = useState<Stage>("setup");
   const [error, setError] = useState<string | null>(null);
   const [engineAvailable, setEngineAvailable] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<LoadingStep>("checking-model");
+  const startupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Formulario
   const [participant, setParticipant] = useState("");
@@ -115,7 +119,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [countdown, setCountdown] = useState(COUNTDOWN_S);
   const [valIndex, setValIndex] = useState(0);
   const [valTargets, setValTargets] = useState<Point[]>([]);
-  const [live, setLive] = useState({ fps: 0, faceOk: false, gazeOk: false });
+  const [live, setLive] = useState({ fps: 0, faceOk: false, gazeOk: false, slow: false });
   const [session, setSession] = useState<ExportedSession | null>(null);
   const [copied, setCopied] = useState(false);
   const [consent, setConsent] = useState(false);
@@ -144,7 +148,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     video.playsInline = true;
     video.width = 640;
     video.height = 480;
-    const show = stage === "position" || stage === "recovery";
+    const show = stage === "loading" || stage === "position" || stage === "recovery";
     video.setAttribute("aria-label", "Vista de tu cámara");
     video.setAttribute("aria-hidden", String(!show));
     video.className = show
@@ -221,6 +225,8 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   // Al salir: cancela cualquier validación en curso y apaga la cámara.
   const teardown = useCallback(() => {
     runIdRef.current++;
+    if (startupTimerRef.current) clearTimeout(startupTimerRef.current);
+    startupTimerRef.current = null;
     engineRef.current?.stop();
     engineRef.current = null;
     setEngineAvailable(false);
@@ -269,7 +275,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     const id = setInterval(() => {
       const now = performance.now();
       const recent = framesRef.current.filter((f) => f.t > now - 1000);
-      setLive({ fps: recent.length, faceOk: recent.some((f) => f.faceDetected ?? (f.x !== null)), gazeOk: recent.some((f) => f.x !== null && f.y !== null) });
+      setLive({ fps: recent.length, faceOk: recent.some((f) => f.faceDetected ?? (f.x !== null)), gazeOk: recent.some((f) => f.x !== null && f.y !== null), slow: now - (framesRef.current[0]?.t ?? now) >= 2000 && recent.length < THRESHOLDS.minFps });
     }, 400);
     return () => clearInterval(id);
   }, [stage]);
@@ -307,7 +313,21 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       ? "Ajusta y confirma la tarjeta con el tamaño actual de pantalla. Indica una distancia entre 10 y 200 cm."
       : "Indica una diagonal entre 3 y 100 pulgadas y una distancia entre 10 y 200 cm.");
 
+    const run = ++runIdRef.current;
+    let currentStep: LoadingStep = "checking-model";
+    const report = (step: LoadingStep) => {
+      currentStep = step;
+      if (run === runIdRef.current) setLoadingStep(step);
+    };
+    report("checking-model");
     setStage("loading");
+    const timer = setTimeout(() => {
+      if (run !== runIdRef.current) return;
+      teardown();
+      setError(`No se pudo completar la preparación en 90 segundos. Último paso: ${LOADING_LABELS[currentStep]} Revisa tu conexión y vuelve a intentar.`);
+      setStage("setup");
+    }, STARTUP_TIMEOUT_MS);
+    startupTimerRef.current = timer;
     try {
       // `?engine=fake` usa un simulador (puntero como mirada) para probar el flujo sin cámara ni modelos.
       const fake = new URLSearchParams(window.location.search).get("engine") === "fake";
@@ -316,9 +336,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       }
       if (!fake) {
         await checkModelAssets();
+        if (run !== runIdRef.current) return;
+        report("checking-downloads");
         await checkCdnReachable();
+        if (run !== runIdRef.current) return;
       }
+      report("loading-code");
       const engine = fake ? (await import("./engine.fake")).createFakeEngine() : createWebEyeTrackEngine();
+      if (run !== runIdRef.current) return;
       engineRef.current = engine;
       framesRef.current = [];
       rawFramesRef.current = [];
@@ -332,19 +357,24 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
         setEngineAvailable(false);
         framesRef.current = [];
         rawFramesRef.current = [];
-        setLive({ fps: 0, faceOk: false, gazeOk: false });
+        setLive({ fps: 0, faceOk: false, gazeOk: false, slow: false });
         if (study && studySessionIdRef.current) recoverStudy(failure.message, true);
         else { calibrationFitRef.current = null; setNeedsCalibration(true); setError(failure.message); setStage("position"); }
-      });
+      }, report);
+      if (run !== runIdRef.current) { engine.stop(); return; }
       readyMsRef.current = readyMs;
       setEngineAvailable(true);
       setStage("position");
     } catch (err) {
+      if (run !== runIdRef.current) return;
       engineRef.current?.stop();
       engineRef.current = null;
       setEngineAvailable(false);
       setError(err instanceof Error ? err.message : "No se pudo iniciar el eye tracking.");
       setStage("setup");
+    } finally {
+      clearTimeout(timer);
+      if (startupTimerRef.current === timer) startupTimerRef.current = null;
     }
   }
 
@@ -413,12 +443,14 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     const runId = runIdRef.current;
     const viewport = calibrationViewportRef.current;
     let fixation: ReturnType<typeof assessFixation> = { ok: false, reason: "unstable" };
-    // Espera una ventana estable después del clic, hasta un máximo de 3 s.
-    await sleep(1000);
+    // Conserva el mínimo de muestras y la estabilidad; amplía el tiempo en equipos lentos.
+    const recentFrom = Math.max(now - 2000, rawFramesRef.current[0]?.t ?? now - 2000);
+    const captureMs = fixationWindowMs(frameStats(rawFramesRef.current, recentFrom, now).fps);
+    await sleep(Math.max(1000, captureMs + 200));
     while (performance.now() - now <= 3200) {
       if (runId !== runIdRef.current) return;
       const end = performance.now();
-      fixation = assessFixation(rawFramesRef.current, Math.max(now + 200, end - 800), end, viewport);
+      fixation = assessFixation(rawFramesRef.current, Math.max(now + 200, end - captureMs), end, viewport);
       if (fixation.ok || fixation.reason === "saturated") break;
       await sleep(200);
     }
@@ -994,11 +1026,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <ConsentCheck checked={consent} onChange={setConsent}>
                 Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
               </ConsentCheck>
+              {stage === "loading" ? <div ref={videoPreviewRef} data-testid="camera-loading-preview" /> : null}
               <Button size="lg" onClick={start} disabled={stage === "loading"} className="w-full">
                 {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
               </Button>
               {stage === "loading" ? (
-                <p className="text-sm text-muted" role="status">La primera vez descarga varios MB de modelos; puede tardar hasta 45 s.</p>
+                <p className="text-sm text-muted" role="status">{LOADING_LABELS[loadingStep]} La primera preparación puede tardar hasta 90 s.</p>
               ) : null}
             </div>
           </ParticipantScreen>
@@ -1030,11 +1063,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
             {conditionFields}
 
+            {stage === "loading" ? <div ref={videoPreviewRef} data-testid="camera-loading-preview" /> : null}
             <Button onClick={start} disabled={stage === "loading"} className="w-full">
               {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
             </Button>
             {stage === "loading" ? (
-              <p className="text-xs text-muted">La primera vez descarga varios MB de modelos; puede tardar hasta 45 s.</p>
+              <p className="text-xs text-muted">{LOADING_LABELS[loadingStep]} La primera preparación puede tardar hasta 90 s.</p>
             ) : null}
           </Card>
         </div>
@@ -1058,6 +1092,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
             <span className="text-sm text-muted">Lecturas por segundo: {live.fps}</span>
           </p>
+          {live.faceOk && live.slow ? <Callout icon="alert" title="La lectura va despacio">
+            <p>Cierra otras pestañas y aplicaciones para mejorar la velocidad. La validación final requiere al menos {THRESHOLDS.minFps} lecturas por segundo.</p>
+          </Callout> : null}
           {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
@@ -1067,7 +1104,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <Button size="lg" variant="secondary" onClick={() => setStage("free")} disabled={!live.gazeOk}>
               Ver mi punto de mirada
             </Button>
-            <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, faceOk: false, gazeOk: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
+            <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, faceOk: false, gazeOk: false, slow: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
           </div>
         </ParticipantScreen>
       ) : null}
