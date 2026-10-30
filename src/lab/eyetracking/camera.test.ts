@@ -6,6 +6,7 @@ let video: HTMLVideoElement;
 let stop: ReturnType<typeof vi.fn>;
 let getUserMedia: ReturnType<typeof vi.fn>;
 const drawImage = vi.fn();
+const fillRect = vi.fn();
 const getImageData = vi.fn((x: number, y: number, width: number, height: number) => ({ width, height }) as ImageData);
 
 beforeEach(() => {
@@ -16,7 +17,7 @@ beforeEach(() => {
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia } });
   vi.spyOn(video, "play").mockResolvedValue();
   vi.spyOn(video, "pause").mockImplementation(() => {});
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage, getImageData } as unknown as ReturnType<HTMLCanvasElement["getContext"]>);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage, getImageData, fillRect } as unknown as ReturnType<HTMLCanvasElement["getContext"]>);
   Object.defineProperties(video, {
     readyState: { configurable: true, value: 2 },
     videoWidth: { configurable: true, value: 720 },
@@ -90,4 +91,15 @@ describe("cámara móvil", () => {
     source.stopWebcam();
     expect(stop).toHaveBeenCalledOnce();
   });
+  it("normaliza vídeo vertical para que la proporción no invalide ojos abiertos", async () => {
+    const frame = vi.fn().mockResolvedValue(undefined);
+    const source = createCameraSource(video, vi.fn(), { square: true });
+    await source.startWebcam(frame);
+    await vi.advanceTimersByTimeAsync(16);
+    expect(fillRect).toHaveBeenCalledWith(0, 0, 640, 640);
+    expect(drawImage).toHaveBeenCalledWith(video, 140, 0, 360, 640);
+    expect(frame).toHaveBeenCalledWith(expect.objectContaining({ width: 640, height: 640 }), 0);
+    source.stopWebcam();
+  });
+
 });

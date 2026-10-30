@@ -2,9 +2,10 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EyeTrackingLab } from "./EyeTrackingLab";
+import { EngineError } from "./engine";
 import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+const control = vi.hoisted(() => ({ runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
   return { ...actual, checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
@@ -15,7 +16,8 @@ vi.mock("./engine", async (original) => {
       let driftSince = 0;
       let firstDriftAt: number | null = null;
       return { id: "webeyetrack@0.0.2", calibration: "global-click",
-        start: async (_video: unknown, onFrame: (f: { t: number; x: number | null; y: number | null; inferenceMs: number; faceDetected?: boolean }) => void) => {
+        start: async (_video: unknown, onFrame: (f: { t: number; x: number | null; y: number | null; inferenceMs: number; faceDetected?: boolean }) => void, onError?: (error: import("./engine").EngineError) => void) => {
+          control.runtimeError = onError ?? null;
           timer = setInterval(() => {
             const dot = document.querySelector<HTMLElement>('button[aria-label^="Punto de calibración"], [data-testid="validation-target"], [data-testid="drift-target"]');
             let x = dot ? Number.parseFloat(dot.style.left) : window.innerWidth / 2;
@@ -92,7 +94,7 @@ async function piece() { await tick(20); await tick(5000); }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
-  control.startError = false; control.eyesClosed = false;
+  control.startError = false; control.eyesClosed = false; control.runtimeError = null;
   control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
   starts = 0; completed = null; activeAssets = assets;
@@ -337,4 +339,18 @@ describe("preparación móvil y tamaño de pantalla", () => {
     expect(screen.getByText(/Vemos tu rostro/)).toBeTruthy();
     expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
   });
+  it("muestra una interrupción del análisis y permite reiniciar sin calibrar con lecturas antiguas", async () => {
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    act(() => { control.runtimeError!(new EngineError("El análisis dejó de responder", "timeout")); });
+    expect(screen.getByText("El análisis dejó de responder")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
+    await tick(1200);
+    expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
+    click("Volver a iniciar cámara");
+    expect(screen.getByRole("button", { name: "Iniciar cámara y cargar modelos" })).toBeTruthy();
+  });
+
 });
