@@ -658,16 +658,31 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     return check.passed;
   }, [session, device, study, recoverStudy]);
 
+  function prepareRecalibration(message: string) {
+    runIdRef.current++;
+    calibrationFitRef.current = null;
+    setNeedsCalibration(true);
+    setLightingStatus("checking");
+    setError(message);
+    setStage("position");
+  }
+
   async function startStudy(allowLimited = false) {
-    if (!study || !session || studyBusy) return;
+    if (!study || studyBusy) return;
+    if (!engineAvailable || !engineRef.current) { teardown(); setStage("setup"); return; }
+    if (!session) { prepareRecalibration("Revisa tu posición y la iluminación para volver a calibrar. Conservamos el avance validado."); return; }
     if (allowLimited) {
       if (recoveryCountRef.current < 2 || !recoveryChecksRef.current.some((check) => !check.passed)) return;
       measurementLimitedRef.current = true;
       setMeasurementLimited(true);
     }
-    if (!measurementLimitedRef.current && (needsCalibration || !calibrationFitRef.current || !session.verdict.pass)) return setError("Recalibra antes de iniciar: la medición no alcanzó la calidad necesaria.");
+    if (!measurementLimitedRef.current && (needsCalibration || !calibrationFitRef.current || !session.verdict.pass)) {
+      prepareRecalibration("Necesitamos volver a calibrar. Revisa tu posición y la iluminación; conservamos el avance validado.");
+      return;
+    }
     if (!measurementLimitedRef.current && (window.innerWidth !== session.viewport.width || window.innerHeight !== session.viewport.height)) {
-      return setError("La ventana cambió desde la calibración. Recalibra antes de iniciar.");
+      prepareRecalibration("Cambió el tamaño visible de la pantalla. Vamos a calibrar con el tamaño actual; conservamos el avance validado.");
+      return;
     }
     if (!study.preview && session.engineId !== "webeyetrack@0.0.2") {
       setError("La vista de prueba no puede enviar lecturas a un estudio real. Abre la liga sin el simulador.");
@@ -1114,8 +1129,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           </Callout>
           <Section title="Qué hacer">
             <p className="text-base leading-relaxed">
-              Centra tu cara como al principio y apoya el dispositivo. Mira los 3 puntos del control; tarda entre 6 y 11 segundos.
-              Repetiremos sólo las imágenes del bloque que quedó sin validar.
+              {!engineAvailable ? "Vuelve a iniciar la cámara para recuperar la lectura de tu mirada."
+                : needsCalibration ? "Pulsa «Volver a calibrar y continuar». Revisaremos tu posición e iluminación antes de mostrar los puntos."
+                : "Centra tu cara como al principio y apoya el dispositivo. Pulsa «Revisar mirada y continuar» y mira los 3 puntos del control; tarda entre 6 y 11 segundos."}
+              {" "}Repetiremos sólo las imágenes del bloque que quedó sin validar.
             </p>
             {needsCalibration ? <p className="text-base leading-relaxed">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
           </Section>
@@ -1125,9 +1142,10 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           {lightingNotice}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
           <div className="flex flex-wrap gap-3">
-            <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration}>Revisar mirada y continuar</Button>
-            <Button size="lg" variant="secondary" onClick={() => { setLightingStatus("checking"); setStage("position"); }} disabled={studyBusy || !engineAvailable}>Recalibrar</Button>
-            {!engineAvailable ? <Button size="lg" variant="secondary" onClick={() => { teardown(); setStage("setup"); }}>Volver a iniciar cámara</Button> : null}
+            <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy}>
+              {!engineAvailable ? "Volver a iniciar cámara" : needsCalibration ? "Volver a calibrar y continuar" : "Revisar mirada y continuar"}
+            </Button>
+            {engineAvailable && !needsCalibration ? <Button size="lg" variant="secondary" onClick={() => prepareRecalibration("Revisa tu posición e iluminación para volver a calibrar. Conservamos el avance validado.")} disabled={studyBusy}>Recalibrar</Button> : null}
           </div>
           {limitedReady ? <Callout icon="alert" title="Si el ajuste sigue fallando">
             <p>Puedes terminar. Tu participación quedará marcada con precisión limitada y sus miradas no se incluirán en los mapas válidos.</p>

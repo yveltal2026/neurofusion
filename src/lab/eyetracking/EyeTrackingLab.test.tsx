@@ -225,6 +225,44 @@ describe("estudios con control de calidad", () => {
     expect(completed!.quality.medianErrorDeg).toBeGreaterThan(0.5);
   });
 
+  it("el botón de recuperación lleva a recalibrar si cambia la altura al mostrar la cámara", async () => {
+    await setup();
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece();
+    control.failDrift = true; await drift();
+    const descriptor = Object.getOwnPropertyDescriptor(window, "innerHeight")!;
+    try {
+      Object.defineProperty(window, "innerHeight", { value: window.innerHeight - 80, configurable: true });
+      act(() => { window.dispatchEvent(new Event("resize")); });
+      click("Revisar mirada y continuar");
+      expect(screen.getByRole("heading", { name: "Acomódate frente a la cámara" })).toBeTruthy();
+      expect(screen.getByText(/Cambió el tamaño visible de la pantalla/)).toBeTruthy();
+      control.failDrift = false;
+      await tick(500); await calibrate();
+      click("Continuar desde imagen 1"); await drift();
+      expect(screen.getByAltText("Pieza 1")).toBeTruthy();
+      expect(starts).toBe(1);
+      await piece(); await piece(); await drift(); await piece(); await drift();
+      expect(completed!.observations).toHaveLength(3);
+      expect(completed!.quality.recovery!.recalibrations).toBe(1);
+    } finally { Object.defineProperty(window, "innerHeight", descriptor); }
+  });
+
+  it("permite reiniciar una cámara interrumpida desde la acción principal y conserva el bloque validado", async () => {
+    await setup();
+    click("Comenzar presentación"); await drift();
+    await piece(); await piece(); await drift(); await tick(20);
+    act(() => { control.runtimeError!(new EngineError("El análisis dejó de responder", "timeout")); });
+    expect(screen.getByText(/Conservamos 2 de 3 imágenes validadas/)).toBeTruthy();
+    click("Volver a iniciar cámara");
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    await calibrate(); click("Continuar desde imagen 3"); await drift();
+    expect(screen.getByAltText("Pieza 3")).toBeTruthy();
+    expect(starts).toBe(1);
+    await piece(); await drift();
+    expect(completed!.observations).toHaveLength(3);
+  });
+
   it("conserva el bloque validado si se oculta la pestaña durante la siguiente imagen", async () => {
     await setup();
     click("Comenzar presentación"); await drift();
@@ -260,9 +298,14 @@ describe("estudios con control de calidad", () => {
       Object.defineProperty(window, "innerWidth", { value: window.innerWidth + 100, configurable: true });
       act(() => { window.dispatchEvent(new Event("resize")); });
       expect(screen.getByText(/Conservamos 2 de 3 imágenes validadas/)).toBeTruthy();
-      expect((screen.getByRole("button", { name: "Revisar mirada y continuar" }) as HTMLButtonElement).disabled).toBe(true);
-      await tick(10_000);
-      expect(completed).toBeNull();
+      expect((screen.getByRole("button", { name: "Volver a calibrar y continuar" }) as HTMLButtonElement).disabled).toBe(false);
+      click("Volver a calibrar y continuar");
+      await tick(500); await calibrate();
+      click("Continuar desde imagen 3"); await drift();
+      expect(screen.getByAltText("Pieza 3")).toBeTruthy();
+      expect(starts).toBe(1);
+      await piece(); await drift();
+      expect(completed!.observations).toHaveLength(3);
     } finally {
       Object.defineProperty(window, "innerWidth", descriptor);
     }
