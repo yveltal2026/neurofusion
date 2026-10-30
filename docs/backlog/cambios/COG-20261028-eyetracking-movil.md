@@ -134,10 +134,12 @@ El propietario informa de dos calibraciones con buena luz y teléfono inmóvil q
 
 ### Implementación, réplica y validación
 
-- Implementación: `e3ab6e9801cea7828cdc766327fb75a155549f7a`, rama `fix/eyetracking-guided-quality`, basada en `main` `0d8ac9c`; [PR #14](https://github.com/yveltal2026/neurofusion/pull/14). Archivos: `lighting.ts`, `lighting.test.ts`, `EyeTrackingLab.tsx` y sus pruebas.
+- Implementación: `e3ab6e9801cea7828cdc766327fb75a155549f7a`, rama `fix/eyetracking-guided-quality`, basada en `main` `0d8ac9c`; [PR #14](https://github.com/yveltal2026/neurofusion/pull/14), integrado en `main` mediante `00036b3d537e2a102c15176f80f110de054ea5f0`. Archivos: `lighting.ts`, `lighting.test.ts`, `EyeTrackingLab.tsx` y sus pruebas.
 - Sin dependencias, variables ni migraciones nuevas. Los píxeles de comprobación se procesan localmente, no se almacenan ni se envían. La condición `buena` representa el requisito del protocolo después de superar la comprobación, no una medición de lux.
 - Para replicar, aplicar después de `3bc0e2b`, conservar identidad/flujo propios y repetir casos de exposición, 18 puntos, motivos de rechazo y soporte móvil. Sin cambios de autenticación, registro, roles o permisos; otras ediciones permanecen sin verificar.
 - 130 pruebas correctas en 15 archivos, TypeScript y ESLint correctos. Incluyen protocolo completo de 18 puntos en los flujos de estudio, bloqueo por poca luz, recuperación al mejorar exposición, mensajes concretos de validación y leyenda móvil. Build correcto con fixture temporal de fuentes fuera del repositorio.
-- Navegador: seis recorridos simulados en ejecución. El simulador omite la comprobación de video real sólo en laboratorio o preview permitido; no habilita el simulador en participaciones reales.
+- Navegador: seis recorridos simulados correctos en escritorio y Pixel 7. El simulador omite la comprobación de video real sólo en laboratorio o preview permitido; no habilita el simulador en participaciones reales.
 - Limitaciones: la evaluación de exposición es una heurística de imagen, no identifica todas las condiciones físicas de luz ni garantiza precisión ocular. Se prueba en imágenes sintéticas de distintas intensidades; falta validación con la cámara del propietario y más condiciones reales. No se afirma que la velocidad haya aumentado ni que las dos calibraciones reportadas ya superen el criterio.
 - Recuperación: revertir este seguimiento devuelve los selectores y comportamiento anteriores; no hay cambios de datos que revertir.
+
+- 2026-10-29: preparación guiada integrada en `main` mediante PR #14 (`00036b3d537e2a102c15176f80f110de054ea5f0`); preview de Vercel correcto en `9950298`. Falta validación del control de exposición y causas concretas de rechazo con la cámara del propietario.
