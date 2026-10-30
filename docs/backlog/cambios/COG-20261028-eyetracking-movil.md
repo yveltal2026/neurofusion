@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. Selección de inferencia implementada en PR #18; integración y repetición física pendientes.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Rostro confirmado por el propietario tras PR #16, con CPU a 10 FPS por error GPU. PR #17 integrado (`7679b62`); diagnóstico nuevo registra 17.86 FPS de promedio y el propietario sigue viendo 10/s antes de calibrar. Selección de inferencia integrada en `main` mediante PR #18 (`1bb8a46`); repetición física pendiente.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -207,7 +207,7 @@ El JSON nuevo confirma `gpu-detection-error` en `FaceGeometryPipelineCalculator`
 - Se mantienen los pesos del modelo, preparación, filtro original, resolución, validación y mínimo de 15 FPS. La selección no modifica el detector facial CPU/GPU; el diagnóstico distingue ahora ese detector del backend de estimación de mirada.
 - El diagnóstico añade `gazeBackend` (selección y medianas), `lastSecond` (análisis y mirada válida en la ventana de un segundo) y `phase`. Se conserva `processedFps` como media de hasta 120 muestras. No se incluyen imágenes ni identificadores del participante.
 - Se fijan dependencias directas `@tensorflow/tfjs-core` y `@tensorflow/tfjs-backend-wasm` 4.22.0, igual que la versión TensorFlow incluida en WebEyeTrack 0.0.2. JS y motor comparten la instancia global de TensorFlow, comprobada por contrato. Los tres binarios oficiales WASM se sirven desde `/web/tfjs-wasm/4.22.0/`, con licencia Apache 2.0 y SHA-256 en su README (aproximadamente 1.1 MiB en total; se descarga la variante correspondiente). Un hilo; sin nuevas cabeceras de aislamiento, servicios ni CDN. Sin variables ni migraciones nuevas.
-- Archivos: `gaze-backend.ts` y pruebas, adaptador móvil, motor/diagnóstico, corredor, manifiestos y `public/web/tfjs-wasm/4.22.0/`. Implementación `c060d4aee764f936511e5fcbb2de1e716babc40e` y serialización `b0c0c8023a61c72e6d7081f03063fdd19c9c9619`, [PR #18](https://github.com/yveltal2026/neurofusion/pull/18), desde `main` `7ba3762`. Integración/despliegue pendientes.
+- Archivos: `gaze-backend.ts` y pruebas, adaptador móvil, motor/diagnóstico, corredor, manifiestos y `public/web/tfjs-wasm/4.22.0/`. Implementación `c060d4aee764f936511e5fcbb2de1e716babc40e` y serialización `b0c0c8023a61c72e6d7081f03063fdd19c9c9619`, [PR #18](https://github.com/yveltal2026/neurofusion/pull/18), desde `main` `7ba3762`. Integrado en `main` mediante `1bb8a46b0c2e8b4b5e1a915ca288075ef42e6b54`; preview Vercel correcto en `a423cbf`. Estado Vercel de `main` correcto para `1bb8a46`: https://vercel.com/neurofusion1/neurofusion/DKBDgKq1FAniW6npCseyz67VfL3X. Frecuencia, precisión y flujo con cámara física pendientes de comprobar.
 
 ### Evidencia y limitaciones
 
