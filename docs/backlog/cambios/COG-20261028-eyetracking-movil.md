@@ -1,7 +1,7 @@
 # COG-20261028-eyetracking-movil — Cámara móvil y medición visual de pantalla
 
 - Fecha: 2026-10-28, implementación asistida por Codex.
-- Estado: detección de rostro confirmada por el propietario en Android/Chrome tras PR #12; corrección de recortes, captura a baja frecuencia y preparación integrada en `main` mediante PR #13; repetición con cámara física pendiente.
+- Estado: seguimientos #10–#15 integrados en `main`; nueva incidencia de 46 análisis/s sin rostro en Android. Recuperación y diagnóstico implementados en PR #16; integración y comprobación física pendientes.
 - Tipo: corrección y mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, `main`, `19c96bd762cd7a1dfce55fdb8239c33e80870ef7`.
@@ -160,3 +160,17 @@ El propietario informa de 12.5 lecturas/s en un Samsung S25 Ultra con una sola p
 - Recuperación: revertir PR #15 restaura CPU fijo en móvil. No hay datos o migraciones que revertir.
 
 - 2026-10-29: PR #15 integrado en `main` (`902c10a770fba28ef9dc3e142a330db6beb9e7ad`); preview correcto en `644559d`. Rendimiento físico del S25 Ultra pendiente de medir con el diagnóstico.
+
+
+## Seguimiento 2026-10-30 — Análisis sin rostro y diagnóstico siempre accesible
+
+El propietario informa de 46 lecturas/s pero «cara no detectada» y confirma que no aparece el botón de diagnóstico. El indicador contaba todas las respuestas, incluidas las que no contienen landmarks. El diagnóstico se ocultaba salvo frecuencia baja; su ausencia con 46/s es reproducible por la condición de interfaz. No hay diagnóstico del teléfono que confirme todavía una incompatibilidad concreta de GPU.
+
+- El detector móvil usa `runningMode: VIDEO` y `detectForVideo()` con timestamps de cámara en milisegundos estrictamente crecientes. MediaPipe puede aprovechar el seguimiento temporal en vez de reiniciar detección de imagen en cada frame; no se ha medido su efecto en la frecuencia del S25 Ultra.
+- Tras cinco resultados GPU consecutivos sin rostro, se compara el mismo frame con un detector CPU. Sólo se conserva CPU si éste encuentra un rostro que GPU no encontró; si ambos devuelven vacío se mantiene GPU. Los sondeos se espacian cinco segundos, se libera el detector descartado y se conserva el manejo de cancelación. Un error del sondeo no interrumpe la GPU. Se mantienen los fallback previos por excepción.
+- «Análisis por segundo» y «Lecturas de mirada válidas» se muestran por separado. «Ayuda con la cámara» está disponible siempre en posición e incluye la descarga, aunque haya muchos análisis y ningún rostro.
+- El JSON añade `trackingMode`, `detectorFallbackReason`, `faceDetectionRatio` y `validGazeRatio` sobre hasta 120 resultados. No incluye imágenes ni identificadores; los umbrales de calidad permanecen intactos.
+- Implementación: `e77a7caff859b0bc5bb008c727ebf35a1f32b008`, [PR #16](https://github.com/yveltal2026/neurofusion/pull/16), basado en `main` `aa7e1dc`. Integración y despliegue pendientes. Archivos: `mobile-runtime.ts`, `engine.ts`, `EyeTrackingLab.tsx`, sus pruebas y `e2e/eyetracking-lab.spec.ts`.
+- Validación local: 136 pruebas correctas en 15 archivos, TypeScript y ESLint correctos. Incluyen GPU vacía/CPU con rostro, ambos vacíos sin cambiar backend, liberación de detectores y timestamps crecientes. Build de producción correcto con `npm run build -- --webpack` y fixture temporal de fuentes fuera del repositorio; Turbopack local falló por permisos de puertos del sandbox. Dos pruebas de navegador correctas sobre ese build (escritorio y Pixel 7 simulado), incluido el diagnóstico accesible sin frecuencia baja. Preview de Vercel correcto en `e77a7ca`. El contrato con WebEyeTrack real sustituye las descargas y el detector; no demuestra detección física.
+- Réplica: aplicar este seguimiento después de `5bcf197` y su documentación, adaptar controles y ejecutar las mismas pruebas, incluido el acceso al diagnóstico con frecuencia alta. Sin dependencias, variables ni migraciones nuevas. Autenticación, registro, roles, permisos e identidad institucional no afectados; universidades sin verificar.
+- Pendiente: reabrir el estudio en Samsung S25 Ultra/Chrome, comprobar rostro, lecturas válidas, backend/motivo de fallback y calibración completa. No se afirma detección corregida en hardware ni un mínimo alcanzado de FPS. Para revertir, revertir este seguimiento; no hay cambios de datos.

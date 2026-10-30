@@ -24,7 +24,7 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   const fileset = await FilesetResolver.forVisionTasks(MOBILE_VISION_WASM);
   checkCancelled();
   const options = {
-    runningMode: "IMAGE" as const, numFaces: 1,
+    runningMode: "VIDEO" as const, numFaces: 1,
     outputFaceBlendshapes: true, outputFacialTransformationMatrixes: true,
   };
   let backend: "main-gpu" | "main-cpu" = "main-gpu";
@@ -51,6 +51,10 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   const closeDetector = () => { if (!detectorClosed) { detectorClosed = true; detector.close(); } };
   const dispose = () => { closeDetector(); internals.blazeGaze?.model?.dispose(); };
   let lastLandmarks: GazeResult["facialLandmarks"] = [];
+  let timestampMs = -1;
+  let emptyFrames = 0;
+  let nextProbeAt = 0;
+  let fallbackReason: string | null = backend === "main-cpu" ? "gpu-initialization-failed" : null;
   try {
     checkCancelled();
     if (!("faceLandmarkerClient" in runtime)) throw new Error("La versión del motor no admite el detector móvil.");
@@ -58,18 +62,46 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
       initialize: async () => {},
       processFrame: async (frame) => {
         let result;
-        try { result = detector.detect(frame); }
+        try { result = detector.detectForVideo(frame, timestampMs); }
         catch (error) {
           if (backend !== "main-gpu") throw error;
           checkCancelled();
           closeDetector();
           backend = "main-cpu";
+          fallbackReason = "gpu-detection-error";
           detector = await FaceLandmarker.createFromOptions(fileset, {
             ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
           });
           detectorClosed = false;
           checkCancelled();
-          result = detector.detect(frame);
+          result = detector.detectForVideo(frame, timestampMs);
+        }
+        emptyFrames = result.faceLandmarks.length ? 0 : emptyFrames + 1;
+        // Una respuesta vacía no demuestra que la GPU funcione. Comparar el mismo
+        // frame con CPU distingue una incompatibilidad de una cámara sin persona.
+        if (backend === "main-gpu" && emptyFrames >= 5 && performance.now() >= nextProbeAt) {
+          nextProbeAt = performance.now() + 5000;
+          let probe: typeof detector | null = null;
+          let retained = false;
+          try {
+            probe = await FaceLandmarker.createFromOptions(fileset, {
+              ...options, baseOptions: { modelAssetPath: FACE_LANDMARKER_MODEL, delegate: "CPU" },
+            });
+            checkCancelled();
+            const reference = probe.detectForVideo(frame, timestampMs);
+            if (reference.faceLandmarks.length) {
+              closeDetector();
+              detector = probe;
+              detectorClosed = false;
+              retained = true;
+              backend = "main-cpu";
+              fallbackReason = "gpu-empty-cpu-detected-face";
+              result = reference;
+            }
+          } catch {
+            checkCancelled();
+            fallbackReason = "cpu-probe-failed";
+          } finally { if (probe && !retained) probe.close(); }
         }
         lastLandmarks = result.faceLandmarks[0] ?? [];
         return result;
@@ -91,9 +123,12 @@ export async function createMobileRuntime(onProgress: (step: LoadingStep) => voi
   let pending: Promise<GazeResult> | null = null;
   return {
     get backend() { return backend; },
+    get fallbackReason() { return fallbackReason; },
+    trackingMode: "VIDEO",
     async step(frame: ImageData, timestamp: number): Promise<MobileGazeReading> {
       if (stopped) throw new Error("El detector móvil ya está detenido.");
       const from = performance.now();
+      timestampMs = Math.max(timestampMs + 0.001, Number.isFinite(timestamp) ? timestamp * 1000 : from);
       pending = runtime.step(frame, timestamp);
       try { return await pending; }
       catch (error) {

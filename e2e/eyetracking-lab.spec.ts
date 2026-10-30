@@ -79,6 +79,8 @@ test("ajusta pantalla sin pulgadas y coloca la cámara antes de calibrar", async
   const cameraBox = await video.boundingBox();
   const buttonBox = await calibration.boundingBox();
   const titleBox = await page.getByRole("heading", { name: "Acomódate frente a la cámara" }).boundingBox();
+  await page.getByText("Ayuda con la cámara", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Descargar diagnóstico de cámara" })).toBeVisible();
   expect(cameraBox!.y).toBeGreaterThan(titleBox!.y + titleBox!.height);
   expect(cameraBox!.y + cameraBox!.height).toBeLessThanOrEqual(buttonBox!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

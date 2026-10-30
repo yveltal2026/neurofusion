@@ -25,7 +25,7 @@ vi.mock("webeyetrack", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks(); control.failModel = false; control.pendingStep = null;
-  control.options.mockResolvedValue({ detect: control.detect, close: control.close });
+  control.options.mockResolvedValue({ detect: control.detect, detectForVideo: control.detect, close: control.close });
   control.fileset.mockResolvedValue({});
   control.detect.mockReturnValue({ faceLandmarks: [] });
 });
@@ -36,12 +36,12 @@ describe("detector móvil acelerado", () => {
     const runtime = await createMobileRuntime();
     expect(control.fileset).toHaveBeenCalledWith(MOBILE_VISION_WASM);
     expect(control.options).toHaveBeenCalledWith({}, expect.objectContaining({
-      baseOptions: expect.objectContaining({ delegate: "GPU" }), runningMode: "IMAGE",
+      baseOptions: expect.objectContaining({ delegate: "GPU" }), runningMode: "VIDEO",
     }));
     expect(control.gpuInitialize).not.toHaveBeenCalled();
     const frame = { width: 640, height: 640 } as ImageData;
     await runtime.step(frame, 1);
-    expect(control.detect).toHaveBeenCalledWith(frame);
+    expect(control.detect).toHaveBeenCalledWith(frame, 1000);
     runtime.stop(); runtime.stop();
     expect(control.close).toHaveBeenCalledOnce();
     expect(control.dispose).toHaveBeenCalledOnce();
@@ -91,6 +91,44 @@ describe("detector móvil acelerado", () => {
     expect(control.detect).toHaveBeenCalledTimes(2);
     runtime.stop();
     expect(control.close).toHaveBeenCalledTimes(2);
+  });
+
+  it("cambia a CPU si la GPU devuelve vacío y la CPU reconoce el mismo frame", async () => {
+    const empty = { faceLandmarks: [] };
+    const face = { faceLandmarks: [[{ x: 0.5, y: 0.5, z: 0 }]] };
+    const gpu = { detectForVideo: vi.fn(() => empty), close: vi.fn() };
+    const cpu = { detectForVideo: vi.fn(() => face), close: vi.fn() };
+    control.options.mockResolvedValueOnce(gpu).mockResolvedValueOnce(cpu);
+    const runtime = await createMobileRuntime();
+    const frame = {} as ImageData;
+    for (let i = 1; i <= 5; i++) await runtime.step(frame, i / 30);
+    expect(runtime.backend).toBe("main-cpu");
+    expect(runtime.fallbackReason).toBe("gpu-empty-cpu-detected-face");
+    expect(cpu.detectForVideo).toHaveBeenCalledWith(frame, 5 / 30 * 1000);
+    expect(gpu.close).toHaveBeenCalledOnce();
+    runtime.stop(); expect(cpu.close).toHaveBeenCalledOnce();
+  });
+
+  it("no atribuye una cámara sin persona a un fallo GPU y no repite la prueba cada frame", async () => {
+    const empty = { faceLandmarks: [] };
+    const gpu = { detectForVideo: vi.fn(() => empty), close: vi.fn() };
+    const cpu = { detectForVideo: vi.fn(() => empty), close: vi.fn() };
+    control.options.mockResolvedValueOnce(gpu).mockResolvedValueOnce(cpu);
+    const runtime = await createMobileRuntime();
+    for (let i = 1; i <= 6; i++) await runtime.step({} as ImageData, i / 30);
+    expect(runtime.backend).toBe("main-gpu");
+    expect(control.options).toHaveBeenCalledTimes(2);
+    expect(cpu.close).toHaveBeenCalledOnce();
+    runtime.stop();
+  });
+
+  it("mantiene timestamps crecientes en milisegundos para el seguimiento de video", async () => {
+    const runtime = await createMobileRuntime();
+    await runtime.step({} as ImageData, 1);
+    await runtime.step({} as ImageData, 0.5);
+    expect(control.detect.mock.calls[1][1]).toBeGreaterThan(control.detect.mock.calls[0][1]);
+    expect(control.detect.mock.calls[0][1]).toBe(1000);
+    runtime.stop();
   });
 
 });
