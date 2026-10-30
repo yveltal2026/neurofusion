@@ -4,7 +4,7 @@ import { createMobileRuntime, MOBILE_VISION_WASM, needsMobileRuntime } from "./m
 
 const control = vi.hoisted(() => ({
   detect: vi.fn(), close: vi.fn(), dispose: vi.fn(), gpuInitialize: vi.fn(), failModel: false,
-  options: vi.fn(), fileset: vi.fn(),
+  options: vi.fn(), fileset: vi.fn(), pendingStep: null as Promise<unknown> | null,
 }));
 vi.mock("@mediapipe/tasks-vision", () => ({
   FilesetResolver: { forVisionTasks: control.fileset },
@@ -14,19 +14,20 @@ vi.mock("webeyetrack", () => ({
   WebEyeTrack: class {
     faceLandmarkerClient = { initialize: control.gpuInitialize, processFrame: control.detect };
     blazeGaze = { model: { dispose: control.dispose } };
+    prepareInput = vi.fn();
     async initialize() {
       await this.faceLandmarkerClient.initialize();
       if (control.failModel) throw new Error("Modelo ausente");
     }
-    async step(frame: ImageData) { return this.faceLandmarkerClient.processFrame(frame); }
+    async step(frame: ImageData) { return control.pendingStep ? await control.pendingStep : this.faceLandmarkerClient.processFrame(frame); }
   },
 }));
 
 beforeEach(() => {
-  vi.clearAllMocks(); control.failModel = false;
+  vi.clearAllMocks(); control.failModel = false; control.pendingStep = null;
   control.options.mockResolvedValue({ detect: control.detect, close: control.close });
   control.fileset.mockResolvedValue({});
-  control.detect.mockResolvedValue({ facialLandmarks: [] });
+  control.detect.mockReturnValue({ faceLandmarks: [] });
 });
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -48,12 +49,12 @@ describe("detector móvil por CPU", () => {
 
   it("espera la inferencia en curso antes de cerrar WASM y liberar el modelo", async () => {
     let finish!: (value: unknown) => void;
-    control.detect.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+    control.pendingStep = new Promise((resolve) => { finish = resolve; });
     const runtime = await createMobileRuntime();
     const pending = runtime.step({} as ImageData, 1);
     runtime.stop();
     expect(control.close).not.toHaveBeenCalled();
-    finish({ facialLandmarks: [] }); await pending; await Promise.resolve();
+    finish({ faceLandmarks: [] }); await pending; await Promise.resolve();
     expect(control.close).toHaveBeenCalledOnce();
     await expect(runtime.step({} as ImageData, 2)).rejects.toThrow("detenido");
   });

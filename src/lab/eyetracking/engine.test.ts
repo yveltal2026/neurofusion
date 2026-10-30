@@ -69,7 +69,7 @@ describe("integración del motor", () => {
     const starting = engine.start(document.createElement("video"), vi.fn());
     const rejected = expect(starting).rejects.toMatchObject({ kind: "timeout" });
     await vi.dynamicImportSettled();
-    await vi.advanceTimersByTimeAsync(45000);
+    await vi.advanceTimersByTimeAsync(90000);
     await rejected;
     expect(control.stop).toHaveBeenCalledOnce();
     expect(control.worker!.terminate).toHaveBeenCalledOnce();

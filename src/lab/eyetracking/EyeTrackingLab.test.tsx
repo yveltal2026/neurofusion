@@ -2,10 +2,10 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EyeTrackingLab } from "./EyeTrackingLab";
-import { EngineError } from "./engine";
+import { EngineError, checkModelAssets } from "./engine";
 import { completionAllowed, eyeRunSchema, requiredDriftChecksPass } from "@/tools/visual/eye/schema";
 
-const control = vi.hoisted(() => ({ runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
+const control = vi.hoisted(() => ({ frameIntervalMs: 25, runtimeError: null as null | ((error: import("./engine").EngineError) => void), eyesClosed: false, failDrift: false, noisy: false, saturateLower: false, startError: false, validationBiasPx: 0, loseDuringSettle: false, dropFirstDriftMeasurement: false }));
 vi.mock("./engine", async (original) => {
   const actual = await original<typeof import("./engine")>();
   return { ...actual, checkModelAssets: vi.fn(), checkCdnReachable: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock("./engine", async (original) => {
             const lost = key && ((control.loseDuringSettle && performance.now() - driftSince < 950)
               || (control.dropFirstDriftMeasurement && firstDriftAt !== null && performance.now() - firstDriftAt >= 975 && performance.now() - firstDriftAt < 1975));
             onFrame({ t: performance.now(), x: lost || control.eyesClosed ? null : x, y: lost || control.eyesClosed ? null : y, inferenceMs: 10, faceDetected: true });
-          }, 25);
+          }, control.frameIntervalMs);
           return { readyMs: 1 };
         }, stop: () => clearInterval(timer) };
     } };
@@ -94,7 +94,7 @@ async function piece() { await tick(20); await tick(5000); }
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   control.failDrift = false; control.noisy = false; control.saturateLower = false;
-  control.startError = false; control.eyesClosed = false; control.runtimeError = null;
+  control.startError = false; control.eyesClosed = false; control.frameIntervalMs = 25; control.runtimeError = null;
   control.validationBiasPx = 0; control.loseDuringSettle = false; control.dropFirstDriftMeasurement = false;
   Object.defineProperty(document, "hidden", { value: false, configurable: true });
   starts = 0; completed = null; activeAssets = assets;
@@ -351,6 +351,33 @@ describe("preparación móvil y tamaño de pantalla", () => {
     expect((screen.getByRole("button", { name: "Comenzar calibración" }) as HTMLButtonElement).disabled).toBe(true);
     click("Volver a iniciar cámara");
     expect(screen.getByRole("button", { name: "Iniciar cámara y cargar modelos" })).toBeTruthy();
+  });
+
+  it("sale de una descarga que nunca responde y no arranca tarde al completarse", async () => {
+    let finish!: () => void;
+    vi.mocked(checkModelAssets).mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos");
+    expect(screen.getByText(/Comprobando los archivos del modelo/)).toBeTruthy();
+    await tick(90000);
+    expect(screen.getByText(/No se pudo completar la preparación en 90 segundos/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Iniciar cámara y cargar modelos" }) as HTMLButtonElement).disabled).toBe(false);
+    finish(); await tick(0);
+    expect(screen.queryByRole("heading", { name: "Acomódate frente a la cámara" })).toBeNull();
+  });
+
+  it("permite avanzar el punto con 10 lecturas/s sin relajar sus muestras ni estabilidad", async () => {
+    control.frameIntervalMs = 100;
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    click("Comenzar calibración"); await tick(1200);
+    click("Punto de calibración 1"); await tick(1600);
+    expect(screen.getByRole("button", { name: "Punto de calibración 2" })).toBeTruthy();
+    expect(screen.queryByText(/No se obtuvo una fijación estable/)).toBeNull();
   });
 
 });

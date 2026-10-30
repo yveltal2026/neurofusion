@@ -83,3 +83,15 @@ test("ajusta pantalla sin pulgadas y coloca la cámara antes de calibrar", async
   expect(cameraBox!.y + cameraBox!.height).toBeLessThanOrEqual(buttonBox!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+
+test("muestra un fallo de descarga y permite volver a iniciar", async ({ page }) => {
+  await page.route("**/web/model.json", (route) => route.abort("timedout"));
+  await page.goto("/lab/eyetracking");
+  await page.getByLabel("Código de la persona").fill("MODEL-ERROR");
+  await page.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }).check();
+  const start = page.getByRole("button", { name: "Iniciar cámara y cargar modelos" });
+  await start.click();
+  await expect(page.getByText(/No se pudo descargar el modelo/)).toBeVisible();
+  await expect(start).toBeEnabled();
+});

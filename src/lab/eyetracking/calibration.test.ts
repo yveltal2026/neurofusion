@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCalibration, assessFixation, fitCalibration, fixationMedian, fixationWeight, moveSaturatedTarget, refineCalibration, refinementGrid, stableFixation, weakCalibrationPoints, type CalibrationFit, type FixationQuality } from "./calibration";
+import { applyCalibration, assessFixation, fitCalibration, fixationWindowMs, fixationMedian, fixationWeight, moveSaturatedTarget, refineCalibration, refinementGrid, stableFixation, weakCalibrationPoints, type CalibrationFit, type FixationQuality } from "./calibration";
 import { calibrationGrid, validationTargets } from "./metrics";
 import { screenWidthCm } from "./screen";
 
@@ -124,4 +124,16 @@ describe("pantalla en pulgadas", () => {
     expect(screenWidthCm(27, "16:9", 1440, 2560)).toBeCloseTo(33.62, 1);
     expect(screenWidthCm(Infinity, "auto", 2560, 1440)).toBeNaN();
   });
+});
+
+
+it("reúne las mismas diez muestras a 10 FPS ampliando la ventana, sin aprobar ruido", () => {
+  const frames = Array.from({ length: 15 }, (_, i) => ({ t: i * 100, x: 400, y: 300, inferenceMs: 90 }));
+  const viewport = { width: 1000, height: 1000 };
+  expect(assessFixation(frames, 600, 1400, viewport).ok).toBe(false);
+  expect(fixationWindowMs(10)).toBe(1200);
+  expect(assessFixation(frames, 1400 - fixationWindowMs(10), 1400, viewport).ok).toBe(true);
+  expect(assessFixation(frames.map((f, i) => ({ ...f, x: f.x + (i % 2 ? 100 : -100) })), 200, 1400, viewport).ok).toBe(false);
+  expect(fixationWindowMs(30)).toBe(800);
+  expect(fixationWindowMs(0)).toBeLessThanOrEqual(2200);
 });
