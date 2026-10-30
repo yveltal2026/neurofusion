@@ -143,3 +143,18 @@ El propietario informa de dos calibraciones con buena luz y teléfono inmóvil q
 - Recuperación: revertir este seguimiento devuelve los selectores y comportamiento anteriores; no hay cambios de datos que revertir.
 
 - 2026-10-29: preparación guiada integrada en `main` mediante PR #14 (`00036b3d537e2a102c15176f80f110de054ea5f0`); preview de Vercel correcto en `9950298`. Falta validación del control de exposición y causas concretas de rechazo con la cámara del propietario.
+
+## Seguimiento 2026-10-29 — Rendimiento en S25 Ultra e instrumentación
+
+El propietario informa de 12.5 lecturas/s en un Samsung S25 Ultra con una sola pestaña. No se atribuye esa observación a falta de capacidad del teléfono. La ruta móvil de la implementación forzaba `delegate: CPU` en MediaPipe aun cuando el navegador dispusiera de GPU. Esto es una limitación de selección de backend; falta medir cuánto explica del rendimiento de ese teléfono.
+
+- Se intenta MediaPipe por GPU en el hilo principal, sin volver al worker GPU que fallaba inicialmente. Si la inicialización o una detección fallan, se libera ese detector y se utiliza CPU. Se conservan las protecciones de recorte y todos los criterios de calidad, incluido el mínimo de 15 lecturas/s.
+- Se solicita cámara a 30 FPS. El valor solicitado no se presenta como una frecuencia alcanzada.
+- Desde lectura lenta y validación fallida se puede descargar `diagnostico-camara.json`. Registra backend activo, dimensiones y FPS reportados por la cámara, FPS de frames decodificados cuando el navegador ofrece el contador, FPS de lecturas procesadas, coste de copia de cámara y tiempos medios por etapa (detección, preparación, inferencia, filtro/lectura y total). Se usan hasta 120 muestras; no contiene imágenes, video, identificadores de cámara ni datos del participante.
+- Los mensajes de lectura lenta solicitan revisar el diagnóstico en lugar de culpar automáticamente a otras apps o recomendar sustituir el dispositivo.
+- Archivos: `mobile-runtime.ts`, `camera.ts`, `engine.ts`, `EyeTrackingLab.tsx` y pruebas de motor/runtime. Implementación `5bcf197a875d41653cf073d7086eed9ce3d78491`, [PR #15](https://github.com/yveltal2026/neurofusion/pull/15), basado en `main` `46d2586`. Integración pendiente.
+- Sin dependencias, variables ni migraciones nuevas. Para replicar, aplicar después de `e3ab6e9`, conservar las personalizaciones y repetir los casos de GPU, fallback inicial/en ejecución, limpieza de recursos y diagnóstico sin identificadores. Autenticación/roles no afectados; otras ediciones siguen sin verificar.
+- Validación: 133 pruebas correctas, TypeScript, ESLint y build correctos. Dos comprobaciones de preparación en navegador (escritorio/Pixel 7 simulado) correctas. Las pruebas verifican la selección/fallback y una cámara/decodificación a 30 FPS frente a procesamiento a 10 FPS; no demuestran aceleración de hardware real.
+- Exploración local: preparación de imagen del paquete real en aproximadamente 5 ms de media sobre 20 iteraciones, con fixture sintética y reconstrucción 3D sustituida. Excluye detección e inferencia y no es un benchmark del S25 Ultra ni confirma el cuello de botella en ese teléfono.
+- Pendiente: repetir la calibración en el S25 Ultra y revisar su diagnóstico para verificar backend efectivo y frecuencia. No se afirma haber alcanzado 15 o 30 FPS en hardware físico.
+- Recuperación: revertir PR #15 restaura CPU fijo en móvil. No hay datos o migraciones que revertir.

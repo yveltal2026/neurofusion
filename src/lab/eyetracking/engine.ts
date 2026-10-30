@@ -97,7 +97,7 @@ export async function checkCdnReachable(urls: string[] = needsMobileRuntime() ? 
 const FIRST_FRAME_TIMEOUT_MS = STARTUP_TIMEOUT_MS;
 
 export function createWebEyeTrackEngine(): GazeEngine {
-  let webcam: { stopWebcam(): void } | null = null;
+  let webcam: { stopWebcam(): void; diagnostics?(): unknown } | null = null;
   let worker: Worker | null = null;
   let active = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -106,7 +106,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
   let mobileRuntime: MobileRuntime | null = null;
   let watchdog: ReturnType<typeof setInterval> | null = null;
   let videoForDiagnostics: HTMLVideoElement | null = null;
-  const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], total: [] };
+  const timingSamples: Record<string, number[]> = { faceLandmarker: [], prepareInput: [], blazeGaze: [], kalmanFilter: [], total: [] };
   const readingTimes: number[] = [];
   const decodedCounts: Array<number | null> = [];
   let loadingController: AbortController | null = null;
@@ -139,6 +139,7 @@ export function createWebEyeTrackEngine(): GazeEngine {
         camera: { width: videoForDiagnostics?.videoWidth ?? 0, height: videoForDiagnostics?.videoHeight ?? 0, requestedFps: 30, reportedFps: settings?.frameRate ?? null,
           decodedFps: readingTimes.length > 1 && decodedCounts[0] !== null && decodedCounts.at(-1) != null && readingTimes.at(-1)! > readingTimes[0]
             ? (decodedCounts.at(-1)! - decodedCounts[0]!) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null },
+        capture: webcam?.diagnostics?.() ?? null,
         readings: readingTimes.length,
         processedFps: readingTimes.length > 1 && readingTimes.at(-1)! > readingTimes[0] ? (readingTimes.length - 1) * 1000 / (readingTimes.at(-1)! - readingTimes[0]) : null,
         meanStageMs: Object.fromEntries(Object.entries(timingSamples).map(([key, values]) => [key, values.length ? values.reduce((a, b) => a + b, 0) / values.length : null])),
