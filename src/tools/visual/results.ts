@@ -42,7 +42,7 @@ export function toVisualAsset(row: VisualAssetRow): VisualAsset {
 }
 
 export async function loadAssets(supabase: SupabaseClient, studyId: string): Promise<VisualAsset[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("visual_assets")
     .select("*")
     .eq("study_id", studyId)
@@ -51,6 +51,7 @@ export async function loadAssets(supabase: SupabaseClient, studyId: string): Pro
     .order("position", { ascending: true })
     .order("created_at", { ascending: true })
     .returns<VisualAssetRow[]>();
+  if (error) throw new Error("No se pudieron cargar las piezas del estudio.");
   return (data ?? []).map(toVisualAsset);
 }
 

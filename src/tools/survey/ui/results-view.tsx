@@ -5,6 +5,7 @@ import { Block, Card } from "@/components/ui/card";
 import { SectionTitle } from "@/components/ui/section-title";
 import {
   getInstrument,
+  listItems,
   type InstrumentAggregate,
   type ItemAggregate,
   type NumericSummary,
@@ -268,7 +269,7 @@ function InstrumentCard({
   );
 }
 
-function ItemCard({ item }: { item: ItemAggregate }) {
+function ItemCard({ item, image }: { item: ItemAggregate; image?: { src: string; alt: string } }) {
   let body: ReactNode;
   if (item.type === "select" || item.type === "multiselect") {
     body = (
@@ -324,7 +325,7 @@ function ItemCard({ item }: { item: ItemAggregate }) {
   } else {
     body = (
       <p className="text-sm text-muted">
-        {item.n} respuestas escritas. Los textos libres se leen en el CSV; no se
+        {item.n} respuestas escritas. Los textos libres se leen en el informe o el CSV; no se
         envían a la IA.
       </p>
     );
@@ -337,6 +338,11 @@ function ItemCard({ item }: { item: ItemAggregate }) {
           {item.n} {item.n === 1 ? "respuesta" : "respuestas"}
         </p>
       </div>
+      {image ? (
+        // El estímulo privado se conserva completo; la carga diferida evita descargar todos los adjuntos.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image.src} alt={image.alt || "Imagen evaluada en esta pregunta"} loading="lazy" decoding="async" className="max-h-48 w-full rounded-md object-contain" />
+      ) : null}
       {body}
     </Block>
   );
@@ -421,9 +427,11 @@ function PriceCard({ agg, subject }: { agg: PriceAggregate; subject?: string }) 
 export function SurveyResultsView({
   config,
   aggregates,
+  token,
 }: {
   config: SurveyConfig;
   aggregates: SurveyAggregates;
+  token?: string | null;
 }) {
   const subjects = new Map(
     config.blocks.map((b) => [
@@ -432,6 +440,7 @@ export function SurveyResultsView({
     ]),
   );
   const excluded = aggregates.nTotal - aggregates.nIncluded;
+  const images = new Map(listItems(config).filter((item) => item.image).map((item) => [item.id, item.image!]));
 
   return (
     <div className="space-y-6">
@@ -493,7 +502,7 @@ export function SurveyResultsView({
         <section className="space-y-4" aria-label="Preguntas">
           <h2 className="text-xl font-semibold">Preguntas</h2>
           {aggregates.items.map((item) => (
-            <ItemCard key={item.id} item={item} />
+            <ItemCard key={item.id} item={item} image={token && images.has(item.id) ? { src: `/api/s/${token}/survey/images/${item.id}`, alt: images.get(item.id)!.alt } : undefined} />
           ))}
         </section>
       ) : null}
