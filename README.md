@@ -25,6 +25,12 @@ SEO y Visual provienen del módulo NeuroSEO; decisiones, modelo y pendientes en 
 4. Los participantes: consentimiento → los datos que el investigador pidió → test (teclado **o** botones táctiles en celular) → agradecimiento. **No ven resultados.**
 5. Los datos se almacenan centralmente. El investigador consulta **datos crudos** (tabla, detalle por sesión, exclusiones, CSV) o pide un **análisis** con estadísticos, gráficas y conclusiones redactadas por IA.
 
+### Cuestionarios con imágenes
+
+En **Encuesta → Preguntas**, cada pregunta propia permite **Agregar imagen**, previsualizarla, cambiarla o quitarla y añadir una descripción accesible opcional. Funciona con opción única (por ejemplo «¿Comprarías este producto?» con Sí/No), opción múltiple, Likert, texto libre, número y recomendación 0–10. Se admite una imagen PNG, JPEG o WebP de hasta 10 MB por pregunta. Cambiar el tipo o duplicar la pregunta conserva su imagen.
+
+Los archivos permanecen locales hasta **Crear encuesta y generar liga**. Se suben al bucket privado `study-assets` y el servidor verifica contenido, tamaño y pertenencia al estudio antes de publicar. El participante ve la imagen completa al responder desde computadora o celular, también en las baterías. Duplicar un estudio copia sus archivos; eliminarlo limpia sus imágenes. No requiere nuevas migraciones ni variables, pero sí las migraciones de Storage ya existentes. Estado y validación: [COG-20261030-imagenes-cuestionario](docs/backlog/cambios/COG-20261030-imagenes-cuestionario.md).
+
 ### Imágenes con IA: lote y desglose por elemento
 
 El resumen de piezas permite seleccionar imágenes individuales, todas o sólo las pendientes y **Analizar seleccionadas** con progreso, errores por pieza y reintento de fallidas. Los journeys ofrecen el mismo control en **Analizar capturas en lote**. Cada resultado se guarda por separado y el lote se puede detener después de la solicitud activa.

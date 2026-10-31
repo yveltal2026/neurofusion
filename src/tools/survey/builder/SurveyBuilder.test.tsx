@@ -10,7 +10,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const create = vi.hoisted(() => vi.fn());
+const imageCreate = vi.hoisted(() => vi.fn());
+const push = vi.hoisted(() => vi.fn());
 vi.mock("./actions", () => ({ createSurveyStudy: create }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("./upload-images", () => ({ createSurveyWithImages: imageCreate }));
 
 import { surveyConfigSchema } from "../engine";
 import { SurveyBuilder } from "./SurveyBuilder";
@@ -20,6 +24,8 @@ const PROJECT = "11111111-1111-4111-8111-111111111111";
 beforeEach(() => {
   create.mockReset();
   create.mockResolvedValue(undefined);
+  imageCreate.mockReset();
+  push.mockReset();
 });
 afterEach(cleanup);
 
@@ -37,6 +43,23 @@ const pickTemplate = (
 const CREATE = { name: "Crear encuesta y generar liga" };
 
 describe("SurveyBuilder", () => {
+  it("publica una pregunta con imagen mediante la subida verificada y conserva su archivo", async () => {
+    URL.createObjectURL = vi.fn(() => "blob:preview");
+    URL.revokeObjectURL = vi.fn();
+    imageCreate.mockResolvedValue({ studyId: "study-images" });
+    const user = setup();
+    await pickTemplate(user, /Usabilidad/);
+    await user.click(screen.getByRole("button", { name: /Editar pregunta 1/ }));
+    const file = new File(["png"], "producto.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("Agregar imagen"), file);
+    await user.click(screen.getByRole("button", CREATE));
+    await waitFor(() => expect(imageCreate).toHaveBeenCalledTimes(1));
+    expect(create).not.toHaveBeenCalled();
+    const draft = imageCreate.mock.calls[0]![1];
+    const question = draft.blocks.find((b: { kind: string }) => b.kind === "questions").questions[0];
+    expect(question.image.file).toBe(file);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/studies/study-images?created=1"));
+  });
   it("ofrece plantillas y, al elegir una, muestra sus bloques editables", async () => {
     const user = setup();
     expect(screen.getByText(/Proyecto: Mi proyecto/)).toBeTruthy();
