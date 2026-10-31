@@ -31,4 +31,6 @@ export async function setSessionExcluded(formData: FormData) {
   revalidatePath(`/studies/${studyId}/data/${sessionId}`);
   revalidatePath(`/studies/${studyId}/analysis`);
   revalidatePath(`/studies/${studyId}/eye`);
+  revalidatePath(`/studies/${studyId}/report`);
+  revalidatePath(`/studies/${studyId}/responses`);
 }

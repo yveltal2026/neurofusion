@@ -26,7 +26,7 @@ const t = (key: TabKey, label: string, path = ""): Tab => ({ key, label, icon: I
 /** Pestañas por herramienta (y por modo, en la herramienta visual). */
 const TABS = {
   iat: [t("overview", "Resumen"), t("data", "Datos", "/data"), t("analysis", "Análisis", "/analysis")],
-  survey: [t("overview", "Resumen"), t("responses", "Resultados", "/responses")],
+  survey: [t("overview", "Resumen"), t("report", "Informe y resultados", "/report")],
   variant: [t("overview", "Resumen"), t("responses", "Resultados", "/responses")],
   seo: [t("overview", "Auditorías"), t("settings", "Ajustes", "/settings")],
   pieces: [
@@ -35,7 +35,7 @@ const TABS = {
     t("report", "Informe", "/report"),
     t("settings", "Ajustes", "/settings"),
   ],
-  eye: [t("overview", "Piezas y enlace"), t("results", "Miradas", "/eye"), t("settings", "Ajustes", "/settings")],
+  eye: [t("overview", "Piezas y enlace"), t("report", "Informe", "/report"), t("results", "Miradas", "/eye"), t("settings", "Ajustes", "/settings")],
   journey: [
     t("overview", "Capturas"),
     t("ratings", "Calificación", "/ratings"),
