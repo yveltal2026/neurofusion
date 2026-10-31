@@ -1,11 +1,11 @@
 # COG-20261031-informes-herramientas — Informes por herramienta y reporte breve con IA
 
 - Fecha y responsable: 2026-10-31 (America/Mexico_City), Codex a petición del propietario.
-- Estado del trabajo: implementado localmente.
+- Estado del trabajo: integrado en `main`.
 - Tipo: mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, base `main` `45fabf0aa1d6b9227f6734855ca43cf9065b8b6f`, rama local `feat/study-report-dashboards`.
-- Referencias de implementación: `5a7d4689837ffa4e43b191b28ffb142aa75bab37`; PR e integración pendientes. No desplegado.
+- Referencias de implementación: `5a7d4689837ffa4e43b191b28ffb142aa75bab37`; [PR #25](https://github.com/yveltal2026/neurofusion/pull/25) integrado en `main` mediante `054bd5472fc76199f672af0fb663035e3f12b58e`. Producción pendiente de verificar.
 - Dependencias de otros cambios: herramientas de encuesta, visual y eye tracking existentes; miniaturas opcionales de preguntas compatibles con `COG-20261030-imagenes-cuestionario`.
 
 ## Problema y comportamiento esperado
@@ -70,7 +70,7 @@ Los reportes se guardan en `public.analyses`, ya protegida con RLS de organizaci
 - La generación es manual; las cifras se actualizan al abrir la página o pulsar Actualizar resultados. La huella detecta cambios en los agregados disponibles para la IA, no cambios textuales que no alteren esos agregados.
 - El tope horario cuenta reportes guardados; no es una cuota distribuida y atómica para llamadas simultáneas. Se conserva el patrón del análisis IAT existente.
 - Fuentes locales simuladas sólo para la comprobación de compilación/navegador por las restricciones de red; sin cambio de tipografía de producción.
-- Integración, despliegue y compatibilidad universitaria pendientes; consultar `../ADOPCION.md`.
+- Integración en `main` completada. Check Vercel del head `762fd61` correcto; producción y compatibilidad universitaria pendientes de verificar. Consultar `../ADOPCION.md`.
 
 ## Recuperación
 
@@ -81,3 +81,5 @@ Revertir los archivos del cambio devuelve las pestañas/rutas a su comportamient
 - 2026-10-31: implementación local sobre `45fabf0`, sin referencias de commit/PR ni despliegue todavía.
 
 - 2026-10-31: implementación publicada en `5a7d468`; integración en `main` autorizada por el propietario y pendiente de PR/checks.
+
+- 2026-10-31: [PR #25](https://github.com/yveltal2026/neurofusion/pull/25) integrado en `main`, merge `054bd5472fc76199f672af0fb663035e3f12b58e`, tras checks Vercel correctos en `762fd61`. Despliegue y funcionamiento con servicios reales pendientes de verificar.
