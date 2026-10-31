@@ -5,7 +5,7 @@
 - Tipo: mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, base `main` `45fabf0aa1d6b9227f6734855ca43cf9065b8b6f`, rama local `feat/study-report-dashboards`.
-- Referencias de implementación: commit/PR pendientes; no integrado ni desplegado.
+- Referencias de implementación: `5a7d4689837ffa4e43b191b28ffb142aa75bab37`; PR e integración pendientes. No desplegado.
 - Dependencias de otros cambios: herramientas de encuesta, visual y eye tracking existentes; miniaturas opcionales de preguntas compatibles con `COG-20261030-imagenes-cuestionario`.
 
 ## Problema y comportamiento esperado
@@ -45,7 +45,7 @@ Los reportes se guardan en `public.analyses`, ya protegida con RLS de organizaci
 ## Réplica
 
 1. Revisar configuración real de las tres herramientas, tabla `analyses`, RLS, proveedores y personalizaciones del destino. Conservar este ID.
-2. Incorporar juntos rutas, cargadores, modelos, acción, componentes y pruebas. Commit pendiente: aún no hay un cherry-pick documentado ejecutable. Adaptar los equivalentes del destino si divergen.
+2. Incorporar juntos rutas, cargadores, modelos, acción, componentes y pruebas. Implementación de origen `5a7d4689837ffa4e43b191b28ffb142aa75bab37`; revisar el diff antes de aplicar en destinos compatibles. Adaptar los equivalentes del destino si divergen.
 3. No copiar secretos, modelos configurados, dominios ni políticas de registro. Confirmar que el cliente de investigador filtra por organización y que `analyses` permite el guardado previsto.
 4. Validar cuestionario con todos sus formatos, eye tracking con sesiones válidas/limitadas/excluidas, piezas analizadas y pendientes, y conservación del informe journey/variantes.
 5. Ejecutar las pruebas indicadas y un recorrido con cuentas y proveedor de prueba del destino: generar, recargar, recibir respuestas/excluir sesión, detectar obsolescencia y regenerar. Comprobar intento con otra organización.
@@ -79,3 +79,5 @@ Revertir los archivos del cambio devuelve las pestañas/rutas a su comportamient
 ## Historial de la ficha
 
 - 2026-10-31: implementación local sobre `45fabf0`, sin referencias de commit/PR ni despliegue todavía.
+
+- 2026-10-31: implementación publicada en `5a7d468`; integración en `main` autorizada por el propietario y pendiente de PR/checks.
