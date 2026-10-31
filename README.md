@@ -31,6 +31,14 @@ En **Encuesta → Preguntas**, cada pregunta propia permite **Agregar imagen**, 
 
 Los archivos permanecen locales hasta **Crear encuesta y generar liga**. Se suben al bucket privado `study-assets` y el servidor verifica contenido, tamaño y pertenencia al estudio antes de publicar. El participante ve la imagen completa al responder desde computadora o celular, también en las baterías. Duplicar un estudio copia sus archivos; eliminarlo limpia sus imágenes. No requiere nuevas migraciones ni variables, pero sí las migraciones de Storage ya existentes. Estado y validación: [COG-20261030-imagenes-cuestionario](docs/backlog/cambios/COG-20261030-imagenes-cuestionario.md).
 
+### Informes y resultados por herramienta
+
+- **Encuesta → Informe y resultados** reúne las distribuciones por pregunta, instrumentos, precios y respuestas abiertas incluidas, con CSV y PDF. Los enlaces anteriores a `/responses` redirigen al informe; las variantes del IAT conservan su vista de resultados.
+- **Eye tracking → Informe** muestra todas las sesiones completadas, la calidad de la muestra y métricas por imagen/AOI: alcance, primera fijación, fijaciones y permanencia. Conserva el acceso a mapas y sesiones desde **Miradas**. Las sesiones excluidas, limitadas, de baja calidad o sin medición utilizable no entran en las métricas.
+- **Análisis visual → Informe** incorpora cifras generales, promedios de los criterios, piezas pendientes y mejoras sugeridas, además del informe detallado existente. Las estimaciones de IA se distinguen de las miradas medidas con webcam.
+
+Las tres vistas incluyen **Analizar con IA**, que guarda un reporte breve con resumen, hallazgos, recomendaciones y limitaciones. Usa únicamente agregados (sin textos abiertos ni lecturas individuales), permite actualizarlo y avisa si los datos cambiaron. Las gráficas se consultan sin generar IA. Requiere 3 respuestas/sesiones utilizables en encuesta/eye tracking o una pieza ya analizada en visual; no necesita nuevas migraciones ni variables. Detalles y validación en [COG-20261031-informes-herramientas](docs/backlog/cambios/COG-20261031-informes-herramientas.md).
+
 ### Imágenes con IA: lote y desglose por elemento
 
 El resumen de piezas permite seleccionar imágenes individuales, todas o sólo las pendientes y **Analizar seleccionadas** con progreso, errores por pieza y reintento de fallidas. Los journeys ofrecen el mismo control en **Analizar capturas en lote**. Cada resultado se guarda por separado y el lote se puede detener después de la solicitud activa.

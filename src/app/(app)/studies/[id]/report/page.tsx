@@ -1,10 +1,11 @@
 import { IfdChart, TaskSuccessChart } from "@/components/charts/visual-charts";
 import { PrintButton } from "@/components/print-button";
+import { notFound } from "next/navigation";
 import { StudyHeader } from "@/components/study-header";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
-import type { FrictionRatingRow, IfdMeasurementRow } from "@/lib/db/types";
+import type { FrictionRatingRow, IfdMeasurementRow, StudyRow } from "@/lib/db/types";
 import { loadVisualStudyPage } from "@/tools/visual/load";
 import type { SiteSummary } from "@/tools/visual/journey/model";
 import { rubricItems } from "@/tools/visual/journey/rubric";
@@ -12,17 +13,42 @@ import { assetUrls, loadAssets } from "@/tools/visual/results";
 import { AiReading, MetricsPanel } from "@/tools/visual/ui/asset-panels";
 import { AttentionViewer } from "@/tools/visual/ui/attention-viewer";
 import { MethodNote } from "@/tools/visual/ui/journey-views";
+import { loadReportSource, loadSavedReport, reportHash } from "@/tools/reports/load";
+import { visualReportSnapshot } from "@/tools/reports/model";
+import { AiReportPanel } from "@/tools/reports/ui/AiReportPanel";
+import { StudyReportView } from "@/tools/reports/ui/StudyReportView";
+import { VisualReportDashboard } from "@/tools/reports/ui/VisualReportDashboard";
+import { RefreshReportButton } from "@/tools/reports/ui/RefreshReportButton";
 
 export const metadata = { title: "Informe · NeuroFusion" };
+export const maxDuration = 120;
 
 /** Informe imprimible (el navegador lo guarda como PDF). */
 export default async function ReportPage({ params }: PageProps<"/studies/[id]/report">) {
   const { id } = await params;
   const { supabase } = await requireUser();
-  const { study, config, projectName } = await loadVisualStudyPage(supabase, id);
+  const { data: candidate } = await supabase.from("studies").select("*").eq("id", id).in("tool_type", ["survey", "visual"]).maybeSingle<StudyRow>();
+  if (!candidate) notFound();
+  if (candidate.tool_type === "survey") {
+    const source = await loadReportSource(supabase, candidate);
+    if (source.kind !== "survey") notFound();
+    const [{ data: project }, saved] = await Promise.all([
+      supabase.from("projects").select("name").eq("id", candidate.project_id).maybeSingle(),
+      loadSavedReport(supabase, id, "survey"),
+    ]);
+    return <StudyReportView study={candidate} projectName={project?.name ?? null} source={source} sourceHash={reportHash(source.snapshot)} saved={saved.report} loadError={saved.error} />;
+  }
+  const { study, config, projectName } = await loadVisualStudyPage(supabase, id, undefined, true);
+  if (config.mode === "pieces" && config.eyeTracking) {
+    const source = await loadReportSource(supabase, study);
+    if (source.kind !== "eye") notFound();
+    const [saved, urls] = await Promise.all([loadSavedReport(supabase, id, "eye"), assetUrls(supabase, source.assets.map((a) => a.row.storage_path), "thumb")]);
+    const imageUrls = Object.fromEntries(source.assets.flatMap((a) => urls[a.row.storage_path] ? [[a.row.id, urls[a.row.storage_path]]] : []));
+    return <StudyReportView study={study} projectName={projectName} source={source} sourceHash={reportHash(source.snapshot)} saved={saved.report} loadError={saved.error} imageUrls={imageUrls} />;
+  }
   const assets = await loadAssets(supabase, id);
   const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "view");
-  const today = new Date().toLocaleDateString("es-MX", { dateStyle: "long" });
+  const today = new Date().toLocaleDateString("es-MX", { dateStyle: "long", timeZone: "America/Mexico_City" });
   const variant = config.mode === "journey" ? "journey" : "pieces";
 
   const disclaimer = (
@@ -37,9 +63,11 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
   );
 
   if (config.mode === "pieces") {
+    const snapshot = visualReportSnapshot(study.name, config.objective, assets);
+    const saved = await loadSavedReport(supabase, id, "visual");
     return (
       <div className="space-y-8">
-        <StudyHeader study={study} projectName={projectName} active="report" variant={variant} subtitle={today} actions={<PrintButton />} />
+        <StudyHeader study={study} projectName={projectName} active="report" variant={variant} subtitle={today} actions={<><RefreshReportButton /><PrintButton /></>} />
         <Card className="space-y-1 text-sm">
           <p>
             <span className="text-muted">Objetivo:</span> {config.objective}
@@ -49,8 +77,11 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
               <span className="text-muted">Público:</span> {config.audience}
             </p>
           ) : null}
-          <p className="text-muted">{assets.length} pieza(s) evaluada(s).</p>
+          <p className="text-muted">{assets.length} pieza(s) en el estudio.</p>
         </Card>
+        <VisualReportDashboard studyId={id} snapshot={snapshot}>
+          <AiReportPanel studyId={id} snapshot={snapshot} sourceHash={reportHash(snapshot)} saved={saved.report} loadError={saved.error} />
+        </VisualReportDashboard>
         {assets.map((a, i) => (
           <section key={a.row.id} className={`space-y-4 ${i ? "break-before-page" : ""}`}>
             <h2 className="text-xl font-semibold">
