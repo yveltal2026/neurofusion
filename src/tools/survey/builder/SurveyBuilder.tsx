@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Icon } from "@/components/brand/icon";
 import { Alert } from "@/components/ui/alert";
@@ -36,6 +37,7 @@ import {
 } from "./model";
 import { QuestionCard } from "./QuestionCard";
 import { TemplatePicker } from "./TemplatePicker";
+import { createSurveyWithImages } from "./upload-images";
 
 /** Nombre del estudio vacío: se valida aquí porque el motor sólo conoce la configuración. */
 function validate(d: SurveyDraft): BuildIssue[] {
@@ -70,6 +72,7 @@ export function SurveyBuilder({
   projectId: string;
   projectName: string;
 }) {
+  const router = useRouter();
   const [draft, setDraft] = useState<SurveyDraft>(emptyDraft());
   const [started, setStarted] = useState(false);
   const [attempted, setAttempted] = useState(false);
@@ -192,6 +195,17 @@ export function SurveyBuilder({
     const built = buildConfig(draft);
     if (!built.ok) return;
     startTransition(async () => {
+      const hasImages = draft.blocks.some((b) => b.kind === "questions" && b.questions.some((q) => q.image));
+      if (hasImages) {
+        try {
+          const res = await createSurveyWithImages(projectId, draft, built.config);
+          if (res.error) setServerError(res.error);
+          else if (res.studyId) router.push(`/studies/${res.studyId}?created=1`);
+        } catch {
+          setServerError("No se pudo guardar la encuesta. Tus imágenes siguen aquí; vuelve a intentarlo.");
+        }
+        return;
+      }
       const res = await createSurveyStudy({
         projectId,
         name: draft.name,
@@ -214,7 +228,8 @@ export function SurveyBuilder({
   const consentVisible = consentOpen || Boolean(consentProblem);
 
   return (
-    <form onSubmit={submit} noValidate>
+    <form onSubmit={submit} noValidate aria-busy={pending}>
+      <fieldset disabled={pending} className="contents">
       <div className="sticky top-0 z-20 -mx-6 border-b border-border bg-background px-6 py-3">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-2">
           <Link
@@ -531,6 +546,7 @@ export function SurveyBuilder({
           </button>
         </div>
       ) : null}
+      </fieldset>
     </form>
   );
 }

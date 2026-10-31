@@ -32,6 +32,8 @@ export interface DraftQuestion {
   type: QuestionType;
   prompt: string;
   required: boolean;
+  /** El archivo permanece local hasta publicar; nunca se serializa en la configuración. */
+  image?: { file: File; alt: string };
   /** Una opción por línea (opción única y múltiple). */
   optionsText: string;
   points: number;

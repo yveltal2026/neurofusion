@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
 import { removeStudyFiles } from "@/lib/study-files";
+import { listItems, surveyConfigSchema } from "@/tools/survey/engine";
 
 export interface SettingsState {
   error?: string;
@@ -72,7 +73,7 @@ export async function deleteStudy(formData: FormData) {
   // Un estudio que es paso de una batería no se borra desde aquí (la FK lo impide): primero se quita de la batería.
   const { data: usedBy } = await supabase.from("battery_steps").select("battery_id").eq("study_id", id.data).limit(1);
   if (usedBy?.length) redirect(`/studies/${id.data}?blocked=battery`);
-  if (study?.tool_type === "visual") await removeStudyFiles(supabase, id.data);
+  if (study?.tool_type === "visual" || study?.tool_type === "survey") await removeStudyFiles(supabase, id.data);
   // Borra también sesiones, ensayos, resultados, auditorías y piezas (ON DELETE CASCADE).
   await supabase.from("studies").delete().eq("id", id.data);
   redirect(study ? `/projects/${study.project_id}` : "/projects");
@@ -134,5 +135,21 @@ export async function duplicateStudy(formData: FormData) {
     .single();
   // RLS rechaza el insert si el proyecto destino no es de la organización del usuario.
   if (error || !copy) return;
+  if (source.tool_type === "survey") {
+    const parsedConfig = surveyConfigSchema.safeParse(source.config);
+    if (parsedConfig.success && listItems(parsedConfig.data).some((item) => item.image)) {
+      try {
+        const { copySurveyImages } = await import("@/tools/survey/images.server");
+        const config = await copySurveyImages(supabase, id, copy.id, parsedConfig.data);
+        const { data: saved, error: saveError } = await supabase.from("studies").update({ config })
+          .eq("id", copy.id).eq("status", "draft").select("id").maybeSingle();
+        if (saveError || !saved) throw new Error("No se pudo guardar la copia");
+      } catch {
+        await removeStudyFiles(supabase, copy.id);
+        await supabase.from("studies").delete().eq("id", copy.id).eq("status", "draft");
+        return;
+      }
+    }
+  }
   redirect(`/studies/${copy.id}?copied=1`);
 }

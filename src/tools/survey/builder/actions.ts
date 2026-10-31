@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
-import { surveyConfigSchema } from "../engine";
+import { listItems, surveyConfigSchema } from "../engine";
 
 const inputSchema = z.object({
   projectId: z.string().uuid(),
@@ -32,6 +32,8 @@ export async function createSurveyStudy(
     };
   }
   const { projectId, name, config } = parsed.data;
+  if (listItems(config).some((item) => item.image))
+    return { error: "Las imágenes deben subirse y verificarse antes de publicar la encuesta." };
 
   const { supabase } = await requireUser();
   const { data, error } = await supabase

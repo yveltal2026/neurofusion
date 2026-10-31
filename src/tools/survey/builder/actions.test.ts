@@ -48,6 +48,14 @@ beforeEach(() => {
 });
 
 describe("createSurveyStudy", () => {
+  it("impide publicar referencias a imágenes por la acción que no verifica archivos", async () => {
+    const config = validConfig();
+    const block = config.blocks.find((b) => b.kind === "questions")!;
+    if (block.kind !== "questions") throw new Error("sin preguntas");
+    block.questions[0]!.image = { path: `${PROJECT}/22222222-2222-4222-8222-222222222222.png`, alt: "Producto" };
+    expect((await createSurveyStudy({ projectId: PROJECT, name: "x", config })).error).toMatch(/verificarse/);
+    expect(mocks.inserted).toBeNull();
+  });
   it("crea la encuesta publicada con liga mágica y redirige a su resumen", async () => {
     await expect(
       createSurveyStudy({

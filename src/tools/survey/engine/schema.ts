@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { surveyImageSchema, type SurveyImage } from "../images";
 import { GG_NO, GG_YES, MAX_GG_PRICES, MIN_GG_PRICES, PRICE_METHODS, VW_QUESTIONS } from "./price";
 import {
   INSTRUMENT_IDS,
@@ -62,7 +63,7 @@ function refineUniqueOptions(q: { options: string[] }, ctx: z.RefinementCtx) {
   });
 }
 
-const base = { id: idSchema, prompt: text(300), required: z.boolean() };
+const base = { id: idSchema, prompt: text(300), required: z.boolean(), image: surveyImageSchema.optional() };
 
 export const questionSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("text") }),
@@ -203,7 +204,7 @@ export type SurveyBlock = z.infer<typeof blockSchema>;
 export type SurveyQuestion = z.infer<typeof questionSchema>;
 
 /** Elemento respondible aplanado: lo que ve el participante y lo que se exporta. */
-export type SurveyItem =
+export type SurveyItem = { image?: SurveyImage } & (
   | {
       id: string;
       blockId: string;
@@ -244,7 +245,7 @@ export type SurveyItem =
       maxLabel?: string;
       /** Una etiqueta por punto, de `min` a `max` (escala con todas las opciones rotuladas). */
       labels?: string[];
-    };
+    });
 
 /** Etiquetas de escala de un ítem de instrumento, según cómo se presente el instrumento. */
 function scaleLabelsOf(
@@ -316,6 +317,7 @@ export function listItems(config: SurveyConfig): SurveyItem[] {
         blockId: b.id,
         label: q.prompt,
         required: q.required,
+        ...(q.image ? { image: q.image } : {}),
       };
       switch (q.type) {
         case "text":
@@ -463,7 +465,9 @@ export function groupBipolar(items: readonly SurveyItem[]): SurveyItem[][] {
       item.label === last.label &&
       item.min === last.min &&
       item.max === last.max &&
-      item.blockId === last.blockId
+      item.blockId === last.blockId &&
+      item.image?.path === last.image?.path &&
+      item.image?.alt === last.image?.alt
     )
       prev.push(item);
     else groups.push([item]);

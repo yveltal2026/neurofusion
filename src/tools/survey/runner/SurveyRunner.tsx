@@ -35,6 +35,7 @@ import {
 } from "../engine";
 import { surveyApi } from "./api";
 import { BipolarGroup, ItemField } from "./ItemField";
+import { QuestionImage } from "./QuestionImage";
 
 type Stage =
   | { kind: "welcome" }
@@ -338,6 +339,7 @@ export function SurveyRunner({
               if (group.length > 1)
                 return (
                   <QuestionCard key={group[0]!.id} number={number}>
+                    {group[0]!.image ? <QuestionImage src={`/api/s/${token}/survey/images/${group[0]!.id}`} alt={group[0]!.image.alt} /> : null}
                     <BipolarGroup
                       items={
                         group as Extract<
@@ -357,6 +359,7 @@ export function SurveyRunner({
               const item = group[0]!;
               return (
                 <QuestionCard key={item.id} number={number}>
+                  {item.image ? <QuestionImage src={`/api/s/${token}/survey/images/${item.id}`} alt={item.image.alt} /> : null}
                   <ItemField
                     item={item}
                     value={answers[item.id]}

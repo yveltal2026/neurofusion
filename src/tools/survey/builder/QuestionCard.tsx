@@ -13,6 +13,7 @@ import {
   MAX_TEXT_ANSWER,
 } from "../engine";
 import { QUESTION_TYPE_ICONS } from "./catalog";
+import { DraftImagePreview, QuestionImageEditor } from "./QuestionImageEditor";
 import {
   joinOptions,
   QUESTION_TYPE_LABELS,
@@ -102,6 +103,7 @@ function QuestionPreview({ q }: { q: DraftQuestion }) {
           </>
         ) : null}
       </p>
+      {q.image ? <DraftImagePreview image={q.image} /> : null}
       {q.type === "select" || q.type === "multiselect" ? (
         <ul aria-hidden="true" className="space-y-1.5">
           {shown.map((o, i) => (
@@ -444,6 +446,8 @@ export function QuestionCard({
             />
           </div>
         </div>
+
+        <QuestionImageEditor image={q.image} onChange={(image) => onChange({ image })} />
 
         {q.type === "select" || q.type === "multiselect" ? (
           <OptionsEditor
