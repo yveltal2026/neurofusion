@@ -1,11 +1,11 @@
 # COG-20261030-imagenes-cuestionario — Imágenes en preguntas del cuestionario
 
 - Fecha y responsable: 2026-10-30 (America/Mexico_City), Codex a petición del propietario.
-- Estado del trabajo: implementado localmente.
+- Estado del trabajo: integrado en `main`.
 - Tipo: mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, copia de trabajo `work` actualizada desde `main`, base `b67b23c1dbb980770076b2a9a5d3fcbebbfad772`.
-- Referencias de implementación: commit `73d2bfdc2e53cf9c624d366e778bc04faf76d2bb`, rama `feat/survey-question-images`, [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) abierto contra `main`; integración y despliegue pendientes.
+- Referencias de implementación: commit `73d2bfdc2e53cf9c624d366e778bc04faf76d2bb`, documentación `ab27024`, [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) integrado en `main` mediante merge `f48f94844d853c4f0800cb12b8a8a3056dac1e04`. Despliegue de producción pendiente de verificar.
 - Dependencias de otros cambios: ninguna nueva; requiere el cuestionario y Storage existentes en `main`.
 
 ## Problema y comportamiento esperado
@@ -59,7 +59,7 @@ Variables existentes: públicas de Supabase para el investigador, clave de servi
 - El navegador usa una pantalla temporal de prueba con componentes reales, respuestas de imagen simuladas y fuentes simuladas para evitar solicitudes externas; se elimina antes de la entrega. No certifica autenticación ni persistencia real.
 - Una imagen opcional por pregunta propia; no se añade un formato de respuesta basado en archivos. No evalúa la imagen con IA: las opiniones las aportan los participantes.
 - Si se cierra la pestaña durante la subida puede quedar un borrador remoto y sus archivos; se puede eliminar desde el proyecto. Tras un error normal la limpieza se intenta automáticamente. La selección local no se conserva después de cerrar o recargar la página.
-- Rama y PR publicados en GitHub; integración en `main`, despliegue, prueba con Supabase real y adopción universitaria pendientes; ver `../ADOPCION.md`.
+- [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) integrado en `main` (`f48f948`). El check Vercel del head `ab27024` terminó correctamente: [preview](https://vercel.com/neurofusion1/neurofusion/EY6SFjp9FkLPnT1xdybSNQVsWTiX). Despliegue de producción, prueba con Supabase real y adopción universitaria pendientes de verificar; ver `../ADOPCION.md`.
 
 ## Recuperación
 
@@ -68,3 +68,4 @@ Revertir los cambios de código y documentación del ID. Los campos opcionales n
 ## Historial de la ficha
 
 - 2026-10-30: implementación sobre la versión actualizada de `main`; commit `73d2bfd` subido a `feat/survey-question-images` y [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) abierto. Integración y despliegue pendientes.
+- 2026-10-30: check Vercel del head `ab27024` correcto y PR #24 integrado por petición del propietario en `main`, merge `f48f948`. Producción y adopción universitaria sin verificar.
