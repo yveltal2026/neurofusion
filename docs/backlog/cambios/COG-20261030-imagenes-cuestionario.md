@@ -5,7 +5,7 @@
 - Tipo: mejora.
 - Alcance: compartido.
 - Origen: `yveltal2026/neurofusion`, copia de trabajo `work` actualizada desde `main`, base `b67b23c1dbb980770076b2a9a5d3fcbebbfad772`.
-- Referencias de implementación: commit/PR pendientes; no integrado ni desplegado.
+- Referencias de implementación: commit `73d2bfdc2e53cf9c624d366e778bc04faf76d2bb`, rama `feat/survey-question-images`, [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) abierto contra `main`; integración y despliegue pendientes.
 - Dependencias de otros cambios: ninguna nueva; requiere el cuestionario y Storage existentes en `main`.
 
 ## Problema y comportamiento esperado
@@ -34,7 +34,7 @@ Variables existentes: públicas de Supabase para el investigador, clave de servi
 ## Réplica
 
 1. Revisar el diff completo y la configuración del cuestionario, almacenamiento y permisos del destino. Conservar este ID.
-2. Aplicar el cambio de cliente y servidor conjuntamente, adaptando rutas si difieren. Commit pendiente: todavía no hay un cherry-pick ejecutable documentado.
+2. Revisar el commit de implementación `73d2bfdc2e53cf9c624d366e778bc04faf76d2bb` y el [PR #24](https://github.com/yveltal2026/neurofusion/pull/24). Si el destino comparte historial y se ha revisado su compatibilidad, aplicar mediante `git cherry-pick -x 73d2bfdc2e53cf9c624d366e778bc04faf76d2bb`; en otro caso adaptar el comportamiento. Aplicar cliente y servidor conjuntamente, adaptando rutas si difieren.
 3. Confirmar el bucket privado, límites, MIME y políticas existentes de pertenencia a organización; no copiar secretos ni sustituir permisos institucionales.
 4. Ejecutar pruebas del cuestionario, baterías, acciones de duplicación y ruta de imagen, tipos y lint.
 5. Con cuentas de prueba del destino, publicar una pregunta con imagen de cada formato, abrir la liga y una batería en móvil/escritorio, duplicar el estudio y eliminar el original; comprobar acceso de otra organización y regeneración de liga. Confirmar carga, validación y limpieza en Storage real.
@@ -59,7 +59,7 @@ Variables existentes: públicas de Supabase para el investigador, clave de servi
 - El navegador usa una pantalla temporal de prueba con componentes reales, respuestas de imagen simuladas y fuentes simuladas para evitar solicitudes externas; se elimina antes de la entrega. No certifica autenticación ni persistencia real.
 - Una imagen opcional por pregunta propia; no se añade un formato de respuesta basado en archivos. No evalúa la imagen con IA: las opiniones las aportan los participantes.
 - Si se cierra la pestaña durante la subida puede quedar un borrador remoto y sus archivos; se puede eliminar desde el proyecto. Tras un error normal la limpieza se intenta automáticamente. La selección local no se conserva después de cerrar o recargar la página.
-- Integración, despliegue, prueba con Supabase real y adopción universitaria pendientes; ver `../ADOPCION.md`.
+- Rama y PR publicados en GitHub; integración en `main`, despliegue, prueba con Supabase real y adopción universitaria pendientes; ver `../ADOPCION.md`.
 
 ## Recuperación
 
@@ -67,4 +67,4 @@ Revertir los cambios de código y documentación del ID. Los campos opcionales n
 
 ## Historial de la ficha
 
-- 2026-10-30: implementación local sobre la versión actualizada de `main`; referencias remotas y despliegue pendientes.
+- 2026-10-30: implementación sobre la versión actualizada de `main`; commit `73d2bfd` subido a `feat/survey-question-images` y [PR #24](https://github.com/yveltal2026/neurofusion/pull/24) abierto. Integración y despliegue pendientes.
