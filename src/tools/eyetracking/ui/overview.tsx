@@ -1,3 +1,4 @@
+import { StudyParticipationSummary } from "@/components/study-participation-summary";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { CopyLink } from "@/components/copy-link";
@@ -37,6 +38,7 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
   return (
     <div className="space-y-8">
       <StudyHeader study={study} projectName={projectName} active="overview" variant="eye" subtitle="Medición de mirada con participantes" />
+      <StudyParticipationSummary studyId={study.id} />
       {created ? <Alert>Estudio de eye tracking creado. Sube tus imágenes y comparte la liga de participación.</Alert> : null}
       <Card className="space-y-2">
         <p className="text-sm"><span className="text-muted">Objetivo:</span> {config.objective}</p>

@@ -1,5 +1,8 @@
 "use client";
 
+import { useParticipationActivity } from "@/components/use-participation-activity";
+import { ParticipationExpired } from "@/components/participation-expired";
+
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Callout, ConsentCheck, FactList, ParticipantScreen, Prose, ReadingPanel, ScreenHeader, Section, StatusScreen } from "@/components/participant";
 import { Alert } from "@/components/ui/alert";
@@ -67,6 +70,8 @@ export function VariantRunner({
   const responsesRef = useRef<TrialResponse[]>([]);
   const autoStartedRef = useRef(false);
   const completedRef = useRef(false);
+
+  const expired = useParticipationActivity(token, sessionId, !preview && !embedded && stage.kind !== "thanks" && stage.kind !== "blocked");
 
   const total = useMemo(() => (plan ? totalTrials(plan) : 0), [plan]);
   const minutes = useMemo(() => estimateVariantMinutes(config), [config]);
@@ -195,6 +200,8 @@ export function VariantRunner({
         "--focus": "var(--heading)",
         "--control": "var(--muted)",
       } as CSSProperties);
+
+  if (expired) return <ParticipationExpired />;
 
   let body: ReactNode = null;
 

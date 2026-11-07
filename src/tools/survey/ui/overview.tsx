@@ -1,3 +1,4 @@
+import { StudyParticipationSummary } from "@/components/study-participation-summary";
 import { deleteStudy, regenerateLink } from "@/app/(app)/studies/[id]/actions";
 import { CopyLink } from "@/components/copy-link";
 import { DuplicateStudyForm } from "@/components/duplicate-study-form";
@@ -46,6 +47,7 @@ export function SurveyOverview({
         variant="survey"
         subtitle={STATUS_LABEL[study.status]}
       />
+      <StudyParticipationSummary studyId={study.id} />
 
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
 

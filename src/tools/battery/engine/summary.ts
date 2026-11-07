@@ -1,4 +1,5 @@
 import { isBatteryComplete, stepProgress, type StepStatus } from "./config";
+import { participationStatus, type ParticipationStatus } from "@/lib/participation-activity";
 
 /**
  * Resumen de una batería para el investigador: cuántos participantes hay, cuántos terminaron cada
@@ -16,6 +17,9 @@ export interface SummarySession {
   excluded: boolean;
   startedAt: string;
   completedAt: string | null;
+  lastActivityAt?: string;
+  inactiveSince?: string | null;
+  abandonReason?: string | null;
 }
 
 export interface SummaryChild {
@@ -27,7 +31,8 @@ export interface SummaryChild {
 export interface ParticipantSummary {
   id: string;
   participantRef: string;
-  status: SummarySession["status"];
+  status: ParticipationStatus;
+  abandonReason?: string | null;
   deviceType: string;
   excluded: boolean;
   startedAt: string;
@@ -42,6 +47,7 @@ export interface BatterySummary {
   total: number;
   completed: number;
   inProgress: number;
+  inactive: number;
   abandoned: number;
   excluded: number;
   /** Por paso de la batería: cuántos participantes lo completaron o lo tienen en curso. */
@@ -65,7 +71,8 @@ export function summarizeBattery(
       return {
         id: s.id,
         participantRef: s.participantRef,
-        status: s.status,
+        status: participationStatus({ status: s.status, started_at: s.startedAt, last_activity_at: s.lastActivityAt, inactive_since: s.inactiveSince }),
+        abandonReason: s.abandonReason,
         deviceType: s.deviceType,
         excluded: s.excluded,
         startedAt: s.startedAt,
@@ -80,6 +87,7 @@ export function summarizeBattery(
     total: participants.length,
     completed: participants.filter((p) => p.status === "completed").length,
     inProgress: participants.filter((p) => p.status === "started").length,
+    inactive: participants.filter((p) => p.status === "inactive").length,
     abandoned: participants.filter((p) => p.status === "abandoned").length,
     excluded: participants.filter((p) => p.excluded).length,
     byStep: stepOrder.map((studyId) => ({

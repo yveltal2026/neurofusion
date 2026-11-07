@@ -10,6 +10,7 @@ import {
   type SummarySession,
 } from "./engine";
 import type { AvailableStudy } from "./ui/StepsEditor";
+import { refreshParticipationActivity } from "@/lib/participation-activity-server";
 
 /** Parte una lista en trozos (las consultas con `in(...)` no admiten listas enormes). */
 export function chunk<T>(list: readonly T[], size: number): T[][] {
@@ -137,6 +138,7 @@ export async function loadBatteryDetail(
     .eq("id", id)
     .maybeSingle<BatteryRow>();
   if (!battery) return null;
+  await refreshParticipationActivity(supabase, "battery", id);
 
   const [stepRows, sessionRows] = await Promise.all([
     supabase
@@ -149,7 +151,7 @@ export async function loadBatteryDetail(
       supabase
         .from("battery_sessions")
         .select(
-          "id, battery_id, participant_ref, status, run_order, device_type, excluded, excluded_reason, started_at, completed_at",
+          "id, battery_id, participant_ref, status, run_order, device_type, excluded, excluded_reason, started_at, completed_at, last_activity_at, inactive_since, abandon_reason",
         )
         .eq("battery_id", id)
         .order("started_at", { ascending: false })
@@ -204,6 +206,9 @@ export async function loadBatteryDetail(
       excluded: s.excluded,
       startedAt: s.started_at,
       completedAt: s.completed_at,
+      lastActivityAt: s.last_activity_at,
+      inactiveSince: s.inactive_since,
+      abandonReason: s.abandon_reason,
     })),
     children,
   };

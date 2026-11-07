@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Block } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { fetchAll, loadStudyForResearcher } from "@/lib/studies";
-import { DEVICE_LABEL, FLAG_LABEL, STATUS_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
+import { DEVICE_LABEL, FLAG_LABEL, interpretationText, validityText } from "@/tools/iat/results/labels";
 import { formatExtraAnswer } from "@/tools/iat/participant";
 import { loadSessionViews } from "@/tools/iat/results/load";
 import type { TrialExportRow } from "@/tools/iat/results/views";
 import { setSessionExcluded } from "../actions";
+import { participationLabel } from "@/lib/participation-activity";
 
 export const metadata = { title: "Sesión · NeuroFusion" };
 
@@ -38,7 +39,7 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
   const explicitLabel =
     view.explicit_preference === "A" ? config.conceptA.label : view.explicit_preference === "B" ? config.conceptB.label : view.explicit_preference === "neutral" ? "Ninguna / me da igual" : "sin dato";
   const fields: [string, string][] = [
-    ["Estado", STATUS_LABEL[view.status]],
+    ["Estado", participationLabel(view)],
     ["Inicio", new Date(view.started_at).toLocaleString("es-MX")],
     ["Fin", view.completed_at ? new Date(view.completed_at).toLocaleString("es-MX") : "sin dato"],
     ["Dispositivo", `${DEVICE_LABEL[view.device_type]} · ${view.input_mode === "touch" ? "táctil" : "teclado"} · ${view.screen_width ?? "?"}×${view.screen_height ?? "?"}`],

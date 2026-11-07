@@ -63,6 +63,9 @@ export interface BatterySessionRow {
   excluded_reason: string | null;
   started_at: string;
   completed_at: string | null;
+  last_activity_at?: string;
+  inactive_since?: string | null;
+  abandon_reason?: string | null;
 }
 
 export interface SeoAuditRow {

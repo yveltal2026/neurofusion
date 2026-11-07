@@ -69,6 +69,7 @@ function createFakeServer(config: IatConfig, opts: { checkError?: string; startE
 
   const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = new URL(String(input), "http://localhost").pathname.replace(/^\/api\/s\/[^/]+/, "");
+    if (path.endsWith("/activity")) return Response.json({ ok: true });
     state.calls.push(path);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
 
