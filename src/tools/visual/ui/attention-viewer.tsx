@@ -199,6 +199,7 @@ export function AttentionViewer({
   initialMode = "heatmap",
   showControls = true,
   reviewed = false,
+  maxHeight = "min(68vh, 640px)",
 }: {
   imageUrl: string;
   width: number;
@@ -210,6 +211,7 @@ export function AttentionViewer({
   initialMode?: ViewMode;
   showControls?: boolean;
   reviewed?: boolean;
+  maxHeight?: string;
 }) {
   const [mode, setMode] = useState<ViewMode>(initialMode);
   const [aois, setAois] = useState<Aoi[]>(initial);
@@ -217,18 +219,114 @@ export function AttentionViewer({
   const [draft, setDraft] = useState<Aoi["box"] | null>(null);
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState<{ tone: "error" | "info"; text: string } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
   const [saving, startSaving] = useTransition();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fullscreenCanvasRef = useRef<HTMLCanvasElement>(null);
   const start = useRef<[number, number] | null>(null);
 
   const scale = Math.min(1, MAX_CANVAS / width);
   const cw = Math.round(width * scale);
   const ch = Math.round(height * scale);
 
+  const handleZoomIn = () =>
+    setZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))));
+
+  const handleZoomOut = () =>
+    setZoom((z) => {
+      const next = Math.max(1, Number((z - 0.25).toFixed(2)));
+      if (next === 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const closeFullscreen = () => {
+    setFullscreen(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
   useEffect(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) draw(ctx, mode, aois, selected, draft);
-  }, [mode, aois, selected, draft]);
+    const fctx = fullscreenCanvasRef.current?.getContext("2d");
+    if (fctx) draw(fctx, mode, aois, selected, draft);
+  }, [mode, aois, selected, draft, fullscreen]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeFullscreen();
+      } else if (e.key === "+" || e.key === "=") {
+        handleZoomIn();
+      } else if (e.key === "-" || e.key === "_") {
+        handleZoomOut();
+      } else if (e.key === "0") {
+        handleResetZoom();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
+  const onWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY;
+    if (delta < 0) {
+      handleZoomIn();
+    } else if (delta > 0) {
+      handleZoomOut();
+    }
+  };
+
+  const onPointerDownFullscreen = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (zoom <= 1 || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    setIsDragging(true);
+  };
+
+  const onPointerMoveFullscreen = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const rawX = e.clientX - dragStartRef.current.x;
+    const rawY = e.clientY - dragStartRef.current.y;
+    const limitX = Math.max(120, (window.innerWidth * (zoom - 1)) / 1.5);
+    const limitY = Math.max(120, (window.innerHeight * (zoom - 1)) / 1.5);
+    setPan({
+      x: Math.max(-limitX, Math.min(limitX, rawX)),
+      y: Math.max(-limitY, Math.min(limitY, rawY)),
+    });
+  };
+
+  const onPointerUpFullscreen = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingRef.current) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // noop
+      }
+      isDraggingRef.current = false;
+      setIsDragging(false);
+    }
+  };
+
+  const onDoubleClickFullscreen = () => {
+    if (zoom > 1) {
+      handleResetZoom();
+    } else {
+      setZoom(2);
+    }
+  };
 
   const pos = (e: React.PointerEvent<HTMLCanvasElement>): [number, number] => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -309,30 +407,72 @@ export function AttentionViewer({
   const cold = useMemo(() => coldZones(aois), [aois]);
   const unreached = useMemo(() => outsidePath(aois), [aois]);
 
+  const ratio = width / height;
+
   return (
     <div className="space-y-3">
       {showControls ? (
-        <div className="flex flex-wrap items-center gap-2 print:hidden" role="group" aria-label="Capa sobre la imagen">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={mode === m.id}
-              onClick={() => setMode(m.id)}
-              className={`min-h-8 rounded-full border px-3 py-1 text-sm ${mode === m.id ? "border-primary bg-primary/10 font-medium" : "border-border text-muted hover:text-foreground"}`}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 shadow-2xs print:hidden">
+          <div className="flex items-center gap-2">
+            <label htmlFor="viewer-mode-select" className="text-xs font-semibold text-muted">
+              Capa:
+            </label>
+            <select
+              id="viewer-mode-select"
+              value={mode}
+              onChange={(e) => setMode(e.target.value as ViewMode)}
+              aria-label="Capa sobre la imagen"
+              className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
             >
-              {m.label}
-              {m.id === "blind" && cold.length ? ` (${cold.length})` : ""}
+              {MODES.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}{m.id === "blind" && cold.length ? ` (${cold.length})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFullscreen(true)}
+              title="Ver a pantalla completa"
+              aria-label="Fullscreen"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+            >
+              <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+              </svg>
+              <span>Fullscreen</span>
             </button>
-          ))}
-          <button type="button" onClick={exportPng} className="ml-auto px-1 py-1.5 text-sm text-heading underline underline-offset-4">
-            Descargar PNG
-          </button>
+            <button
+              type="button"
+              onClick={exportPng}
+              title="Descargar imagen en PNG"
+              aria-label="Descargar PNG"
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+            >
+              <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>PNG</span>
+            </button>
+          </div>
         </div>
       ) : null}
 
-      <div className={editable && mode === "boxes" ? "grid gap-4 lg:grid-cols-[1fr_300px]" : ""}>
-        <div className="relative w-full overflow-hidden rounded-lg border border-border bg-foreground/5 break-inside-avoid" style={{ aspectRatio: `${width} / ${height}` }}>
+      <div className="space-y-4">
+        <div
+          className="relative mx-auto overflow-hidden rounded-lg border border-border bg-foreground/5 break-inside-avoid shadow-xs"
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            maxHeight,
+            maxWidth: `min(100%, calc(${maxHeight} * ${ratio}))`,
+            width: "100%",
+          }}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage; next/image no aplica */}
           <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full" draggable={false} />
           <canvas
@@ -348,7 +488,7 @@ export function AttentionViewer({
         </div>
 
         {editable && mode === "boxes" ? (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 rounded-lg border border-border bg-surface p-4 text-sm">
             <p className="text-xs text-muted">Arrastra sobre la imagen para agregar un área (o usa «Agregar área»); haz clic en una para editarla.</p>
             <button
               type="button"
@@ -470,6 +610,158 @@ export function AttentionViewer({
         <p className="text-xs text-muted">
           Estimación experta (IA + revisión del analista) a partir de principios de saliencia visual. No es eye tracking ni datos de personas reales.
         </p>
+      ) : null}
+
+      {fullscreen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Visor a pantalla completa"
+          className="fixed inset-0 z-50 flex flex-col bg-black/92 p-4 backdrop-blur-sm sm:p-6"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 text-white">
+            <div className="flex flex-wrap items-center gap-2">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={mode === m.id}
+                  onClick={() => setMode(m.id)}
+                  className={`min-h-8 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    mode === m.id
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-white/30 text-white/80 hover:bg-white/10"
+                  }`}
+                >
+                  {m.label}
+                  {m.id === "blind" && cold.length ? ` (${cold.length})` : ""}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Controles de Zoom */}
+              <div
+                className="flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm"
+                role="group"
+                aria-label="Control de zoom"
+              >
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 1}
+                  title="Alejar (-)"
+                  aria-label="Alejar zoom"
+                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    aria-hidden="true"
+                    className="size-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetZoom}
+                  title="Restablecer zoom al 100% (0)"
+                  aria-label={`Nivel de zoom: ${Math.round(zoom * 100)}%`}
+                  className="min-w-12 px-1 text-center font-mono text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 4}
+                  title="Acercar (+)"
+                  aria-label="Acercar zoom"
+                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    aria-hidden="true"
+                    className="size-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={exportPng}
+                className="text-xs text-white/80 underline underline-offset-4 hover:text-white"
+              >
+                Descargar PNG
+              </button>
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+          </div>
+          <div
+            className="relative flex flex-1 items-center justify-center overflow-hidden select-none"
+            onWheel={onWheel}
+          >
+            <div
+              className={`relative mx-auto overflow-hidden rounded-lg shadow-2xl transition-transform ${
+                zoom > 1
+                  ? isDragging
+                    ? "cursor-grabbing"
+                    : "cursor-grab"
+                  : "cursor-default"
+              }`}
+              style={{
+                aspectRatio: `${width} / ${height}`,
+                maxHeight: "calc(100vh - 6.5rem)",
+                maxWidth: `min(94vw, calc((100vh - 6.5rem) * ${ratio}))`,
+                width: "100%",
+                transform: `translate3d(${pan.x}px, ${pan.y}px, 0px) scale(${zoom})`,
+                transformOrigin: "center center",
+                transition: isDragging ? "none" : "transform 150ms ease-out",
+              }}
+              onPointerDown={onPointerDownFullscreen}
+              onPointerMove={onPointerMoveFullscreen}
+              onPointerUp={onPointerUpFullscreen}
+              onPointerCancel={onPointerUpFullscreen}
+              onDoubleClick={onDoubleClickFullscreen}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full pointer-events-none select-none" draggable={false} />
+              <canvas
+                ref={fullscreenCanvasRef}
+                width={cw}
+                height={ch}
+                className="absolute inset-0 h-full w-full"
+                aria-hidden="true"
+              />
+            </div>
+
+            {zoom > 1 ? (
+              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-2xs text-white/80 shadow-lg backdrop-blur-md">
+                Arrastra para explorar · Doble clic para restablecer (0)
+              </div>
+            ) : null}
+          </div>
+        </div>
       ) : null}
     </div>
   );

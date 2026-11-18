@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AGE_GROUPS, DEFAULT_CALIBRATION, DEFAULT_QUOTAS, LITERACY } from "./journey/calibration";
 import { TASK_KINDS } from "./journey/model";
+import { videoAoiSchema } from "./video/schema";
 
 const text = (max: number) => z.string().trim().max(max);
 const key = z.string().trim().regex(/^[a-z0-9][a-z0-9-]{0,31}$/, "Clave inválida (minúsculas, números y guiones)");
@@ -33,11 +34,52 @@ const context = {
   audience: text(400).default(""),
 };
 
+export const eyeTrackingVideoSceneInputSchema = z
+  .object({
+    id: z.string().trim().min(1).max(64),
+    label: z.string().trim().min(1).max(120),
+    startMs: z.number().int().min(0).max(300_000),
+    endMs: z.number().int().min(1).max(300_000),
+  })
+  .refine((s) => s.endMs > s.startMs, {
+    message: "La escena debe cumplir endMs > startMs",
+  });
+
+export const eyeTrackingVideoConfigSchema = z.object({
+  storage: z.enum(["cloudflare_r2"]).default("cloudflare_r2"),
+  maxDurationSeconds: z.number().int().min(5).max(300).default(120),
+  r2Key: z.string().trim().min(1).max(500).optional(),
+  playbackUrl: z.string().trim().url("URL de video inválida").max(2000).optional(),
+  title: text(160).optional(),
+  videoWidth: z.number().int().min(64).max(7680).optional(),
+  videoHeight: z.number().int().min(64).max(4320).optional(),
+  durationMs: z.number().int().min(1000).max(300_000).optional(),
+  scenes: z.array(eyeTrackingVideoSceneInputSchema).max(24).default([]),
+  aois: z.array(videoAoiSchema).max(30).default([]),
+});
+
+export const eyeTrackingConfigSchema = z.object({
+  mediaType: z.enum(["image", "video"]).optional(),
+  durationSeconds: z.number().int().min(5).max(30).default(10),
+  facialCoding: z.boolean().optional(),
+  video: eyeTrackingVideoConfigSchema.optional(),
+});
+
+export type EyeTrackingConfig = z.infer<typeof eyeTrackingConfigSchema>;
+
+export function resolveEyeMediaType(eye?: EyeTrackingConfig): "image" | "video" {
+  return eye?.mediaType ?? "image";
+}
+
+export function isEyeFacialCodingEnabled(eye?: EyeTrackingConfig): boolean {
+  return eye?.facialCoding ?? false;
+}
+
 export const piecesConfigSchema = z.object({
   mode: z.literal("pieces"),
   ...context,
   /** Presente sólo cuando las piezas se miden con una webcam de participantes. */
-  eyeTracking: z.object({ durationSeconds: z.number().int().min(5).max(30) }).optional(),
+  eyeTracking: eyeTrackingConfigSchema.optional(),
 });
 
 export const journeyConfigSchema = z

@@ -83,3 +83,5 @@ Revertir los archivos del cambio devuelve las pestañas/rutas a su comportamient
 - 2026-10-31: implementación publicada en `5a7d468`; integración en `main` autorizada por el propietario y pendiente de PR/checks.
 
 - 2026-10-31: [PR #25](https://github.com/yveltal2026/neurofusion/pull/25) integrado en `main`, merge `054bd5472fc76199f672af0fb663035e3f12b58e`, tras checks Vercel correctos en `762fd61`. Despliegue y funcionamiento con servicios reales pendientes de verificar.
+
+- 2026-11-18: la réplica de UI de Anáhuac reorganiza el reporte y las vistas de eye manteniendo los informes de IA existentes. Referencia `COG-20261111-analisis-imagenes-ia`; sin cambios a generación/persistencia de informes ni autenticación.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { EyeKpiGuide } from "./kpi-guide";
 import { toCsv, type CsvCell } from "@/lib/csv";
@@ -19,6 +19,7 @@ const fmt = (n: number | null, digits = 1) =>
   n === null
     ? "sin dato"
     : n.toLocaleString("es-MX", { maximumFractionDigits: digits });
+
 const headers = [
   "AOI",
   "TTFF (ms)",
@@ -31,6 +32,7 @@ const headers = [
   "Visitas",
   "Regresos",
 ];
+
 function cells(row: AoiMetrics | AggregateAoi, count: number): CsvCell[] {
   return [
     row.label,
@@ -49,6 +51,7 @@ function cells(row: AoiMetrics | AggregateAoi, count: number): CsvCell[] {
     count ? row.revisitCount : null,
   ];
 }
+
 function download(name: string, columns: string[], rows: CsvCell[][]) {
   const url = URL.createObjectURL(
     new Blob([toCsv(columns, rows)], { type: "text/csv;charset=utf-8" }),
@@ -69,6 +72,7 @@ export function EyeResults({
   height,
   aois,
   participants,
+  maxHeight = "min(60vh, 520px)",
 }: {
   studyId: string;
   assetId: string;
@@ -78,13 +82,19 @@ export function EyeResults({
   height: number;
   aois: Aoi[];
   participants: EyeParticipant[];
+  maxHeight?: string;
 }) {
   const [view, setView] = useState<"heatmap" | "gaze" | "aois">("heatmap");
-  const [heatMetric, setHeatMetric] = useState<"count" | "duration">(
-    "duration",
-  );
+  const [heatMetric, setHeatMetric] = useState<"count" | "duration">("duration");
   const [session, setSession] = useState("all");
+  const [fullscreen, setFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
   const gradientId = useId().replace(/:/g, "");
+
   const aggregate = useMemo(
     () => aggregateEyeMetrics(participants, aois, { width, height }),
     [participants, aois, width, height],
@@ -108,12 +118,230 @@ export function EyeResults({
     (n, p) => n + p.metrics.fixations.reduce((n, f) => n + f.durationMs, 0),
     0,
   );
+
+  const handleZoomIn = () =>
+    setZoom((z) => Math.min(4, Number((z + 0.25).toFixed(2))));
+
+  const handleZoomOut = () =>
+    setZoom((z) => {
+      const next = Math.max(1, Number((z - 0.25).toFixed(2)));
+      if (next === 1) setPan({ x: 0, y: 0 });
+      return next;
+    });
+
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const closeFullscreen = () => {
+    setFullscreen(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeFullscreen();
+      } else if (e.key === "+" || e.key === "=") {
+        handleZoomIn();
+      } else if (e.key === "-" || e.key === "_") {
+        handleZoomOut();
+      } else if (e.key === "0") {
+        handleResetZoom();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
+  const onWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY;
+    if (delta < 0) {
+      handleZoomIn();
+    } else if (delta > 0) {
+      handleZoomOut();
+    }
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (zoom <= 1 || e.button !== 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    setIsDragging(true);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    const rawX = e.clientX - dragStartRef.current.x;
+    const rawY = e.clientY - dragStartRef.current.y;
+    const limitX = Math.max(120, (window.innerWidth * (zoom - 1)) / 1.5);
+    const limitY = Math.max(120, (window.innerHeight * (zoom - 1)) / 1.5);
+    setPan({
+      x: Math.max(-limitX, Math.min(limitX, rawX)),
+      y: Math.max(-limitY, Math.min(limitY, rawY)),
+    });
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingRef.current) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // noop
+      }
+      isDraggingRef.current = false;
+      setIsDragging(false);
+    }
+  };
+
+  const onDoubleClick = () => {
+    if (zoom > 1) {
+      handleResetZoom();
+    } else {
+      setZoom(2);
+    }
+  };
+
+  const ratio = width / height;
+
+  const renderSvg = (idSuffix = "", isAriaHidden = false) => {
+    const gid = `${gradientId}${idSuffix}`;
+    return (
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role={isAriaHidden ? undefined : "img"}
+        aria-hidden={isAriaHidden ? true : undefined}
+        aria-label={
+          isAriaHidden
+            ? undefined
+            : view === "heatmap"
+              ? `Mapa de calor por ${heatMetric === "duration" ? "duración" : "número"} de fijaciones`
+              : view === "gaze"
+                ? "Secuencia de fijaciones por participante"
+                : "Áreas de interés delimitadas"
+        }
+        className="pointer-events-none absolute inset-0 size-full"
+      >
+        <defs>
+          <radialGradient id={gid}>
+            <stop offset="0" stopColor="#ff1600" stopOpacity="0.9" />
+            <stop offset="0.4" stopColor="#ff9d00" stopOpacity="0.65" />
+            <stop offset="0.7" stopColor="#ffef00" stopOpacity="0.3" />
+            <stop offset="1" stopColor="#ffef00" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        {view === "heatmap"
+          ? heat.map((cell, i) => (
+              <circle
+                key={i}
+                cx={cell.x * width}
+                cy={cell.y * height}
+                r={Math.hypot(width, height) * 0.045}
+                fill={`url(#${gid})`}
+                opacity={Math.sqrt(cell.strength)}
+              />
+            ))
+          : null}
+        {view === "gaze"
+          ? visible.map((p, i) => {
+              const color = `hsl(${(i * 137.5) % 360} 85% 50%)`;
+              return (
+                <g key={p.sessionId}>
+                  {p.metrics.transitions.map((t) => {
+                    const from = p.metrics.fixations[t.from];
+                    const to = p.metrics.fixations[t.to];
+                    return (
+                      <line
+                        key={t.to}
+                        x1={from.x * width}
+                        y1={from.y * height}
+                        x2={to.x * width}
+                        y2={to.y * height}
+                        stroke={color}
+                        strokeWidth={Math.max(width, height) * 0.002}
+                      />
+                    );
+                  })}
+                  {p.metrics.fixations.map((f, j) => (
+                    <g key={j}>
+                      <circle
+                        cx={f.x * width}
+                        cy={f.y * height}
+                        r={
+                          Math.max(width, height) *
+                          (0.008 + Math.sqrt(f.durationMs / 1000) * 0.012)
+                        }
+                        fill={color}
+                        fillOpacity={0.45}
+                        stroke="white"
+                        strokeWidth={1}
+                      >
+                        <title>
+                          {p.participant} · #{j + 1} · {f.startMs}–{f.endMs} ms ·{" "}
+                          {f.durationMs} ms
+                        </title>
+                      </circle>
+                      <text
+                        x={f.x * width}
+                        y={f.y * height}
+                        dy=".35em"
+                        textAnchor="middle"
+                        fontSize={Math.max(width, height) * 0.012}
+                        fill="white"
+                        stroke="black"
+                        strokeWidth={Math.max(width, height) * 0.001}
+                        paintOrder="stroke"
+                      >
+                        {j + 1}
+                      </text>
+                    </g>
+                  ))}
+                </g>
+              );
+            })
+          : null}
+        {view === "aois"
+          ? aois.map((a) => (
+              <g key={a.id}>
+                <rect
+                  x={a.box[0] * width}
+                  y={a.box[1] * height}
+                  width={(a.box[2] - a.box[0]) * width}
+                  height={(a.box[3] - a.box[1]) * height}
+                  fill="#06b6d422"
+                  stroke="#06b6d4"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <text
+                  x={a.box[0] * width + 4}
+                  y={a.box[1] * height + width * 0.025}
+                  fontSize={width * 0.02}
+                  fill="white"
+                  stroke="black"
+                  strokeWidth={width * 0.002}
+                  paintOrder="stroke"
+                >
+                  {a.id} · {a.label}
+                </text>
+              </g>
+            ))
+          : null}
+      </svg>
+    );
+  };
+
   return (
     <section className="space-y-4" aria-label={`Resultados de ${title}`}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Encabezado con conteo y enlace directo a edición de AOIs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div>
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <p className="text-xs text-muted">
+          <h2 className="text-xl font-semibold text-heading">{title}</h2>
+          <p className="mt-0.5 text-xs text-muted">
             {aggregate.count} sesiones con lecturas ·{" "}
             {aggregate.withoutFixations} sin fijaciones detectadas ·{" "}
             {participants.length - aggregate.count} registros sin lecturas o
@@ -122,203 +350,128 @@ export function EyeResults({
         </div>
         <Link
           href={`/studies/${studyId}/assets/${assetId}`}
-          className="text-sm underline"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 hover:border-primary/40"
         >
-          Definir áreas de interés ({aois.length})
+          <span>Definir áreas de interés ({aois.length})</span>
         </Link>
       </div>
-      <div className="flex flex-wrap gap-4">
-        <label className="text-sm">
-          Participante
-          <select
-            aria-label="Participante"
-            className="ml-2 rounded border border-border bg-background p-2"
-            value={session}
-            onChange={(e) => setSession(e.target.value)}
-          >
-            <option value="all">Todos (agregado)</option>
-            {aggregate.participants.map((p) => (
-              <option key={p.sessionId} value={p.sessionId}>
-                {p.participant}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div
-          className="flex flex-wrap gap-2"
-          role="group"
-          aria-label="Visualización"
-        >
-          {(
-            [
-              ["heatmap", "Heatmap"],
-              ["gaze", "Gaze plot"],
-              ["aois", "Áreas de interés"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              type="button"
-              key={id}
-              aria-pressed={view === id}
-              onClick={() => setView(id)}
-              className={`rounded border px-3 py-1 text-sm ${view === id ? "border-primary bg-primary/10" : "border-border"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {view === "heatmap" ? (
-          <label className="text-sm">
-            Métrica del mapa
+
+      {/* Barra de herramientas compacta y estilizada */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 shadow-2xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+            <span>Participante</span>
             <select
-              aria-label="Métrica del mapa"
-              value={heatMetric}
-              onChange={(e) =>
-                setHeatMetric(e.target.value as "count" | "duration")
-              }
-              className="ml-2 rounded border border-border bg-background p-2"
+              aria-label="Participante"
+              className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              value={session}
+              onChange={(e) => setSession(e.target.value)}
             >
-              <option value="duration">Duración de fijaciones</option>
-              <option value="count">Número de fijaciones</option>
+              <option value="all">Todos (agregado)</option>
+              {aggregate.participants.map((p) => (
+                <option key={p.sessionId} value={p.sessionId}>
+                  {p.participant}
+                </option>
+              ))}
             </select>
           </label>
-        ) : null}
+
+          <div
+            className="inline-flex rounded-lg border border-border bg-surface-muted/30 p-0.5"
+            role="group"
+            aria-label="Visualización"
+          >
+            {(
+              [
+                ["heatmap", "Heatmap"],
+                ["gaze", "Gaze plot"],
+                ["aois", "Áreas de interés"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                type="button"
+                key={id}
+                aria-pressed={view === id}
+                onClick={() => setView(id)}
+                className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                  view === id
+                    ? "bg-surface text-primary shadow-2xs border border-border/80"
+                    : "text-muted hover:text-heading"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {view === "heatmap" ? (
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+              <span>Métrica del mapa</span>
+              <select
+                aria-label="Métrica del mapa"
+                value={heatMetric}
+                onChange={(e) =>
+                  setHeatMetric(e.target.value as "count" | "duration")
+                }
+                className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              >
+                <option value="duration">Duración de fijaciones</option>
+                <option value="count">Número de fijaciones</option>
+              </select>
+            </label>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setFullscreen(true)}
+          title="Ver a pantalla completa"
+          aria-label="Fullscreen"
+          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/40 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+        >
+          <svg
+            aria-hidden="true"
+            className="size-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+          </svg>
+          <span>Fullscreen</span>
+        </button>
       </div>
+
+      {/* Contenedor de la imagen con contención estricta de altura */}
       {imageUrl ? (
         <div
-          className="relative mx-auto w-full max-w-4xl overflow-hidden rounded border border-border"
-          style={{ aspectRatio: `${width}/${height}` }}
+          className="relative mx-auto overflow-hidden rounded-lg border border-border bg-foreground/5 shadow-xs"
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            maxHeight,
+            maxWidth: `min(100%, calc(${maxHeight} * ${ratio}))`,
+            width: "100%",
+          }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- signed private storage URL */}
           <img
             src={imageUrl}
             alt={title}
             className="absolute inset-0 size-full"
+            draggable={false}
           />
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            role="img"
-            aria-label={
-              view === "heatmap"
-                ? `Mapa de calor por ${heatMetric === "duration" ? "duración" : "número"} de fijaciones`
-                : view === "gaze"
-                  ? "Secuencia de fijaciones por participante"
-                  : "Áreas de interés delimitadas"
-            }
-            className="pointer-events-none absolute inset-0 size-full"
-          >
-            <defs>
-              <radialGradient id={gradientId}>
-                <stop offset="0" stopColor="#ff1600" stopOpacity="0.9" />
-                <stop offset="0.4" stopColor="#ff9d00" stopOpacity="0.65" />
-                <stop offset="0.7" stopColor="#ffef00" stopOpacity="0.3" />
-                <stop offset="1" stopColor="#ffef00" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            {view === "heatmap"
-              ? heat.map((cell, i) => (
-                  <circle
-                    key={i}
-                    cx={cell.x * width}
-                    cy={cell.y * height}
-                    r={Math.hypot(width, height) * 0.045}
-                    fill={`url(#${gradientId})`}
-                    opacity={Math.sqrt(cell.strength)}
-                  />
-                ))
-              : null}
-            {view === "gaze"
-              ? visible.map((p, i) => {
-                  const color = `hsl(${(i * 137.5) % 360} 85% 50%)`;
-                  return (
-                    <g key={p.sessionId}>
-                      {p.metrics.transitions.map((t) => {
-                        const from = p.metrics.fixations[t.from],
-                          to = p.metrics.fixations[t.to];
-                        return (
-                          <line
-                            key={t.to}
-                            x1={from.x * width}
-                            y1={from.y * height}
-                            x2={to.x * width}
-                            y2={to.y * height}
-                            stroke={color}
-                            strokeWidth={Math.max(width, height) * 0.002}
-                          />
-                        );
-                      })}
-                      {p.metrics.fixations.map((f, j) => (
-                        <g key={j}>
-                          <circle
-                            cx={f.x * width}
-                            cy={f.y * height}
-                            r={
-                              Math.max(width, height) *
-                              (0.008 + Math.sqrt(f.durationMs / 1000) * 0.012)
-                            }
-                            fill={color}
-                            fillOpacity={0.45}
-                            stroke="white"
-                            strokeWidth={1}
-                          >
-                            <title>
-                              {p.participant} · #{j + 1} · {f.startMs}–{f.endMs}{" "}
-                              ms · {f.durationMs} ms
-                            </title>
-                          </circle>
-                          <text
-                            x={f.x * width}
-                            y={f.y * height}
-                            dy=".35em"
-                            textAnchor="middle"
-                            fontSize={Math.max(width, height) * 0.012}
-                            fill="white"
-                            stroke="black"
-                            strokeWidth={Math.max(width, height) * 0.001}
-                            paintOrder="stroke"
-                          >
-                            {j + 1}
-                          </text>
-                        </g>
-                      ))}
-                    </g>
-                  );
-                })
-              : null}
-            {view === "aois"
-              ? aois.map((a) => (
-                  <g key={a.id}>
-                    <rect
-                      x={a.box[0] * width}
-                      y={a.box[1] * height}
-                      width={(a.box[2] - a.box[0]) * width}
-                      height={(a.box[3] - a.box[1]) * height}
-                      fill="#06b6d422"
-                      stroke="#06b6d4"
-                      strokeWidth={2}
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <text
-                      x={a.box[0] * width + 4}
-                      y={a.box[1] * height + width * 0.025}
-                      fontSize={width * 0.02}
-                      fill="white"
-                      stroke="black"
-                      strokeWidth={width * 0.002}
-                      paintOrder="stroke"
-                    >
-                      {a.id} · {a.label}
-                    </text>
-                  </g>
-                ))
-              : null}
-          </svg>
+          {renderSvg("", false)}
         </div>
       ) : (
         <p className="text-sm text-muted">
           No se pudo abrir la imagen almacenada.
         </p>
       )}
+
+      {/* Nota explicativa del modo activo */}
       <p className="text-xs text-muted">
         {view === "heatmap"
           ? "Amarillo → naranja → rojo: mayor intensidad relativa a esta selección. Se suman fijaciones por tiempo de exposición, sin ponderar por FPS. El heatmap es una visualización, no un KPI independiente."
@@ -326,165 +479,272 @@ export function EyeResults({
             ? "Cada color representa una sesión. Los números indican el orden y el tamaño indica duración; las líneas unen fijaciones con señal continua de esa misma sesión. Selecciona un participante para leer su recorrido."
             : "Cada rectángulo delimita un elemento. Las AOI superpuestas se calculan de forma independiente; sus porcentajes pueden sumar más de 100 %."}
       </p>
+
       {!fixationCount ? (
         <p role="status" className="text-sm text-muted">
           Todavía no hay fijaciones detectables en esta selección.
         </p>
       ) : null}
-      <dl className="grid gap-3 text-sm sm:grid-cols-4">
-        <div>
-          <dt className="text-muted">Fijaciones detectadas</dt>
-          <dd>{fmt(fixationCount, 0)}</dd>
+
+      {/* Tarjetas rápidas de KPIs */}
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+          <dt className="text-xs font-medium text-muted">Fijaciones detectadas</dt>
+          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+            {fmt(fixationCount, 0)}
+          </dd>
         </div>
-        <div>
-          <dt className="text-muted">FD media</dt>
-          <dd>
+        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+          <dt className="text-xs font-medium text-muted">FD media</dt>
+          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
             {fmt(fixationCount ? totalDuration / fixationCount : null)} ms
           </dd>
         </div>
-        <div>
-          <dt className="text-muted">Amplitud entre fijaciones (estimada)</dt>
-          <dd>
-            {fmt(mean(transitions.map((t) => t.amplitudeDiagonalPct)))} % de
-            diagonal
+        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+          <dt className="text-xs font-medium text-muted">Amplitud entre fijaciones</dt>
+          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+            {fmt(mean(transitions.map((t) => t.amplitudeDiagonalPct)))}{" "}
+            <span className="text-xs font-normal text-muted">% diagonal</span>
           </dd>
         </div>
-        <div>
-          <dt className="text-muted">Duración entre fijaciones (estimada)</dt>
-          <dd>
-            {fmt(mean(transitions.map((t) => t.durationMs)))} ms ·{" "}
-            {transitions.length} transiciones
+        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+          <dt className="text-xs font-medium text-muted">Duración entre fijaciones</dt>
+          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+            {fmt(mean(transitions.map((t) => t.durationMs)))}{" "}
+            <span className="text-xs font-normal text-muted">
+              ms ({transitions.length} trans.)
+            </span>
           </dd>
         </div>
       </dl>
-      <h3 className="text-lg font-semibold">
-        KPIs por AOI ·{" "}
-        {selected
-          ? selected.participant
-          : `agregado de ${aggregate.count} sesiones`}
-      </h3>
-      {aois.length ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">
-              Indicadores de atención por área de interés
-            </caption>
-            <thead>
-              <tr>
-                {headers.map((h) => (
-                  <th key={h} scope="col" className="whitespace-nowrap p-2">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-t border-border">
-                  {cells(row, visible.length).map((v, i) =>
-                    i === 0 ? (
-                      <th key={i} scope="row" className="p-2">
-                        {v}
-                      </th>
-                    ) : (
-                      <td key={i} className="p-2">
-                        {fmt(typeof v === "number" ? v : null)}
-                      </td>
-                    ),
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="text-sm text-muted">
-          Define las áreas de interés para calcular resultados por logotipo,
-          producto, precio, mensaje o botón.
-        </p>
-      )}
-      <div className="flex flex-wrap gap-4 text-sm">
-        <button
-          type="button"
-          className="underline disabled:opacity-50"
-          disabled={!aggregate.count || !aois.length}
-          onClick={() =>
-            download(
-              `eye-kpis-${assetId}.csv`,
-              ["asset_id", "base_sessions", "metrics_version", ...headers],
-              aggregate.aois.map((r) => [
-                assetId,
-                aggregate.count,
-                EYE_METRICS_VERSION,
-                ...cells(r, aggregate.count),
-              ]),
-            )
-          }
-        >
-          Descargar KPIs agregados CSV
-        </button>
-        <button
-          type="button"
-          className="underline disabled:opacity-50"
-          disabled={!aggregate.count || !aois.length}
-          onClick={() =>
-            download(
-              `eye-participantes-${assetId}.csv`,
-              [
-                "asset_id",
-                "session_id",
-                "participant",
-                "metrics_version",
-                ...headers,
-              ],
-              aggregate.participants.flatMap((p) =>
-                p.metrics.aois.map((r) => [
-                  assetId,
-                  p.sessionId,
-                  p.participant,
-                  EYE_METRICS_VERSION,
-                  ...cells(r, 1),
-                ]),
-              ),
-            )
-          }
-        >
-          Descargar KPIs por participante CSV
-        </button>
-        <button
-          type="button"
-          className="underline disabled:opacity-50"
-          disabled={!fixationCount}
-          onClick={() =>
-            download(
-              `eye-fijaciones-${assetId}.csv`,
-              [
-                "asset_id",
-                "session_id",
-                "participant",
-                "fixation",
-                "start_ms",
-                "duration_ms",
-                "x_norm",
-                "y_norm",
-                "aoi_ids",
-                "transition_amplitude_diagonal_pct",
-                "transition_duration_ms",
-                "metrics_version",
-              ],
-              visible.flatMap((p) =>
-                p.metrics.fixations.map((f, i) => {
-                  const t = p.metrics.transitions.find((t) => t.to === i);
-                  return [
+
+      {/* Tabla de KPIs por AOI con botones de descarga */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-heading">
+            KPIs por AOI ·{" "}
+            <span className="font-normal text-muted">
+              {selected
+                ? selected.participant
+                : `agregado de ${aggregate.count} sesiones`}
+            </span>
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!aggregate.count || !aois.length}
+              onClick={() =>
+                download(
+                  `eye-kpis-${assetId}.csv`,
+                  ["asset_id", "base_sessions", "metrics_version", ...headers],
+                  aggregate.aois.map((r) => [
                     assetId,
-                    p.sessionId,
-                    p.participant,
-                    i + 1,
-                    f.startMs,
-                    f.durationMs,
-                    f.x,
-                    f.y,
-                    aois
+                    aggregate.count,
+                    EYE_METRICS_VERSION,
+                    ...cells(r, aggregate.count),
+                  ]),
+                )
+              }
+            >
+              <svg
+                aria-hidden="true"
+                className="size-3.5 text-muted"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Descargar KPIs agregados CSV</span>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!aggregate.count || !aois.length}
+              onClick={() =>
+                download(
+                  `eye-participantes-${assetId}.csv`,
+                  [
+                    "asset_id",
+                    "session_id",
+                    "participant",
+                    "metrics_version",
+                    ...headers,
+                  ],
+                  aggregate.participants.flatMap((p) =>
+                    p.metrics.aois.map((r) => [
+                      assetId,
+                      p.sessionId,
+                      p.participant,
+                      EYE_METRICS_VERSION,
+                      ...cells(r, 1),
+                    ]),
+                  ),
+                )
+              }
+            >
+              <svg
+                aria-hidden="true"
+                className="size-3.5 text-muted"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Descargar KPIs por participante CSV</span>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!fixationCount}
+              onClick={() =>
+                download(
+                  `eye-fijaciones-${assetId}.csv`,
+                  [
+                    "asset_id",
+                    "session_id",
+                    "participant",
+                    "fixation",
+                    "start_ms",
+                    "duration_ms",
+                    "x_norm",
+                    "y_norm",
+                    "aoi_ids",
+                    "transition_amplitude_diagonal_pct",
+                    "transition_duration_ms",
+                    "metrics_version",
+                  ],
+                  visible.flatMap((p) =>
+                    p.metrics.fixations.map((f, i) => {
+                      const t = p.metrics.transitions.find((t) => t.to === i);
+                      return [
+                        assetId,
+                        p.sessionId,
+                        p.participant,
+                        i + 1,
+                        f.startMs,
+                        f.durationMs,
+                        f.x,
+                        f.y,
+                        aois
+                          .filter(
+                            (a) =>
+                              f.x >= a.box[0] &&
+                              f.x <= a.box[2] &&
+                              f.y >= a.box[1] &&
+                              f.y <= a.box[3],
+                          )
+                          .map((a) => a.id)
+                          .join(" | "),
+                        t?.amplitudeDiagonalPct,
+                        t?.durationMs,
+                        EYE_METRICS_VERSION,
+                      ];
+                    }),
+                  ),
+                )
+              }
+            >
+              <svg
+                aria-hidden="true"
+                className="size-3.5 text-muted"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Descargar fijaciones y recorrido CSV</span>
+            </button>
+          </div>
+        </div>
+
+        {aois.length ? (
+          <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-2xs">
+            <table className="w-full text-left text-sm">
+              <caption className="sr-only">
+                Indicadores de atención por área de interés
+              </caption>
+              <thead className="border-b border-border bg-surface-muted/50 text-xs font-semibold text-muted">
+                <tr>
+                  {headers.map((h) => (
+                    <th key={h} scope="col" className="whitespace-nowrap px-3 py-2.5">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {rows.map((row) => (
+                  <tr key={row.id} className="transition hover:bg-foreground/2">
+                    {cells(row, visible.length).map((v, i) =>
+                      i === 0 ? (
+                        <th
+                          key={i}
+                          scope="row"
+                          className="whitespace-nowrap px-3 py-2 font-medium text-heading"
+                        >
+                          {v}
+                        </th>
+                      ) : (
+                        <td key={i} className="whitespace-nowrap px-3 py-2 tabular-nums">
+                          {fmt(typeof v === "number" ? v : null)}
+                        </td>
+                      ),
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-border bg-surface/50 p-6 text-center">
+            <p className="text-sm text-muted">
+              Define las áreas de interés para calcular resultados por logotipo,
+              producto, precio, mensaje o botón.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Desplegable de scanpath / secuencia */}
+      <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs">
+        <summary className="flex cursor-pointer items-center justify-between font-medium text-sm text-heading hover:text-primary">
+          <span>Scanpath / secuencia de mirada</span>
+          <span className="text-xs text-muted group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="mt-3 space-y-3 pt-2">
+          {visible.map((p) => (
+            <div
+              key={p.sessionId}
+              className="rounded-md border border-border/80 bg-background/50 p-3"
+            >
+              <p className="font-mono text-xs font-medium text-heading">{p.participant}</p>
+              <ol className="mt-2 flex flex-wrap gap-2">
+                {p.metrics.fixations.map((f, i) => (
+                  <li
+                    key={i}
+                    className="rounded border border-border bg-surface px-2.5 py-1 text-xs text-heading"
+                  >
+                    <span className="font-semibold text-primary">{i + 1}.</span>{" "}
+                    {aois
                       .filter(
                         (a) =>
                           f.x >= a.box[0] &&
@@ -492,60 +752,29 @@ export function EyeResults({
                           f.y >= a.box[1] &&
                           f.y <= a.box[3],
                       )
-                      .map((a) => a.id)
-                      .join(" | "),
-                    t?.amplitudeDiagonalPct,
-                    t?.durationMs,
-                    EYE_METRICS_VERSION,
-                  ];
-                }),
-              ),
-            )
-          }
-        >
-          Descargar fijaciones y recorrido CSV
-        </button>
-      </div>
-      <details className="space-y-2 text-sm">
-        <summary className="cursor-pointer font-medium">
-          Scanpath / secuencia de mirada
-        </summary>
-        {visible.map((p) => (
-          <div key={p.sessionId} className="border-t border-border py-2">
-            <p className="font-mono text-xs">{p.participant}</p>
-            <ol className="flex flex-wrap gap-2">
-              {p.metrics.fixations.map((f, i) => (
-                <li
-                  key={i}
-                  className="rounded border border-border p-2 text-xs"
-                >
-                  {i + 1}.{" "}
-                  {aois
-                    .filter(
-                      (a) =>
-                        f.x >= a.box[0] &&
-                        f.x <= a.box[2] &&
-                        f.y >= a.box[1] &&
-                        f.y <= a.box[3],
-                    )
-                    .map((a) => a.label)
-                    .join(" / ") || "Fuera de AOI"}{" "}
-                  · {f.startMs} ms · duración {f.durationMs} ms
-                </li>
-              ))}
-            </ol>
-            {!p.metrics.fixations.length ? (
-              <p className="text-xs text-muted">Sin fijaciones detectables.</p>
-            ) : null}
-          </div>
-        ))}
+                      .map((a) => a.label)
+                      .join(" / ") || "Fuera de AOI"}{" "}
+                    · {f.startMs} ms · {f.durationMs} ms
+                  </li>
+                ))}
+              </ol>
+              {!p.metrics.fixations.length ? (
+                <p className="mt-1 text-xs text-muted">Sin fijaciones detectables.</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </details>
+
       <EyeKpiGuide />
-      <details className="text-xs text-muted">
-        <summary className="cursor-pointer">
-          Definiciones y método de cálculo
+
+      {/* Desplegable de definiciones y método */}
+      <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs text-xs text-muted">
+        <summary className="flex cursor-pointer items-center justify-between font-medium text-heading hover:text-primary">
+          <span>Definiciones y método de cálculo</span>
+          <span className="text-xs text-muted group-open:rotate-180 transition-transform">▼</span>
         </summary>
-        <div className="mt-2 space-y-2">
+        <div className="mt-3 space-y-2 pt-2 border-t border-border">
           <p>
             {EYE_METRICS_VERSION}: I-DT con duración mínima 100 ms, dispersión
             máxima 3.5 % de la diagonal de la imagen y cortes de señal mayores
@@ -585,6 +814,208 @@ export function EyeResults({
           </p>
         </div>
       </details>
+
+      {/* Modal a pantalla completa (lightbox) */}
+      {fullscreen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Visor de miradas a pantalla completa"
+          className="fixed inset-0 z-50 flex flex-col bg-black/92 p-4 backdrop-blur-sm sm:p-6"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 text-white">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-white/80">
+                <span>Participante</span>
+                <select
+                  aria-label="Participante en pantalla completa"
+                  className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white shadow-2xs backdrop-blur-sm cursor-pointer"
+                  value={session}
+                  onChange={(e) => setSession(e.target.value)}
+                >
+                  <option value="all" className="bg-neutral-900 text-white">
+                    Todos (agregado)
+                  </option>
+                  {aggregate.participants.map((p) => (
+                    <option
+                      key={p.sessionId}
+                      value={p.sessionId}
+                      className="bg-neutral-900 text-white"
+                    >
+                      {p.participant}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div
+                className="flex items-center gap-1"
+                role="group"
+                aria-label="Visualización en pantalla completa"
+              >
+                {(
+                  [
+                    ["heatmap", "Heatmap"],
+                    ["gaze", "Gaze plot"],
+                    ["aois", "Áreas de interés"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    type="button"
+                    key={id}
+                    aria-pressed={view === id}
+                    onClick={() => setView(id)}
+                    className={`min-h-8 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      view === id
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-white/30 text-white/80 hover:bg-white/10"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {view === "heatmap" ? (
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-white/80">
+                  <span>Métrica</span>
+                  <select
+                    aria-label="Métrica del mapa en pantalla completa"
+                    value={heatMetric}
+                    onChange={(e) =>
+                      setHeatMetric(e.target.value as "count" | "duration")
+                    }
+                    className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white shadow-2xs backdrop-blur-sm cursor-pointer"
+                  >
+                    <option value="duration" className="bg-neutral-900 text-white">
+                      Duración de fijaciones
+                    </option>
+                    <option value="count" className="bg-neutral-900 text-white">
+                      Número de fijaciones
+                    </option>
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Controles de Zoom */}
+              <div
+                className="flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm"
+                role="group"
+                aria-label="Control de zoom"
+              >
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 1}
+                  title="Alejar (-)"
+                  aria-label="Alejar zoom"
+                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    aria-hidden="true"
+                    className="size-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetZoom}
+                  title="Restablecer zoom al 100% (0)"
+                  aria-label={`Nivel de zoom: ${Math.round(zoom * 100)}%`}
+                  className="min-w-12 px-1 text-center font-mono text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
+                >
+                  {Math.round(zoom * 100)}%
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 4}
+                  title="Acercar (+)"
+                  aria-label="Acercar zoom"
+                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    aria-hidden="true"
+                    className="size-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeFullscreen}
+                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25 transition"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="relative flex flex-1 items-center justify-center overflow-hidden select-none"
+            onWheel={onWheel}
+          >
+            <div
+              className={`relative mx-auto overflow-hidden rounded-lg shadow-2xl transition-transform ${
+                zoom > 1
+                  ? isDragging
+                    ? "cursor-grabbing"
+                    : "cursor-grab"
+                  : "cursor-default"
+              }`}
+              style={{
+                aspectRatio: `${width} / ${height}`,
+                maxHeight: "calc(100vh - 6.5rem)",
+                maxWidth: `min(94vw, calc((100vh - 6.5rem) * ${ratio}))`,
+                width: "100%",
+                transform: `translate3d(${pan.x}px, ${pan.y}px, 0px) scale(${zoom})`,
+                transformOrigin: "center center",
+                transition: isDragging ? "none" : "transform 150ms ease-out",
+              }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onDoubleClick={onDoubleClick}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={title}
+                className="absolute inset-0 size-full pointer-events-none select-none"
+                draggable={false}
+              />
+              {renderSvg("-fs", true)}
+            </div>
+
+            {zoom > 1 ? (
+              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-2xs text-white/80 shadow-lg backdrop-blur-md">
+                Arrastra para explorar · Doble clic para restablecer (0)
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

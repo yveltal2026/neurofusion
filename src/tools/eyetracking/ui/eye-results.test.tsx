@@ -159,3 +159,46 @@ it("exporta todas las sesiones de la base agregada aunque se haya seleccionado u
   expect(click).toHaveBeenCalledOnce();
   vi.unstubAllGlobals();
 });
+
+it("abre el visor a pantalla completa, permite hacer zoom in / out y lo cierra con el botón o con Escape", () => {
+  render(<EyeResults {...props} />);
+  expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+  expect(screen.getByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeTruthy();
+
+  // Comprobar zoom inicial 100%
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 100%" })).toBeTruthy();
+
+  // Zoom in con botón
+  fireEvent.click(screen.getByRole("button", { name: "Acercar zoom" }));
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 125%" })).toBeTruthy();
+
+  // Zoom in adicional
+  fireEvent.click(screen.getByRole("button", { name: "Acercar zoom" }));
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 150%" })).toBeTruthy();
+
+  // Zoom out con botón
+  fireEvent.click(screen.getByRole("button", { name: "Alejar zoom" }));
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 125%" })).toBeTruthy();
+
+  // Restablecer zoom al 100%
+  fireEvent.click(screen.getByRole("button", { name: "Nivel de zoom: 125%" }));
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 100%" })).toBeTruthy();
+
+  // Zoom con teclado (+ y 0)
+  fireEvent.keyDown(window, { key: "+" });
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 125%" })).toBeTruthy();
+  fireEvent.keyDown(window, { key: "0" });
+  expect(screen.getByRole("button", { name: "Nivel de zoom: 100%" })).toBeTruthy();
+
+  // Cierra con Escape
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();
+
+  // Abre de nuevo y cierra con el botón Cerrar
+  fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+  expect(screen.getByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Cerrar ✕" }));
+  expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();
+});

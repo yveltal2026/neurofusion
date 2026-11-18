@@ -47,7 +47,7 @@ Objetivo: medir, con personas y dispositivos reales, si WebEyeTrack cumple los c
 1. Abre la URL del **preview de Vercel de la rama** (`https://<preview>/lab/eyetracking`) en el dispositivo a probar. Necesita HTTPS (o `localhost`) para usar la cámara. Si el proyecto tiene *Deployment Protection* activa en previews, el celular pedirá iniciar sesión en Vercel o hará falta un enlace con bypass.
 2. Completa: código de la persona (P01, P02… sin nombres), dispositivo, **diagonal física en pulgadas**, formato de pantalla (incluye ultrawide) y distancia aproximada a los ojos. Estos datos determinan la conversión de píxeles a grados.
 3. «Iniciar cámara y cargar modelos» → acomoda la cara (el indicador debe decir «Cara detectada: sí») → «Comenzar calibración».
-4. Calibración recomendada: 18 puntos en dos etapas. Mirar el punto y tocarlo cuando se ponga verde, sin dejar de mirarlo hasta que cambie. Si no hay fijación estable, se pide repetir ese punto. Cabeza quieta, dispositivo apoyado y sin girarlo.
+4. Calibración recomendada: 18 puntos en dos etapas. Mirar el punto y tocarlo cuando se ponga naranja, sin dejar de mirarlo hasta que cambie. Si no hay fijación estable, se pide repetir ese punto. Cabeza quieta, dispositivo apoyado y sin girarlo.
 5. Validación (automática, ~20 s): 8 puntos distintos a los de calibración. Solo mirar; **no tocar la pantalla**.
 6. «Comprobar deriva» mide tres objetivos adicionales. «Descargar JSON» incluye los controles ejecutados. «Repetir validación» mide de nuevo sin entrenar; «Recalibrar» inicia un ajuste nuevo.
 
