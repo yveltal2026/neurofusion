@@ -93,7 +93,7 @@ export function BatteryBuilder({
         imágenes se muestran como estímulo antes de las pruebas.
       </p>
 
-      <Card className="space-y-4">
+      <Card className="glass-panel space-y-4">
         <h2 className="text-xl font-semibold">Datos básicos</h2>
         <Field label="Nombre de la batería" hint="Sólo lo ves tú.">
           <Input
@@ -132,7 +132,7 @@ export function BatteryBuilder({
         <StepsEditor steps={steps} onChange={setSteps} available={available} />
       </section>
 
-      <Card className="space-y-4">
+      <Card className="glass-panel space-y-4">
         <h2 className="text-xl font-semibold">Textos para el participante</h2>
         <Field
           label="Consentimiento"

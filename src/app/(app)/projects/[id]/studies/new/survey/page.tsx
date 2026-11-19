@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { SurveyBuilder } from "@/tools/survey/builder/SurveyBuilder";
 
-export const metadata = { title: "Nueva encuesta · NeuroFusion" };
+export const metadata = { title: "Nueva encuesta" };
 // La publicación verifica las imágenes subidas antes de activar la liga.
 export const maxDuration = 120;
 

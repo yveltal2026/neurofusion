@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -37,7 +38,7 @@ export function VisualReportDashboard({
       />
       {children}
       {snapshot.analyzed ? (
-        <Block className="space-y-4">
+        <Block className="glass-panel space-y-4 rounded-panel p-5">
           <h2 className="text-xl font-semibold">
             Evaluación general de las piezas
           </h2>
@@ -64,8 +65,8 @@ export function VisualReportDashboard({
         </EmptyState>
       )}
       {snapshot.assets.length ? (
-        <Block className="space-y-4">
-          <h2 className="text-xl font-semibold">Resultados por pieza</h2>
+        <Block className="glass-panel space-y-4 rounded-panel p-5">
+          <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">Resultados por pieza</h2><EvidenceBadge kind="estimated" /></div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs text-muted">
@@ -100,7 +101,7 @@ export function VisualReportDashboard({
         </Block>
       ) : null}
       {snapshot.assets.some((asset) => asset.analysis?.weaknesses.length) ? (
-        <Block className="space-y-4">
+        <Block className="glass-panel space-y-4 rounded-panel p-5">
           <h2 className="text-xl font-semibold">Mejoras sugeridas por pieza</h2>
           <ul className="space-y-4">
             {snapshot.assets.flatMap((asset) =>

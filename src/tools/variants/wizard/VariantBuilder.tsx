@@ -313,7 +313,7 @@ function TextsStep({ config, update }: { config: VariantConfig; update: Update }
       </div>
       <div className="space-y-2">
         <h3 className="text-base font-semibold">Color de acento</h3>
-        <RadioCard name="theme" checked={config.theme.mode === "neutral"} onChange={() => update({ theme: { mode: "neutral" } })} title="Neutro (marca FRSKO)" />
+        <RadioCard name="theme" checked={config.theme.mode === "neutral"} onChange={() => update({ theme: { mode: "neutral" } })} title="Neutro" />
         <RadioCard name="theme" checked={config.theme.mode === "custom"} onChange={() => update({ theme: { mode: "custom", accent: config.theme.accent ?? "#0a4a4c" } })} title="Color propio">
           {config.theme.mode === "custom" ? (
             <input type="color" aria-label="Color de acento" value={config.theme.accent ?? "#0a4a4c"} onChange={(e) => update({ theme: { mode: "custom", accent: e.target.value } })} className="mt-2 h-9 w-16" />

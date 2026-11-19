@@ -1,5 +1,6 @@
 "use client";
 
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -170,7 +171,7 @@ export function AssetAnalysisBatch({
     <section className="space-y-6" aria-label="Análisis de imágenes por lote">
       <Card className="space-y-3 print:hidden">
         <div>
-          <h2 className="font-medium">Analizar imágenes con IA</h2>
+          <div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">Analizar imágenes con IA</h2><EvidenceBadge kind="estimated" /></div>
           <p className="text-sm text-muted">
             Selecciona las piezas y analiza todo el lote. Cada resultado se
             guarda por separado. Mantén esta página abierta hasta terminar;

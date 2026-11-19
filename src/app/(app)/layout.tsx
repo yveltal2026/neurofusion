@@ -1,42 +1,62 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
-import { Icon } from "@/components/brand/icon";
 import { Logo } from "@/components/brand/logo";
 import { SetupNotice } from "@/components/setup-notice";
 import { Button } from "@/components/ui/button";
+import { WorkspaceAppearance } from "@/components/workspace-appearance";
+import { WorkspaceNav } from "@/components/workspace-nav";
 import { signOut } from "@/lib/auth/actions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import {
+  readWorkspaceTheme,
+  WORKSPACE_THEME_COOKIE,
+} from "@/lib/workspace-theme";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   if (!isSupabaseConfigured()) return <SetupNotice />;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [
+    {
+      data: { user },
+    },
+    cookieStore,
+  ] = await Promise.all([supabase.auth.getUser(), cookies()]);
+  const theme = readWorkspaceTheme(
+    cookieStore.get(WORKSPACE_THEME_COOKIE)?.value,
+  );
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="bg-profundo">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <Link href="/projects" aria-label="NeuroFusion, ir a proyectos" className="flex items-center gap-3">
-            <Logo width={104} tone="deep" variant="short" decorative />
-            <span className="hidden font-display text-sm font-semibold text-on-deep sm:inline">NeuroFusion</span>
+    <WorkspaceAppearance
+      initialTheme={theme}
+      navigation={
+        <>
+          <Link
+            href="/projects"
+            aria-label="Aesteros, ir a proyectos"
+            className="inline-flex min-h-11 shrink-0 items-center"
+          >
+            <Logo width={128} decorative />
           </Link>
-          <div className="flex items-center gap-3 text-sm text-muted">
-            <Link href="/muestra" className="hidden items-center gap-1.5 rounded-full px-3 py-2 font-medium text-heading hover:bg-heading/10 sm:inline-flex">
-              <Icon name="target" className="size-5" />
-              Calculadora de muestra
-            </Link>
-            <span className="hidden sm:inline">{user?.email}</span>
-            <form action={signOut}>
-              <Button type="submit" variant="ghost">
-                Salir
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 pt-5">{children}</div>
-    </div>
+          <WorkspaceNav />
+        </>
+      }
+      account={
+        <>
+          {user?.email ? (
+            <span className="hidden max-w-52 truncate text-sm text-muted lg:inline">
+              {user.email}
+            </span>
+          ) : null}
+          <form action={signOut}>
+            <Button type="submit" variant="ghost">
+              Salir
+            </Button>
+          </form>
+        </>
+      }
+    >
+      {children}
+    </WorkspaceAppearance>
   );
 }

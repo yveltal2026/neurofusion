@@ -1,6 +1,6 @@
-## CognIA: registro obligatorio de cambios
+## Aesteros: registro obligatorio de cambios
 
-El nombre oficial del producto es **CognIA**. Los nombres técnicos heredados no se renombran automáticamente.
+El nombre oficial de la plataforma principal es **Aesteros**. Las ediciones universitarias conservan su identidad propia. Los nombres técnicos heredados no se renombran automáticamente.
 
 Para cada cambio o mejora de producto, corrección, configuración, datos, infraestructura o documentación:
 

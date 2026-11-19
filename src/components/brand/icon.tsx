@@ -1,12 +1,5 @@
 import type { ReactNode } from "react";
 
-/**
- * Iconos de la marca (Manual FRSKO v4.1, cap. 13): lienzo de 40 × 40, trazo de 2, extremos y uniones
- * redondos, sin relleno salvo UNA burbuja por icono. El trazo toma el color del texto (teal sobre claro,
- * crema sobre profundo) y la burbuja va en el color de la submarca dentro de su propia pieza: aquí, Neuro
- * (`--neuro`: morado en claro, lila en profundo).
- * No mezclar con otras familias de iconos ni usar emojis como iconos.
- */
 const GLYPHS = {
   // Del manual
   neuro: (
@@ -273,15 +266,42 @@ const GLYPHS = {
 
 export type IconName = keyof typeof GLYPHS;
 
+const BRAND_ICONS: Partial<Record<IconName, string>> = {
+  neuro: "iat",
+  results: "barras",
+  search: "buscar",
+  target: "muestra",
+  agenda: "calendario",
+  chat: "ayuda",
+  bolt: "reaccion",
+  folder: "biblioteca",
+  eye: "mirada",
+  survey: "encuesta",
+  link: "liga",
+  table: "tabla",
+  settings: "ajustes",
+  plus: "nuevo",
+  download: "descargar",
+  copy: "duplicar",
+  check: "terminado",
+  trash: "borrar",
+  image: "estimulo",
+  clock: "en-curso",
+  layers: "bateria",
+  user: "cuenta",
+};
+
+
 function Bubble({ cx, cy, r }: { cx: number; cy: number; r: number }) {
-  return <circle cx={cx} cy={cy} r={r} fill="var(--neuro)" stroke="none" />;
+  return <circle cx={cx} cy={cy} r={r} fill="var(--primary)" stroke="none" />;
 }
 
 /** Icono de marca. Decorativo por defecto (`aria-hidden`); pasa `title` si es la única etiqueta del control. */
 export function Icon({ name, className = "size-6", title }: { name: IconName; className?: string; title?: string }) {
+  const official = BRAND_ICONS[name];
   return (
     <svg
-      viewBox="0 0 40 40"
+      viewBox={official ? "0 0 24 24" : "0 0 40 40"}
       fill="none"
       stroke="currentColor"
       strokeWidth={2}
@@ -292,7 +312,7 @@ export function Icon({ name, className = "size-6", title }: { name: IconName; cl
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      {GLYPHS[name]}
+      {official ? <use href={`/brand/aesteros/iconos.svg#${official}`} /> : GLYPHS[name]}
     </svg>
   );
 }

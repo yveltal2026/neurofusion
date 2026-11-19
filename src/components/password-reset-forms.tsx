@@ -16,9 +16,9 @@ export function ForgotPasswordForm({ expired }: { expired?: boolean }) {
   const [state, action, pending] = useActionState(requestPasswordReset, initial);
 
   return (
-    <div className="w-full max-w-sm space-y-6">
+    <div className="w-full space-y-5">
       <AuthHeading title="Restablecer contraseña" />
-      <p className="text-center text-sm">Escribe el correo de tu cuenta y te enviamos un enlace para crear una contraseña nueva.</p>
+      <p className="text-sm text-muted">Escribe el correo de tu cuenta y te enviamos un enlace para crear una contraseña nueva.</p>
 
       {expired ? <Alert tone="warning">Ese enlace venció o ya se usó. Pide uno nuevo aquí abajo.</Alert> : null}
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
@@ -47,7 +47,7 @@ export function ResetPasswordForm() {
   const [state, action, pending] = useActionState(updatePassword, initial);
 
   return (
-    <div className="w-full max-w-sm space-y-6">
+    <div className="w-full space-y-5">
       <AuthHeading title="Crea tu contraseña nueva" />
 
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}

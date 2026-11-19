@@ -81,12 +81,12 @@ export function Tabs({
               onKeyDown={(e) => onKey(e, i)}
               className={
                 isSegmented
-                  ? `relative flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center text-xs font-semibold transition-all focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-heading sm:text-sm ${
+                  ? `relative flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center text-xs font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-heading sm:text-sm ${
                       selected
                         ? "border border-border/80 bg-surface text-heading shadow-xs"
                         : "border border-transparent text-muted hover:bg-foreground/5 hover:text-heading"
                     }`
-                  : `relative -mb-px inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-heading ${
+                  : `relative -mb-px inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-heading ${
                       selected ? "border-primary text-heading" : "border-transparent text-muted hover:text-heading"
                     }`
               }

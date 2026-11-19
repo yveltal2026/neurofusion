@@ -3,7 +3,6 @@ import { StudyHeader } from "@/components/study-header";
 import { setSessionExcluded } from "@/app/(app)/studies/[id]/data/actions";
 import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { Block, Card } from "@/components/ui/card";
 import { StatStrip } from "@/components/ui/stat-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
@@ -17,10 +16,11 @@ import { aggregateVideoStudy } from "@/tools/visual/video/metrics";
 import { readR2Config, resolveR2PlaybackUrl } from "@/tools/visual/video/r2.server";
 import { videoObservationSchema } from "@/tools/visual/video/schema";
 
-export const metadata = { title: "Miradas reales · Laboratorio Digital" };
+export const metadata = { title: "Miradas reales" };
 
-export default async function EyeResultsPage({ params }: PageProps<"/studies/[id]/eye">) {
-  const { id } = await params;
+export default async function EyeResultsPage({ params, searchParams }: PageProps<"/studies/[id]/eye">) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const showSessions = query.view === "sessions";
   const { supabase } = await requireUser();
   const { data: study } = await supabase.from("studies").select("*").eq("id", id).eq("tool_type", "visual").maybeSingle<StudyRow>();
   if (!study) notFound();
@@ -30,8 +30,8 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
   const videoCfg = config.data.eyeTracking.video;
 
   const { data: project } = await supabase.from("projects").select("name").eq("id", study.project_id).maybeSingle();
-  const assets = isVideo ? [] : await loadAssets(supabase, study.id);
-  const urls = isVideo ? {} : await assetUrls(supabase, assets.map((a) => a.row.storage_path), "view");
+  const assets = isVideo || showSessions ? [] : await loadAssets(supabase, study.id);
+  const urls = isVideo || showSessions ? {} : await assetUrls(supabase, assets.map((a) => a.row.storage_path), "view");
   const { data: stored } = await supabase.from("eye_tracking_runs")
     .select("session_id, study_id, validation, observations, created_at")
     .eq("study_id", study.id).order("created_at", { ascending: false }).limit(100)
@@ -87,7 +87,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
     (videoCfg?.maxDurationSeconds ?? 120) * 1000;
 
   const aggregatedVideo =
-    isVideo && playbackUrl
+    !showSessions && isVideo && playbackUrl
       ? aggregateVideoStudy(
           videoParticipants,
           {
@@ -108,11 +108,12 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
       <StudyHeader
         study={study}
         projectName={project?.name}
-        active="results"
+        active={showSessions ? "sessions" : "results"}
         variant="eye"
         subtitle={isVideo ? "Miradas y Facial Coding en video" : "Miradas medidas con webcam"}
+        actions={<a href={`/api/studies/${id}/eye/export`} className={buttonClass("secondary")}>Descargar lecturas CSV</a>}
       />
-      <Block className="space-y-4">
+      <section className="glass-panel space-y-4 rounded-panel p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-heading">Calidad de las sesiones</h2>
@@ -120,12 +121,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               Los resultados incluyen sólo sesiones que cumplieron los umbrales de calibración y no están excluidas.
             </p>
           </div>
-          <a
-            href={`/api/studies/${id}/eye/export`}
-            className={buttonClass("secondary", "inline-flex text-xs")}
-          >
-            Descargar lecturas CSV
-          </a>
+
         </div>
 
         <StatStrip
@@ -134,8 +130,8 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
             { icon: "check", label: "Incluidas en resultados", value: goodCount },
             {
               icon: "alert",
-              label: "Baja calidad",
-              value: runs.filter((r) => !r.quality.passed).length,
+              label: "Baja calidad o precisión limitada",
+              value: runs.filter((r) => !r.session.excluded && (!r.quality.passed || r.quality.measurementStatus === "limited")).length,
               attention: true,
             },
             {
@@ -150,9 +146,9 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
         {(stored?.length ?? 0) === 100 ? (
           <Alert tone="warning">Se muestran las 100 sesiones más recientes.</Alert>
         ) : null}
-      </Block>
+      </section>
 
-      {isVideo ? (
+      {showSessions ? null : isVideo ? (
         !playbackUrl ? (
           <Alert tone="warning">Aún no hay video cargado para este estudio.</Alert>
         ) : aggregatedVideo ? (
@@ -181,7 +177,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               })),
           );
           return (
-            <Card key={asset.row.id}>
+            <div key={asset.row.id} className="glass-panel rounded-panel p-4 sm:p-6">
               <EyeResults
                 studyId={id}
                 assetId={asset.row.id}
@@ -192,13 +188,13 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                 aois={asset.aois}
                 participants={participants}
               />
-            </Card>
+            </div>
           );
         })
       )}
 
-      {runs.length ? (
-        <Block className="space-y-4">
+      {showSessions && runs.length ? (
+        <section className="glass-panel space-y-4 rounded-panel p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-heading">Sesiones</h2>
             <span className="text-xs text-muted tabular-nums">{runs.length} registros</span>
@@ -218,7 +214,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               <tbody className="divide-y divide-border">
                 {runs.map((run) => (
                   <tr key={run.id} className="transition hover:bg-foreground/2">
-                    <td className="whitespace-nowrap px-3 py-2.5 font-mono text-sm font-semibold text-heading tabular-nums">
+                    <td className="whitespace-nowrap px-3 py-2.5 text-sm font-semibold text-heading tabular-nums">
                       {run.session.participant_ref}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-muted">
@@ -268,7 +264,7 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
                         />
                         <button
                           type="submit"
-                          className="text-xs font-medium text-heading underline underline-offset-4 hover:text-primary transition"
+                          className="min-h-11 text-xs font-semibold text-heading underline underline-offset-4 hover:text-accent-ink"
                         >
                           {run.session.excluded ? "Reincorporar" : "Excluir"}
                         </button>
@@ -279,8 +275,8 @@ export default async function EyeResultsPage({ params }: PageProps<"/studies/[id
               </tbody>
             </table>
           </div>
-        </Block>
-      ) : null}
+        </section>
+      ) : showSessions ? <Alert tone="info">Aún no hay sesiones registradas.</Alert> : null}
     </div>
   );
 }

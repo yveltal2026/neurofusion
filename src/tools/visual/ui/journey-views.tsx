@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Block } from "@/components/ui/card";
 import type { IfdMeasurementRow } from "@/lib/db/types";
 import type { SiteSummary } from "../journey/model";
@@ -6,8 +7,8 @@ import type { SiteSummary } from "../journey/model";
 export function MethodNote({ measurement }: { measurement: IfdMeasurementRow }) {
   const s = measurement.summary as SiteSummary;
   return (
-    <Block className="space-y-2 text-sm break-inside-avoid">
-      <h3 className="text-lg font-semibold">Cómo leer estos resultados</h3>
+    <Block className="glass-panel space-y-2 break-inside-avoid rounded-panel p-5 text-sm">
+      <div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-semibold">Cómo leer estos resultados</h3><EvidenceBadge kind="modeled" /></div>
       <ul className="list-disc space-y-1 pl-5">
         <li>
           Es una <strong>estimación modelada</strong>, no una prueba con usuarios. El panel de {measurement.n_panel.toLocaleString("es-MX")} perfiles

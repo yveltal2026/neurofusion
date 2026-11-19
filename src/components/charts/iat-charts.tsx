@@ -4,7 +4,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ErrorBar,
   Legend,
   ReferenceLine,
   ResponsiveContainer,
@@ -14,16 +13,12 @@ import {
 } from "recharts";
 import type { ConcordanceRow, DirectionRow, HistogramRow, MeanDRow } from "@/tools/iat/analysis/charts";
 
-/**
- * Paleta apta para daltonismo (basada en Okabe–Ito). La marca A usa el morado de Neuro (luminancia baja) frente al
- * naranja de la B (luminancia alta): se distinguen también sin color. Las demás series siguen Okabe–Ito.
- */
 export const COLORS = {
-  a: "var(--chart-1)", // Neuro: morado en claro, lila en profundo (la marca A es la serie 1)
-  b: "#E69F00",
-  neutral: "#8c8c8c",
-  consistent: "#009E73",
-  dissonant: "#D55E00",
+  a: "var(--chart-1)",
+  b: "var(--chart-2)",
+  neutral: "var(--chart-4)",
+  consistent: "var(--chart-3)",
+  dissonant: "var(--chart-5)",
 } as const;
 
 const AXIS = { fill: "currentColor", fontSize: 12 } as const;
@@ -47,27 +42,44 @@ function ChartFrame({ title, caption, children }: { title: string; caption?: str
 }
 
 export function MeanDChart({ rows }: { rows: MeanDRow[] }) {
-  // Dominio simétrico y redondeado a 0.5 para que el cero quede centrado y las marcas sean limpias.
-  const extent = Math.max(0.5, ...rows.flatMap((r) => [Math.abs(r.low), Math.abs(r.high)]));
+  const extent = Math.max(0.5, ...rows.flatMap((row) => [Math.abs(row.low), Math.abs(row.high)]));
   const bound = Math.ceil(extent * 2) / 2;
+  const scale = (value: number) => ((value + bound) / (2 * bound)) * 100;
+  const valueText = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 });
+
   return (
-    <ChartFrame
-      title="D medio por dimensión (IC 95 %)"
-      caption="D > 0: la Marca A se asocia más al polo positivo; D < 0: la Marca B. Si el intervalo cruza 0 no hay evidencia de asociación."
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 4 }}>
-          <CartesianGrid stroke={GRID} strokeOpacity={0.12} vertical={false} />
-          <XAxis dataKey="label" tick={AXIS} interval={0} />
-          <YAxis tick={AXIS} domain={[-bound, bound]} ticks={[-bound, -bound / 2, 0, bound / 2, bound]} />
-          <Tooltip contentStyle={tooltipStyle} formatter={(v) => (typeof v === "number" ? v.toFixed(2) : String(v))} />
-          <ReferenceLine y={0} stroke="currentColor" strokeOpacity={0.6} />
-          <Bar dataKey="mean" name="D medio" fill={COLORS.a} maxBarSize={56}>
-            <ErrorBar dataKey="error" direction="y" stroke="#7a7a7a" strokeWidth={2} width={8} />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartFrame>
+    <figure className="space-y-4" aria-label="D medio por dimensión">
+      <figcaption className="space-y-1">
+        <p className="font-bold">D medio por dimensión</p>
+        <p className="text-sm text-muted">La banda representa el IC del 95 %. Si cruza cero, el intervalo incluye la ausencia de efecto (ns).</p>
+      </figcaption>
+      <div className="flex justify-between text-xs text-muted tabular-nums" aria-hidden="true">
+        <span>{valueText.format(-bound)}</span><span>0</span><span>{valueText.format(bound)}</span>
+      </div>
+      <ul className="space-y-4">
+        {rows.map(({ label, mean, low, high, n }) => {
+          const crossesZero = low <= 0 && high >= 0;
+          return (
+            <li key={label} className="space-y-1">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                <span className="font-semibold">{label}</span>
+                <span className="text-xs text-muted tabular-nums">
+                  D {valueText.format(mean)} · IC {valueText.format(low)} a {valueText.format(high)} · n = {n}{crossesZero ? " · ns" : ""}
+                </span>
+              </div>
+              <div aria-hidden="true" className="relative h-7 rounded-md bg-surface-muted/55">
+                <span className="absolute inset-y-0 left-1/2 border-l border-heading/50" />
+                <span
+                  className={`absolute inset-y-1 rounded-full bg-[linear-gradient(to_right,transparent,var(--chart-1),transparent)] ${crossesZero ? "opacity-50" : ""}`}
+                  style={{ left: `${scale(low)}%`, width: `${scale(high) - scale(low)}%` }}
+                />
+                <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-heading" style={{ left: `${scale(mean)}%` }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </figure>
   );
 }
 

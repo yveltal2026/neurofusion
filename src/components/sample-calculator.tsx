@@ -44,7 +44,7 @@ function IatPlanner() {
   const ok = m > 0 && s > 0 && p > 0.5 && p < 0.99;
   const d = ok ? m / s : NaN;
   return (
-    <Card className="space-y-4">
+    <Card className="glass-panel space-y-4">
       <SectionTitle icon="neuro">IAT: ¿cuántos participantes para ver una asociación?</SectionTitle>
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="D medio que quieres poder detectar" hint="0.15 leve, 0.35 moderada, 0.65 fuerte (convención de Greenwald).">
@@ -76,7 +76,7 @@ function AbPlanner() {
   const p = num(power);
   const ok = dv > 0 && p > 0.5 && p < 0.99;
   return (
-    <Card className="space-y-4">
+    <Card className="glass-panel space-y-4">
       <SectionTitle icon="target">Comparar dos grupos (prueba A/B, dos marcas, dos versiones)</SectionTitle>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Diferencia que quieres detectar (d de Cohen)" hint="0.2 pequeña, 0.5 mediana, 0.8 grande.">
@@ -106,7 +106,7 @@ function SurveyPlanner() {
   const popN = num(pop);
   const ok = m > 0 && m < 0.5 && c > 0.5 && c < 0.999;
   return (
-    <Card className="space-y-4">
+    <Card className="glass-panel space-y-4">
       <SectionTitle icon="survey">Encuesta: ¿cuántas respuestas para un margen de error?</SectionTitle>
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label="Margen de error (±)" hint="0.05 = ± 5 puntos porcentuales.">
@@ -139,7 +139,7 @@ function GroupGuide() {
   const two = ok ? detectableEffectTwoMeans(Math.floor(nv / 2)) : null;
   const moe = ok ? marginOfError(nv) : NaN;
   return (
-    <Card className="space-y-4">
+    <Card className="glass-panel space-y-4">
       <SectionTitle icon="user">Ya tengo un grupo: ¿qué puedo concluir?</SectionTitle>
       <div className="max-w-xs">
         <Field label="Participantes disponibles">
@@ -175,12 +175,12 @@ function GroupGuide() {
 
 export function SampleCalculator() {
   return (
-    <div className="space-y-5">
+    <div className="grid gap-4 lg:grid-cols-2">
       <IatPlanner />
       <AbPlanner />
       <SurveyPlanner />
       <GroupGuide />
-      <p className="flex items-start gap-2 text-xs text-muted">
+      <p className="flex items-start gap-2 text-xs text-muted lg:col-span-2">
         <Icon name="alert" className="size-5" />
         <span>
           Guías de planeación con aproximación normal: suponen datos aproximadamente normales, una prueba principal y respuestas completas.

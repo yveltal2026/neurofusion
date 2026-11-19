@@ -1,68 +1,19 @@
-import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Icon, type IconName } from "@/components/brand/icon";
-import { IconTile } from "@/components/ui/icon-tile";
+import { notFound } from "next/navigation";
+import { BrandIllustration } from "@/components/brand/illustration";
+import { Icon } from "@/components/brand/icon";
+import { Breadcrumbs, newStudyCrumbs } from "@/components/ui/breadcrumbs";
+import { buttonClass } from "@/components/ui/button";
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { requireUser } from "@/lib/auth/session";
-import { TOOL_CATEGORIES, TOOLS } from "@/tools/registry";
+import { TOOL_CATEGORIES, TOOLS, type ToolType } from "@/tools/registry";
 
-export const metadata = { title: "Nuevo estudio · Laboratorio Digital" };
+export const metadata = { title: "Nuevo estudio" };
 
-const TOOL_SUBTITLES: Record<string, string> = {
-  eyetracking: "Medición con participantes",
-  visual: "Estimaciones con IA · sin participantes",
-  iat: "2 marcas o conceptos",
-  iat_variant: "SC-IAT · Go/No-Go · Priming",
-  survey: "SUS · NPS · SAM · Preguntas propias",
-  seo: "Indexación · Core Web Vitals · IA",
-};
-
-function StudyCard({
-  href,
-  icon,
-  title,
-  subtitle,
-  description,
-}: {
-  href: string;
-  icon: IconName;
-  title: string;
-  subtitle?: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group relative flex h-full flex-col justify-between rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-2xs transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/70 hover:shadow-md motion-reduce:hover:translate-y-0"
-    >
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <IconTile
-            name={icon}
-            size="md"
-            className="transition-transform duration-150 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-          />
-          <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-muted text-muted transition-colors duration-150 group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon name="arrow" className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-          </span>
-        </div>
-        <div className="space-y-1">
-          <h3 className="font-display text-base font-semibold text-heading transition-colors group-hover:text-primary">
-            {title}
-          </h3>
-          {subtitle ? (
-            <p className="text-xs font-medium text-primary">
-              {subtitle}
-            </p>
-          ) : null}
-          <p className="pt-0.5 text-xs leading-relaxed text-muted">
-            {description}
-          </p>
-        </div>
-      </div>
-    </Link>
-  );
-}
+const ILLUSTRATIONS = {
+  eyetracking: "ocular", visual: "atencion", iat: "asociacion",
+  iat_variant: "variantes", survey: "encuesta", seo: "seo",
+} as const satisfies Record<ToolType, string>;
 
 export default async function NewStudyPage({ params }: PageProps<"/projects/[id]/studies/new">) {
   const { id } = await params;
@@ -70,158 +21,61 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
   const { data: project } = await supabase.from("projects").select("id, name").eq("id", id).maybeSingle();
   if (!project) notFound();
 
-  const attentionTools = TOOLS.filter((t) => t.category === "attention").sort(
-    (a, b) => Number(b.type === "eyetracking") - Number(a.type === "eyetracking"),
-  );
-  const associationTools = TOOLS.filter((t) => t.category === "association");
-  const perceptionTools = TOOLS.filter((t) => t.category === "perception");
-  const digitalTools = TOOLS.filter((t) => t.category === "digital");
-
-  const attentionCategory = TOOL_CATEGORIES.find((c) => c.id === "attention");
-  const associationCategory = TOOL_CATEGORIES.find((c) => c.id === "association");
-  const perceptionCategory = TOOL_CATEGORIES.find((c) => c.id === "perception");
-  const digitalCategory = TOOL_CATEGORIES.find((c) => c.id === "digital");
-
   return (
-    <div className="space-y-7">
-      <div>
+    <div className="space-y-5">
+      <div className="space-y-2">
         <Breadcrumbs items={newStudyCrumbs(id, project.name)} />
-        <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-heading md:text-3xl">Nuevo estudio</h1>
-        <p className="mt-1 text-sm text-muted">
-          Elige entre aplicar <strong>una sola herramienta</strong> o combinar varias en una <strong>batería</strong> con una sola liga.
-        </p>
+        <h1 className="page-title">¿Qué quieres saber?</h1>
+        <p className="text-muted">Elige la herramienta para tu nuevo estudio.</p>
       </div>
 
-      {/* Atención visual */}
-      <section aria-labelledby="category-attention" className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border pb-1.5">
-          <h2 id="category-attention" className="font-display text-base font-bold text-heading">
-            {attentionCategory?.name ?? "Atención visual"}
-          </h2>
-          <span className="text-xs text-muted">· {attentionCategory?.question ?? "¿Qué miran?"}</span>
+      <div className="bg-profundo flex flex-wrap items-center justify-between gap-4 rounded-panel p-5 sm:p-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandIllustration name="mod-baterias" tone="deep" className="hidden w-20 shrink-0 sm:block" />
+          <div>
+            <h2 className="text-lg font-bold">Crear una batería</h2>
+            <p className="text-sm text-muted">Combina varias herramientas en una liga con un solo consentimiento.</p>
+          </div>
         </div>
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          {attentionTools.map((tool) => (
-            <StudyCard
-              key={tool.type}
-              href={tool.newStudyPath(id)}
-              icon={tool.icon}
-              title={tool.name}
-              subtitle={TOOL_SUBTITLES[tool.type]}
-              description={tool.description}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Asociaciones implícitas */}
-      <section aria-labelledby="category-association" className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border pb-1.5">
-          <h2 id="category-association" className="font-display text-base font-bold text-heading">
-            {associationCategory?.name ?? "Asociaciones implícitas"}
-          </h2>
-          <span className="text-xs text-muted">· {associationCategory?.question ?? "¿Qué asocian?"}</span>
-        </div>
-        <div className="grid gap-3.5 sm:grid-cols-2">
-          {associationTools.map((tool) => (
-            <StudyCard
-              key={tool.type}
-              href={tool.newStudyPath(id)}
-              icon={tool.icon}
-              title={tool.name}
-              subtitle={TOOL_SUBTITLES[tool.type]}
-              description={tool.description}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Percepción y Diagnóstico digital en 2 columnas */}
-      <div className="grid gap-5 sm:grid-cols-2">
-        <section aria-labelledby="category-perception" className="space-y-3 flex flex-col justify-between">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border pb-1.5">
-            <h2 id="category-perception" className="font-display text-base font-bold text-heading">
-              {perceptionCategory?.name ?? "Percepción y opinión"}
-            </h2>
-            <span className="text-xs text-muted">· {perceptionCategory?.question ?? "¿Qué opinan?"}</span>
-          </div>
-          <div className="flex-1">
-            {perceptionTools.map((tool) => (
-              <StudyCard
-                key={tool.type}
-                href={tool.newStudyPath(id)}
-                icon={tool.icon}
-                title={tool.name}
-                subtitle={TOOL_SUBTITLES[tool.type]}
-                description={tool.description}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section aria-labelledby="category-digital" className="space-y-3 flex flex-col justify-between">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border pb-1.5">
-            <h2 id="category-digital" className="font-display text-base font-bold text-heading">
-              {digitalCategory?.name ?? "Diagnóstico digital"}
-            </h2>
-            <span className="text-xs text-muted">· {digitalCategory?.question ?? "¿Cómo funciona tu sitio?"}</span>
-          </div>
-          <div className="flex-1">
-            {digitalTools.map((tool) => (
-              <StudyCard
-                key={tool.type}
-                href={tool.newStudyPath(id)}
-                icon={tool.icon}
-                title={tool.name}
-                subtitle={TOOL_SUBTITLES[tool.type]}
-                description={tool.description}
-              />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Combinar herramientas */}
-      <section aria-labelledby="combine-tools" className="space-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-border pb-1.5">
-          <h2 id="combine-tools" className="font-display text-base font-bold text-heading">
-            Combinar herramientas
-          </h2>
-          <span className="text-xs text-muted">· Varias herramientas en una sola liga</span>
-        </div>
-        <Link
-          href={`/projects/${id}/batteries/new`}
-          className="group relative flex flex-col justify-between gap-4 rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 shadow-2xs transition-all duration-150 hover:-translate-y-0.5 hover:border-primary hover:bg-primary/10 hover:shadow-md motion-reduce:hover:translate-y-0 sm:flex-row sm:items-center"
-        >
-          <div className="flex items-start gap-3.5 sm:items-center">
-            <IconTile
-              name="layers"
-              size="md"
-              className="transition-transform duration-150 group-hover:scale-105 motion-reduce:group-hover:scale-100"
-            />
-            <div className="space-y-0.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-display text-base font-semibold text-heading transition-colors group-hover:text-primary">
-                  Batería de pasos
-                </h3>
-                <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                  Multi-estudio
-                </span>
-              </div>
-              <p className="text-xs font-medium text-primary">
-                Consentimiento único · Recorrido secuencial
-              </p>
-              <p className="max-w-2xl text-xs leading-relaxed text-muted">
-                Une estudios del proyecto (IAT, variantes, encuestas y visual) en una sola liga: el participante da un consentimiento y los recorre en el orden que elijas.
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-primary self-end sm:self-center">
-            <span>Crear batería</span>
-            <Icon name="arrow" className="size-4 transition-transform duration-150 group-hover:translate-x-1" />
-          </div>
+        <Link href={`/projects/${id}/batteries/new`} className={buttonClass()}>
+          Armar batería <Icon name="arrow" className="size-4" />
         </Link>
-      </section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {TOOL_CATEGORIES.map((category) => {
+          const tools = TOOLS.filter((tool) => tool.category === category.id)
+            .sort((a, b) => Number(b.type === "eyetracking") - Number(a.type === "eyetracking"));
+          return (
+            <section key={category.id} aria-labelledby={`category-${category.id}`} className="glass-panel min-w-0 space-y-3 rounded-panel p-4 sm:p-5">
+              <div>
+                <p className="text-xs font-medium text-muted">{category.name}</p>
+                <h2 id={`category-${category.id}`} className="text-2xl font-extrabold">{category.question}</h2>
+              </div>
+              <ul className="space-y-2">
+                {tools.map((tool) => (
+                  <li key={tool.type}>
+                    <Link
+                      href={tool.newStudyPath(id)}
+                      className={`group flex items-start gap-3 rounded-lg border border-border/70 bg-surface/80 p-3 hover:border-accent-ink sm:items-center ${tool.type === "visual" ? "estimated-panel" : ""}`}
+                    >
+                      <span className="grid size-14 shrink-0 place-items-center rounded-md bg-neuro-tint sm:size-19">
+                        <BrandIllustration name={ILLUSTRATIONS[tool.type]} className="block w-full" />
+                      </span>
+                      <span className="min-w-0 flex-1 space-y-1">
+                        <span className="block font-bold text-heading group-hover:underline">{tool.name}</span>
+                        <span className="block text-xs text-muted">{tool.description}</span>
+                        {tool.type === "visual" ? <EvidenceBadge kind="estimated" /> : null}
+                      </span>
+                      <Icon name="arrow" className="mt-1 hidden size-5 text-muted sm:block" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

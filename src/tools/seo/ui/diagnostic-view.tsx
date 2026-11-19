@@ -46,7 +46,7 @@ export function SeoExecutiveSummary({ audit }: { audit: SeoAudit }) {
         </h2>
         <p className="mt-1 text-sm text-muted">
           Basado en las comprobaciones automáticas de esta auditoría. La
-          puntuación es una heurística de NeuroFusion; no mide posiciones ni
+          puntuación es una heurística de Aesteros; no mide posiciones ni
           tráfico en Google.
         </p>
       </div>
@@ -284,7 +284,7 @@ export function SeoAuditComparison({
     <Card className="space-y-4">
       <h2 className="font-medium">Comparación con la auditoría anterior</h2>
       <Link
-        className="break-all text-sm text-primary underline"
+        className="break-all text-sm text-accent-ink underline"
         href={`/studies/${studyId}/audits/${previous.id}`}
       >
         Ver auditoría del {new Date(previous.createdAt).toLocaleString("es-MX")}

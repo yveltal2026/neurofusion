@@ -16,7 +16,7 @@ export async function generateMetadata({
     .eq("id", id)
     .maybeSingle();
   return {
-    title: data?.name ? `${data.name} · NeuroFusion` : "Batería · NeuroFusion",
+    title: data?.name ? `${data.name}` : "Batería",
   };
 }
 

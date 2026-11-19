@@ -12,7 +12,7 @@ import { loadSessionViews } from "@/tools/iat/results/load";
 import { DEVICE_LABEL, STATUS_LABEL, validityText } from "@/tools/iat/results/labels";
 import { filterViews, type ViewFilters } from "@/tools/iat/results/views";
 
-export const metadata = { title: "Datos · NeuroFusion" };
+export const metadata = { title: "Datos" };
 
 const PAGE_SIZE = 25;
 

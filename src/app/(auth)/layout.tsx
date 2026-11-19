@@ -1,21 +1,21 @@
-import { Bubbles } from "@/components/brand/bubbles";
 import { Logo } from "@/components/brand/logo";
-import { WaveEdge } from "@/components/brand/wave";
 
-// Acceso en modo profundo: franja teal con el resplandor de Neuro y el logo, la ola de transición
-// y el formulario sobre crema. Efervescencia 1: tres burbujas en una esquina.
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
-    <main className="flex flex-1 flex-col">
-      <div className="bg-resplandor">
-        <div className="mx-auto flex max-w-md justify-center px-6 pb-10 pt-12">
-          <Logo width={176} tone="deep" />
+    <main className="bg-resplandor flex min-h-dvh flex-1 items-center">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-9 px-5 py-10 sm:px-9 md:grid-cols-[1.1fr_1fr] md:gap-16 md:py-16">
+        <div className="space-y-4 md:space-y-6">
+          <Logo width={184} tone="deep" />
+          <p className="max-w-[12ch] text-[clamp(2.25rem,6vw,4.5rem)] leading-[.98] font-extrabold tracking-tight [font-stretch:110%]">
+            Percepción, comparada.
+          </p>
+          <p className="max-w-[42ch] text-base text-muted sm:text-lg">
+            Investiga qué mira, qué asocia y qué opina la gente, con el margen de error a la vista.
+          </p>
         </div>
-      </div>
-      <WaveEdge className="h-6 md:h-8" />
-      <div className="relative isolate flex flex-1 justify-center overflow-hidden px-6 pb-16 pt-8">
-        <Bubbles className="pointer-events-none absolute -bottom-4 -left-4 -z-10 w-28 sm:w-40" />
-        {children}
+        <div className="glass-panel w-full min-w-0 rounded-panel p-5 sm:p-8">
+          {children}
+        </div>
       </div>
     </main>
   );

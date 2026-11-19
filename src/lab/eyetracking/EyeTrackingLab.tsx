@@ -1019,7 +1019,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <Section icon="lock" title="Tu privacidad">
               <ReadingPanel>
                 <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed">
-                  <li>El video se procesa en este dispositivo y no se envía a NeuroFusion.</li>
+                  <li>El video se procesa en este dispositivo y no se envía a Aesteros.</li>
                   <li>Con tu consentimiento se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración.</li>
                   <li>El investigador consulta las lecturas y resultados agregados.</li>
                 </ul>
@@ -1070,7 +1070,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
 
           <Alert tone="info">
             <p>
-              El video se procesa en este dispositivo y no se envía a NeuroFusion. El resultado solo se guarda si lo descargas. Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
+              El video se procesa en este dispositivo y no se envía a Aesteros. El resultado solo se guarda si lo descargas. Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y{" "}
               <code>storage.googleapis.com</code>.
             </p>
           </Alert>

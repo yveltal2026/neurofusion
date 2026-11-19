@@ -30,7 +30,7 @@ function TemplateRow({
 }) {
   const descId = useId();
   return (
-    <li className="group relative flex items-center gap-4 px-2 py-4 transition-colors duration-150 hover:bg-neuro-wash motion-reduce:transition-none sm:px-3">
+    <li className="glass-panel group relative flex items-center gap-4 rounded-panel p-4 transition-colors duration-150 hover:border-accent-ink motion-reduce:transition-none sm:px-3">
       <IconTile name={TEMPLATE_ICONS[t.id] ?? "survey"} size="md" />
       <div className="min-w-0 flex-1 space-y-0.5">
         <h2 className="font-display text-base font-semibold leading-snug text-heading">
@@ -66,14 +66,14 @@ export function TemplatePicker({
     <div className="space-y-8">
       <header className="space-y-1">
         <p className="text-sm text-muted">Proyecto: {projectName}</p>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="page-title">
           Nueva encuesta
         </h1>
         <p className="text-sm text-muted">
           Elige un punto de partida; todo se puede editar después.
         </p>
       </header>
-      <ul className="divide-y divide-border border-y border-border">
+      <ul className="grid gap-4 md:grid-cols-2">
         <TemplateRow t={blank!} onPick={onPick} />
         {ready.map((t) => (
           <TemplateRow key={t.id} t={t} onPick={onPick} />

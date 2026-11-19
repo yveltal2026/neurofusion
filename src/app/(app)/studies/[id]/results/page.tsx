@@ -15,7 +15,7 @@ import { rubricItems } from "@/tools/visual/journey/rubric";
 import { MethodNote } from "@/tools/visual/ui/journey-views";
 import { RunIfdForm } from "@/tools/visual/ui/forms";
 
-export const metadata = { title: "Resultados IFD · NeuroFusion" };
+export const metadata = { title: "Resultados IFD" };
 
 export default async function ResultsPage({ params }: PageProps<"/studies/[id]/results">) {
   const { id } = await params;

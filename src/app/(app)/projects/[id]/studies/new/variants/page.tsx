@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { VariantBuilder } from "@/tools/variants/wizard/VariantBuilder";
 
-export const metadata = { title: "Nueva variante del IAT · NeuroFusion" };
+export const metadata = { title: "Nueva variante del IAT" };
 
 export default async function NewVariantStudyPage({ params }: PageProps<"/projects/[id]/studies/new/variants">) {
   const { id } = await params;

@@ -37,7 +37,7 @@ function GazeMap({ session }: { session: ExportedSession }) {
           {t.gaze ? (
             <>
               <line x1={t.target.x} y1={t.target.y} x2={t.gaze.x} y2={t.gaze.y} stroke="var(--danger)" strokeWidth={r * 0.35} />
-              <circle cx={t.gaze.x} cy={t.gaze.y} r={r * 0.8} fill="var(--neuro)" />
+              <circle cx={t.gaze.x} cy={t.gaze.y} r={r * 0.8} fill="var(--primary)" />
             </>
           ) : null}
           <circle cx={t.target.x} cy={t.target.y} r={r} fill="none" stroke="var(--heading)" strokeWidth={r * 0.3} />

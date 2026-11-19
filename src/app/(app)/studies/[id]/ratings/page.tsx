@@ -11,7 +11,7 @@ import { RUBRIC_VERSION, rubricItems } from "@/tools/visual/journey/rubric";
 import { loadAssets } from "@/tools/visual/results";
 import { RatingItemForm, SuggestRatingsForm, type Suggestion } from "@/tools/visual/ui/forms";
 
-export const metadata = { title: "Calificación · NeuroFusion" };
+export const metadata = { title: "Calificación" };
 // Las sugerencias de IA revisan varias capturas.
 export const maxDuration = 120;
 

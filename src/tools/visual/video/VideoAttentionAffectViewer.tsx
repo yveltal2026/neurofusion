@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Card } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import {
@@ -123,7 +124,7 @@ export function VideoAttentionAffectViewer({
                 top: `${cell.y * 100}%`,
                 width: "7%",
                 height: "11%",
-                background: `radial-gradient(circle, rgba(255,72,0,${0.65 * cell.strength}) 0%, rgba(255,180,0,0) 75%)`,
+                background: `radial-gradient(circle, rgba(138,44,0,${0.65 * cell.strength}) 0%, rgba(255,180,0,0) 75%)`,
               }}
             />
           ))}
@@ -134,7 +135,7 @@ export function VideoAttentionAffectViewer({
         activeAoiBoxes.map(({ aoi, box }) => (
           <div
             key={aoi.id}
-            className="pointer-events-none absolute rounded-md border-2 border-teal-400 bg-teal-500/15"
+            className="pointer-events-none absolute rounded-md border-2 border-amber-400 bg-amber-500/15"
             style={{
               left: `${box[0] * 100}%`,
               top: `${box[1] * 100}%`,
@@ -142,7 +143,7 @@ export function VideoAttentionAffectViewer({
               height: `${(box[3] - box[1]) * 100}%`,
             }}
           >
-            <span className="inline-block rounded-br bg-teal-900/90 px-1.5 py-0.5 text-[11px] font-medium text-white">
+            <span className="inline-block rounded-br bg-deep/90 px-1.5 py-0.5 text-[11px] font-medium text-white">
               {aoi.label}
             </span>
           </div>
@@ -157,8 +158,8 @@ export function VideoAttentionAffectViewer({
       content: (
         <div className="space-y-4">
           <Card className="p-4">
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-              4 Índices Compuestos (
+            <h4 className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
+              <EvidenceBadge kind="modeled" /> Índices compuestos (
               {activeBin
                 ? `${(activeBin.startMs / 1000).toFixed(1)}–${(activeBin.endMs / 1000).toFixed(1)} s`
                 : "—"}
@@ -193,7 +194,7 @@ export function VideoAttentionAffectViewer({
           </Card>
 
           <Card className="p-4">
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+            <h4 className="mb-3 text-xs font-semibold text-muted">
               12 Action Units (FACS · fc-blendshape-v1)
             </h4>
             <div className="grid grid-cols-1 gap-y-1 text-xs sm:grid-cols-2 sm:gap-x-4">
@@ -205,7 +206,7 @@ export function VideoAttentionAffectViewer({
                     className="flex items-center justify-between border-b border-border/50 py-1.5"
                   >
                     <span className="truncate text-muted">{AU_LABELS[key]}</span>
-                    <span className="font-mono font-semibold text-heading tabular-nums">
+                    <span className="font-semibold text-heading tabular-nums">
                       {score}
                     </span>
                   </div>
@@ -222,7 +223,7 @@ export function VideoAttentionAffectViewer({
       count: aggregateAois.length,
       content: (
         <Card className="p-4">
-          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+          <h4 className="mb-3 text-xs font-semibold text-muted">
             Atribución Gaze-Locked Affect por AOI
           </h4>
           {aggregateAois.length === 0 ? (
@@ -254,7 +255,7 @@ export function VideoAttentionAffectViewer({
                       <td className="py-2 pr-3 font-medium text-heading">
                         {row.label}
                       </td>
-                      <td className="py-2 pr-3 font-mono tabular-nums">
+                      <td className="py-2 pr-3 tabular-nums">
                         {(row.startMs / 1000).toFixed(1)}–
                         {(row.endMs / 1000).toFixed(1)} s
                       </td>
@@ -309,7 +310,7 @@ export function VideoAttentionAffectViewer({
               >
                 <div className="flex items-center justify-between font-semibold text-heading">
                   <span>{scene.label}</span>
-                  <span className="font-mono text-muted tabular-nums">
+                  <span className="text-muted tabular-nums">
                     {(scene.startMs / 1000).toFixed(1)}–
                     {(scene.endMs / 1000).toFixed(1)} s
                   </span>
@@ -355,7 +356,7 @@ export function VideoAttentionAffectViewer({
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-2 shadow-2xs">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-heading">{title}</span>
-            <span className="font-mono text-xs text-muted tabular-nums">
+            <span className="text-xs text-muted tabular-nums">
               {(currentTimeMs / 1000).toFixed(2)} /{" "}
               {(durationMs / 1000).toFixed(1)} s
             </span>
@@ -373,7 +374,7 @@ export function VideoAttentionAffectViewer({
                 onClick={() => setShowHeatmap((v) => !v)}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                   showHeatmap
-                    ? "border border-border/80 bg-surface text-primary shadow-2xs"
+                    ? "border border-border/80 bg-surface text-accent-ink shadow-2xs"
                     : "text-muted hover:text-heading"
                 }`}
               >
@@ -385,7 +386,7 @@ export function VideoAttentionAffectViewer({
                 onClick={() => setShowAois((v) => !v)}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                   showAois
-                    ? "border border-border/80 bg-surface text-primary shadow-2xs"
+                    ? "border border-border/80 bg-surface text-accent-ink shadow-2xs"
                     : "text-muted hover:text-heading"
                 }`}
               >

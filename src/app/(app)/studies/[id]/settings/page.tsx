@@ -11,7 +11,7 @@ import { visualConfigSchema } from "@/tools/visual/config";
 import { VisualContextForm } from "@/tools/visual/ui/forms";
 import { deleteStudy } from "../actions";
 
-export const metadata = { title: "Ajustes · NeuroFusion" };
+export const metadata = { title: "Ajustes" };
 
 export default async function SettingsPage({ params }: PageProps<"/studies/[id]/settings">) {
   const { id } = await params;

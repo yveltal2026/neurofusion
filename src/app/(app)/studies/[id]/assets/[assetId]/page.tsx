@@ -30,7 +30,7 @@ import { AttentionViewer } from "@/tools/visual/ui/attention-viewer";
 import { AnalyzeAssetForm, AssetMetaForm } from "@/tools/visual/ui/forms";
 import { PredictedEyeMetrics } from "@/tools/visual/ui/predicted-eye-metrics";
 
-export const metadata = { title: "Pieza · Laboratorio Digital" };
+export const metadata = { title: "Pieza" };
 // El análisis de visión con IA puede tardar.
 export const maxDuration = 120;
 
@@ -52,7 +52,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Volver a las imágenes del estudio
         </Link>
-        <h2 className="text-xl font-semibold">{row.title}</h2>
+        <h2 className="page-title">Áreas de interés · {row.title}</h2>
         {url ? (
           <EyeAoiEditor studyId={id} assetId={assetId} imageUrl={url} width={row.width} height={row.height} initial={asset.aois} />
         ) : (

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { NewSeoStudyForm } from "@/tools/seo/ui/forms";
 
-export const metadata = { title: "Nueva auditoría SEO · NeuroFusion" };
+export const metadata = { title: "Nueva auditoría SEO" };
 
 export default async function NewSeoStudyPage({ params }: PageProps<"/projects/[id]/studies/new/seo">) {
   const { id } = await params;

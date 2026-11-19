@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import type { ReactNode } from "react";
 import { VariantHistogram } from "@/components/charts/variant-charts";
 import { Alert } from "@/components/ui/alert";
@@ -105,8 +106,8 @@ export function VariantResultsView({ config, aggregates: a }: { config: VariantC
         </Alert>
       ) : null}
 
-      <Block className="space-y-4">
-        <SectionTitle icon="results">Resultado principal · {info.short}</SectionTitle>
+      <Block className="glass-panel space-y-4 rounded-panel p-5">
+        <div className="flex flex-wrap items-center gap-2"><SectionTitle icon="results">Resultado principal · {info.short}</SectionTitle><EvidenceBadge kind="measured" /></div>
         {a.primary.test ? (
           <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[200px_1fr]">
             <Row label={`Media (${unit})`}>
