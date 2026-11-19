@@ -6,7 +6,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
-| [COG-20261119-redisenio-aesteros](cambios/COG-20261119-redisenio-aesteros.md) | Marca Aesteros, marco de la aplicación y rediseño modular | Implementado en rama de rediseño; revisión del preview pendiente | Plataforma principal |
+| [COG-20261119-redisenio-aesteros](cambios/COG-20261119-redisenio-aesteros.md) | Marca Aesteros, rediseño modular y selector Claro / Profundo / Sistema | Implementado en [PR #27](https://github.com/yveltal2026/neurofusion/pull/27). Revisión del preview y cámara física pendientes | Plataforma principal |
 | [COG-20261111-analisis-imagenes-ia](cambios/COG-20261111-analisis-imagenes-ia.md) | Formatos impresos, análisis dividido, zoom/paneo y resultados reorganizados | Réplica Anáhuac → CognIA implementada localmente; integración y despliegue pendientes | Compartido |
 | [COG-20261112-video-facial-eyetracking](cambios/COG-20261112-video-facial-eyetracking.md) | Video con mirada, señales faciales, R2 y CSV | Réplica adaptada localmente; credenciales/CORS, producción y cámara física pendientes | Compartido |
 | [COG-20261031-informes-herramientas](cambios/COG-20261031-informes-herramientas.md) | Informes de encuesta, eye tracking y análisis visual con reporte breve de IA | Integrado en `main` mediante [PR #25](https://github.com/yveltal2026/neurofusion/pull/25), merge `054bd54`; producción pendiente de verificar | Compartido |

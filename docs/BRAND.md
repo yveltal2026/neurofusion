@@ -8,13 +8,15 @@ Archivo se carga como fuente variable local con `next/font`. Los pesos y anchos 
 
 Las superficies de trabajo son crema `#FFF7E6` en claro y profundas `#0B0907` en oscuro. El ámbar `#FFB000` identifica acciones y selección, con texto tinta `#14110C`. Los acentos de texto usan café en claro y ámbar claro en profundo. Los estados combinan texto, icono y color. El foco usa un tono de alto contraste.
 
+El selector del encabezado ofrece Claro, Profundo y Sistema en el espacio del investigador. Sistema sigue la apariencia del dispositivo. Una cookie conserva la elección en ese navegador y permite usarla desde el primer render. La preferencia del investigador no se aplica a las ligas del participante; la impresión usa la paleta clara.
+
 Las variables semánticas viven en `src/app/globals.css`. Los valores de interfaz para la aplicación vienen de `documentos/entrega.md` del kit. Los nombres heredados de clases siguen disponibles para los módulos que los usan.
 
 ## Activos
 
 - Los logotipos, símbolo y favicon son SVG oficiales de `logo/svg/` en la entrega de marca. La aplicación sirve sus versiones claro y oscuro desde `public/brand/aesteros/`.
 - El sprite de iconos oficial se usa en los controles con un equivalente en el kit. Los iconos de controles restantes conservan su etiqueta y función.
-- Las ilustraciones del kit se usan para distinguir proyectos y herramientas. Sus variantes siguen la preferencia de color del sistema.
+- Las ilustraciones del kit se usan para distinguir proyectos y herramientas. Sus variantes siguen el selector de apariencia en el espacio del investigador y el sistema en las demás vistas.
 
 ## Evidencia y movimiento
 

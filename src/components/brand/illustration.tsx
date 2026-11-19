@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { BrandImage } from "./brand-image";
 
 type Name =
   | "mod-proyectos"
@@ -22,9 +22,14 @@ export function BrandIllustration({
   const image = (theme: "claro" | "oscuro") =>
     `/brand/aesteros/ilustracion-${name}-${theme}.svg`;
   return (
-    <picture className={className}>
-      {tone === "auto" ? <source media="(prefers-color-scheme: dark)" srcSet={image("oscuro")} /> : null}
-      <Image src={image(tone === "deep" ? "oscuro" : "claro")} alt="" width={240} height={180} unoptimized />
-    </picture>
+    <BrandImage
+      light={image("claro")}
+      dark={image("oscuro")}
+      tone={tone}
+      alt=""
+      width={240}
+      height={180}
+      className={className}
+    />
   );
 }

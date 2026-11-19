@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+@utility modo-claro {
   color-scheme: light;
   --background: #fff7e6;
   --foreground: #14110c;
@@ -34,6 +34,10 @@
   --workspace: radial-gradient(ellipse at 100% 0%, #ffd478 0%, transparent 49%),
     radial-gradient(ellipse at 0% 100%, #ffe3a4 0%, transparent 55%),
     linear-gradient(135deg, #fff7e6, #fff2d1);
+}
+
+:root {
+  @apply modo-claro;
   --deep-glow: radial-gradient(ellipse at 100% 0%, #3d2a06 0%, transparent 49%),
     radial-gradient(ellipse at 0% 100%, #2e1708 0%, transparent 50%), #0b0907;
   --ease-enfocar: cubic-bezier(.16, .84, .24, 1);
@@ -72,6 +76,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    @apply modo-profundo;
+  }
+}
+
+@media screen {
+  [data-workspace-theme="light"] {
+    @apply modo-claro;
+  }
+
+  [data-workspace-theme="dark"] {
     @apply modo-profundo;
   }
 }
@@ -198,6 +212,7 @@
 
 @utility workspace-background {
   background: var(--workspace);
+  color: var(--foreground);
 }
 
 @utility glass-panel {

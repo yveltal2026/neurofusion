@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { FilePicker } from "@/components/ui/file-picker";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { requestResearcherVideoUpload, saveStudyVideoSource } from "../actions";
 
 const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
@@ -143,15 +144,9 @@ export function VideoSetupCard({
                 : "Sube un video MP4 o WebM desde tu computadora (máx. 150 MB)."}
           </p>
         </div>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            r2Configured
-              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-          }`}
-        >
+        <StatusBadge tone={r2Configured ? "success" : "warning"}>
           {r2Configured ? "Subida de video activa" : "Almacenamiento en configuración"}
-        </span>
+        </StatusBadge>
       </div>
 
       {!r2Configured ? (
