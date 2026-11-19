@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { NewEyeTrackingStudyForm } from "@/tools/eyetracking/ui/new-study-form";
 
-export const metadata = { title: "Nuevo estudio de eye tracking · Laboratorio Digital" };
+export const metadata = { title: "Nuevo estudio de eye tracking" };
 
 export default async function NewEyeTrackingStudyPage({ params }: PageProps<"/projects/[id]/studies/new/eyetracking">) {
   const { id } = await params;

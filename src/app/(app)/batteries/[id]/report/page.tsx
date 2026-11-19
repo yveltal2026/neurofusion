@@ -8,7 +8,7 @@ import { loadBatteryReportInput } from "@/tools/battery/report/load";
 import { buildBatteryReport } from "@/tools/battery/report/report";
 import { ReportView } from "@/tools/battery/report/ui/ReportView";
 
-export const metadata = { title: "Informe integrado · NeuroFusion" };
+export const metadata = { title: "Informe integrado" };
 
 export default async function BatteryReportPage({
   params,

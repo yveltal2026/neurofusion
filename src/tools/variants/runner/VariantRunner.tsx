@@ -345,7 +345,7 @@ export function VariantRunner({
   }
 
   return (
-    <div style={theme} className="min-h-dvh bg-background text-foreground" data-device={device?.deviceType}>
+    <div style={theme} className="reaction-theme min-h-dvh bg-background text-foreground" data-device={device?.deviceType}>
       {preview ? (
         <div className="bg-amber-500/15 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200">Vista previa: no se guarda ningún dato.</div>
       ) : null}

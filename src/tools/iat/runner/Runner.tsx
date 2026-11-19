@@ -287,8 +287,8 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
             </p>
           ) : (
             <p className="text-base leading-relaxed">
-              Usa la tecla <kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 font-mono text-sm font-semibold">E</kbd> para la categoría de la izquierda y la
-              tecla <kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 font-mono text-sm font-semibold">I</kbd> para la de la derecha.
+              Usa la tecla <kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 text-sm font-semibold">E</kbd> para la categoría de la izquierda y la
+              tecla <kbd className="rounded-md border-2 border-border bg-surface px-2 py-0.5 text-sm font-semibold">I</kbd> para la de la derecha.
             </p>
           )}
         </Section>
@@ -385,7 +385,7 @@ export function Runner({ token, config, preview, embedded }: { token: string; co
   }
 
   return (
-    <div style={theme} className="min-h-dvh bg-background text-foreground">
+    <div style={theme} className="reaction-theme min-h-dvh bg-background text-foreground">
       {preview ? (
         <div className="bg-amber-500/15 px-4 py-1.5 text-center text-xs text-amber-800 dark:text-amber-200">
           Vista previa: no se guarda ningún dato.

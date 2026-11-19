@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { RowLink, RowList } from "@/components/ui/rows";
+import { BrandIllustration } from "@/components/brand/illustration";
+import { Input } from "@/components/ui/field";
 
 export interface ProjectItem {
   id: string;
@@ -10,40 +12,46 @@ export interface ProjectItem {
   created_at: string;
 }
 
-/** Lista de proyectos con búsqueda por nombre o descripción (aparece desde 6 proyectos). */
 export function ProjectList({ projects }: { projects: ProjectItem[] }) {
-  const [q, setQ] = useState("");
-  const needle = q.trim().toLowerCase();
-  const shown = needle ? projects.filter((p) => `${p.name} ${p.description ?? ""}`.toLowerCase().includes(needle)) : projects;
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLocaleLowerCase("es-MX");
+  const shown = projects.filter(({ name, description }) => `${name} ${description ?? ""}`.toLocaleLowerCase("es-MX").includes(needle));
+
   return (
     <div className="space-y-4">
       {projects.length >= 6 ? (
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar proyecto"
-          aria-label="Buscar proyecto por nombre o descripción"
-          className="h-11 w-full max-w-sm rounded-md border border-control bg-background px-3.5 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/40"
-        />
+        <div className="max-w-sm">
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar proyecto"
+            aria-label="Buscar proyecto por nombre o descripción"
+          />
+        </div>
       ) : null}
-      {shown.length === 0 ? (
-        <p className="text-muted" role="status">
-          Ningún proyecto coincide con «{q}».
-        </p>
-      ) : (
-        <RowList>
-          {shown.map((p) => (
-            <RowLink
-              key={p.id}
-              href={`/projects/${p.id}`}
-              icon="folder"
-              title={p.name}
-              description={p.description ? <span className="line-clamp-1">{p.description}</span> : undefined}
-              meta={`Creado el ${new Date(p.created_at).toLocaleDateString("es-MX")}`}
-            />
+      {shown.length ? (
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Proyectos">
+          {shown.map(({ id, name, description, created_at }) => (
+            <li key={id}>
+              <Link
+                href={`/projects/${id}`}
+                className="glass-panel group block h-full min-w-0 rounded-panel p-4 transition-colors hover:border-accent-ink motion-reduce:transition-none"
+              >
+                <div className="mb-4 grid min-h-25 place-items-center rounded-lg bg-neuro-tint">
+                  <BrandIllustration name="mod-proyectos" className="block w-27" />
+                </div>
+                <h2 className="break-words text-lg font-bold group-hover:underline">{name}</h2>
+                {description ? <p className="line-clamp-2 text-sm text-muted">{description}</p> : null}
+                <p className="mt-3 text-xs text-muted">
+                  Creado el <time dateTime={created_at}>{new Date(created_at).toLocaleDateString("es-MX", { timeZone: "America/Mexico_City" })}</time>
+                </p>
+              </Link>
+            </li>
           ))}
-        </RowList>
+        </ul>
+      ) : (
+        <p className="text-muted" role="status">Ningún proyecto coincide con «{query}».</p>
       )}
     </div>
   );

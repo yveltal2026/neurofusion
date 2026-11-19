@@ -10,7 +10,7 @@ import { computeVariantAggregates } from "@/tools/variants/results/aggregate";
 import { loadVariantRecords } from "@/tools/variants/results/load";
 import { VariantResultsView } from "@/tools/variants/ui/results-view";
 
-export const metadata = { title: "Resultados · NeuroFusion" };
+export const metadata = { title: "Resultados" };
 
 export default async function ResponsesPage({
   params,

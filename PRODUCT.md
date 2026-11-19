@@ -8,13 +8,13 @@ product
 Investigadores de mercado, docentes y estudiantes de neuromarketing que diseñan estudios (IAT, encuesta, SEO, análisis visual), comparten una liga con participantes y analizan los resultados. Trabajan en escritorio, a menudo proyectando a un grupo. Los participantes sólo ven el test, en computadora o celular.
 
 ## Product Purpose
-Plataforma de FRSKO Neuro para diseñar, aplicar y analizar estudios de neuromarketing. Éxito: un investigador sin formación técnica crea un estudio válido en minutos, recolecta datos confiables y entiende los resultados sin hojas de cálculo.
+Plataforma Aesteros para diseñar, aplicar y analizar estudios de neuromarketing. Éxito: un investigador sin formación técnica crea un estudio válido en minutos, recolecta datos confiables y entiende los resultados sin hojas de cálculo.
 
 ## Brand Personality
-La identidad la define el Manual de marca FRSKO v4.1 (resumen en `docs/BRAND.md`): cercana, directa, con datos. Moderna y vibrante dentro de la paleta crema, teal y menta, con el morado de la familia Neuro como color de acción; la menta es acento.
+El manual de identidad Aesteros v3.0 define la marca (resumen en `docs/BRAND.md`). El texto es directo y explica de dónde sale cada dato. La paleta usa crema, tinta y ámbar.
 
 ## Anti-references
-Mezclar familias de iconos o usar emojis como iconos; paletas ajenas a la marca; decoración que no comunica estado; burbujas en pantallas de trabajo.
+Los iconos y las ilustraciones usan el kit Aesteros. Los efectos de vidrio y resplandor se reservan para las pantallas del investigador.
 
 ## Design Principles
 1. Los iconos y el color comunican estado y acción; nunca sólo adorno.

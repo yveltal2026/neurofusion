@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { loadAvailableStudies } from "@/tools/battery/load";
 import { BatteryBuilder } from "@/tools/battery/ui/BatteryBuilder";
 
-export const metadata = { title: "Nueva batería · NeuroFusion" };
+export const metadata = { title: "Nueva batería" };
 
 export default async function NewBatteryPage({
   params,

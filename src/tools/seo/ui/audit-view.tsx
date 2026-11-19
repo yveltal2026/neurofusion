@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Glossary } from "@/components/ui/glossary";
 import { scoreBand, scoreColor } from "@/components/charts/score-color";
 import { CategoryScoreChart } from "@/components/charts/seo-charts";
@@ -31,7 +32,7 @@ export function SummaryCards({
     summary.counts.medium +
     summary.counts.ok;
   return (
-    <Card className="flex flex-wrap items-center gap-x-10 gap-y-4">
+    <Card className="glass-panel flex flex-wrap items-center gap-x-10 gap-y-4">
       <div className="flex items-baseline gap-3">
         <p
           className="font-display text-5xl font-bold tabular-nums leading-none"
@@ -43,9 +44,15 @@ export function SummaryCards({
           <p className="font-medium text-heading">
             {summary.scoredChecks === 0
               ? "Sin evaluaciones puntuables"
-              : `Puntuación NeuroFusion · ${band.label.toLowerCase()}`}
+              : `Puntuación Aesteros · ${band.label.toLowerCase()}`}
           </p>
           <p className="text-xs text-muted">de 100 · {summary.scoreVersion}</p>
+          {summary.scoredChecks !== 0 ? (
+            <div className="mt-2 flex items-center gap-2">
+              <EvidenceBadge kind="modeled" />
+              <progress className="brand-progress h-2 min-w-16 flex-1" aria-label="Puntuación Aesteros" value={summary.score} max={100} />
+            </div>
+          ) : null}
         </div>
       </div>
       <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
@@ -73,7 +80,7 @@ export function SummaryCards({
             </strong>
           </span>{" "}
           · revisa sólo la página principal, después de ejecutar JavaScript, con
-          unas 10 comprobaciones básicas. La puntuación NeuroFusion revisa{" "}
+          unas 10 comprobaciones básicas. La puntuación Aesteros revisa{" "}
           {summary.pagesAudited} página(s) con las reglas aplicables al HTML que
           entrega el servidor. Las dos puntuaciones miden alcances distintos.
         </p>

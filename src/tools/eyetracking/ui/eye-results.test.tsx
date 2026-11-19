@@ -82,7 +82,8 @@ it("muestra los KPIs agregados, cambia de participante y alterna visualizaciones
     "0",
     "0",
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Gaze plot" }));
+  expect(screen.getByText("Medido")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Recorrido" }));
   expect(
     screen
       .getByRole("img", { name: "Secuencia de fijaciones por participante" })
@@ -94,7 +95,7 @@ it("muestra los KPIs agregados, cambia de participante y alterna visualizaciones
       .getByRole("img", { name: "Áreas de interés delimitadas" })
       .querySelectorAll("rect"),
   ).toHaveLength(1);
-  fireEvent.click(screen.getByRole("button", { name: "Heatmap" }));
+  fireEvent.click(screen.getByRole("button", { name: "Calor" }));
   fireEvent.change(screen.getByLabelText("Métrica del mapa"), {
     target: { value: "count" },
   });
@@ -164,7 +165,7 @@ it("abre el visor a pantalla completa, permite hacer zoom in / out y lo cierra c
   render(<EyeResults {...props} />);
   expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();
 
-  fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pantalla completa" }));
   expect(screen.getByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeTruthy();
 
   // Comprobar zoom inicial 100%
@@ -197,7 +198,7 @@ it("abre el visor a pantalla completa, permite hacer zoom in / out y lo cierra c
   expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();
 
   // Abre de nuevo y cierra con el botón Cerrar
-  fireEvent.click(screen.getByRole("button", { name: "Fullscreen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Pantalla completa" }));
   expect(screen.getByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Cerrar ✕" }));
   expect(screen.queryByRole("dialog", { name: "Visor de miradas a pantalla completa" })).toBeNull();

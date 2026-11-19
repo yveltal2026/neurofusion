@@ -4,7 +4,7 @@ import { isAiConfigured } from "@/lib/ai";
 import { requireUser } from "@/lib/auth/session";
 import { Wizard } from "@/tools/iat/wizard/Wizard";
 
-export const metadata = { title: "Nuevo estudio IAT · NeuroFusion" };
+export const metadata = { title: "Nuevo estudio IAT" };
 
 export default async function NewIatStudyPage({ params }: PageProps<"/projects/[id]/studies/new/iat">) {
   const { id } = await params;

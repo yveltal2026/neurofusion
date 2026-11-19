@@ -131,7 +131,7 @@ export function VideoSetupCard({
   }
 
   return (
-    <Card className="space-y-4">
+    <Card className="glass-panel space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold">Archivo de video del estudio</h3>

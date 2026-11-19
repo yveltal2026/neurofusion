@@ -1,38 +1,42 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// Tipografía de marca FRSKO: Poppins para títulos, etiquetas y cifras; Plus Jakarta Sans para el texto.
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-  variable: "--font-poppins",
+const archivo = localFont({
+  src: "./fonts/archivo.woff2",
+  weight: "100 900",
+  variable: "--font-archivo",
   display: "swap",
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  display: "swap",
+  adjustFontFallback: false,
+  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
 });
 
 export const metadata: Metadata = {
-  title: "NeuroFusion · Estudios de neuromarketing",
-  description:
-    "Plataforma para diseñar, aplicar y analizar estudios de neuromarketing, empezando por el Test de Asociación Implícita (IAT).",
+  title: { default: "Aesteros · Estudios de neuromarketing", template: "%s · Aesteros" },
+  description: "Diseña, aplica y analiza estudios de mirada, asociación, percepción y rendimiento digital.",
+  icons: {
+    icon: [
+      { url: "/brand/aesteros/aesteros-favicon-claro.svg", type: "image/svg+xml" },
+      {
+        url: "/brand/aesteros/aesteros-favicon-oscuro.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F6F4EC" },
-    { media: "(prefers-color-scheme: dark)", color: "#062E30" },
+    { media: "(prefers-color-scheme: light)", color: "#FFF7E6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0907" },
   ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es-MX" className={`${poppins.variable} ${jakarta.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="es-MX" className={`${archivo.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">{children}</body>
     </html>
   );
 }

@@ -12,7 +12,7 @@ import { loadSessionViews } from "@/tools/iat/results/load";
 import type { TrialExportRow } from "@/tools/iat/results/views";
 import { setSessionExcluded } from "../actions";
 
-export const metadata = { title: "Sesión · NeuroFusion" };
+export const metadata = { title: "Sesión" };
 
 export default async function SessionDetailPage({ params }: PageProps<"/studies/[id]/data/[sessionId]">) {
   const { id, sessionId } = await params;

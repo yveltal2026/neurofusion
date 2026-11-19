@@ -1,5 +1,6 @@
 "use client";
 
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { EyeKpiGuide } from "./kpi-guide";
@@ -85,7 +86,9 @@ export function EyeResults({
   maxHeight?: string;
 }) {
   const [view, setView] = useState<"heatmap" | "gaze" | "aois">("heatmap");
-  const [heatMetric, setHeatMetric] = useState<"count" | "duration">("duration");
+  const [heatMetric, setHeatMetric] = useState<"count" | "duration">(
+    "duration",
+  );
   const [session, setSession] = useState("all");
   const [fullscreen, setFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -228,10 +231,10 @@ export function EyeResults({
       >
         <defs>
           <radialGradient id={gid}>
-            <stop offset="0" stopColor="#ff1600" stopOpacity="0.9" />
-            <stop offset="0.4" stopColor="#ff9d00" stopOpacity="0.65" />
-            <stop offset="0.7" stopColor="#ffef00" stopOpacity="0.3" />
-            <stop offset="1" stopColor="#ffef00" stopOpacity="0" />
+            <stop offset="0" stopColor="#8a2c00" stopOpacity="0.85" />
+            <stop offset="0.4" stopColor="#ff6a00" stopOpacity="0.65" />
+            <stop offset="0.7" stopColor="#ffb000" stopOpacity="0.38" />
+            <stop offset="1" stopColor="#fff7e6" stopOpacity="0" />
           </radialGradient>
         </defs>
         {view === "heatmap"
@@ -281,8 +284,8 @@ export function EyeResults({
                         strokeWidth={1}
                       >
                         <title>
-                          {p.participant} · #{j + 1} · {f.startMs}–{f.endMs} ms ·{" "}
-                          {f.durationMs} ms
+                          {p.participant} · #{j + 1} · {f.startMs}–{f.endMs} ms
+                          · {f.durationMs} ms
                         </title>
                       </circle>
                       <text
@@ -340,10 +343,16 @@ export function EyeResults({
       {/* Encabezado con conteo y enlace directo a edición de AOIs */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div>
-          <h2 className="text-xl font-semibold text-heading">{title}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-bold text-heading">{title}</h2>
+            {aggregate.count ? <EvidenceBadge kind="measured" /> : null}
+          </div>
           <p className="mt-0.5 text-xs text-muted">
-            {aggregate.count} sesiones con lecturas ·{" "}
-            {aggregate.withoutFixations} sin fijaciones detectadas ·{" "}
+            {aggregate.count}{" "}
+            {aggregate.count === 1
+              ? "sesión con lecturas"
+              : "sesiones con lecturas"}{" "}
+            · {aggregate.withoutFixations} sin fijaciones detectadas ·{" "}
             {participants.length - aggregate.count} registros sin lecturas o
             repetidos fuera del agregado
           </p>
@@ -363,7 +372,7 @@ export function EyeResults({
             <span>Participante</span>
             <select
               aria-label="Participante"
-              className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
               value={session}
               onChange={(e) => setSession(e.target.value)}
             >
@@ -383,8 +392,8 @@ export function EyeResults({
           >
             {(
               [
-                ["heatmap", "Heatmap"],
-                ["gaze", "Gaze plot"],
+                ["heatmap", "Calor"],
+                ["gaze", "Recorrido"],
                 ["aois", "Áreas de interés"],
               ] as const
             ).map(([id, label]) => (
@@ -393,9 +402,9 @@ export function EyeResults({
                 key={id}
                 aria-pressed={view === id}
                 onClick={() => setView(id)}
-                className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                className={`min-h-11 rounded-full px-3 text-xs font-semibold transition ${
                   view === id
-                    ? "bg-surface text-primary shadow-2xs border border-border/80"
+                    ? "bg-primary text-primary-foreground shadow-2xs border border-border/80"
                     : "text-muted hover:text-heading"
                 }`}
               >
@@ -413,7 +422,7 @@ export function EyeResults({
                 onChange={(e) =>
                   setHeatMetric(e.target.value as "count" | "duration")
                 }
-                className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+                className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
               >
                 <option value="duration">Duración de fijaciones</option>
                 <option value="count">Número de fijaciones</option>
@@ -426,8 +435,8 @@ export function EyeResults({
           type="button"
           onClick={() => setFullscreen(true)}
           title="Ver a pantalla completa"
-          aria-label="Fullscreen"
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/40 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+          aria-label="Pantalla completa"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/40 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
         >
           <svg
             aria-hidden="true"
@@ -441,82 +450,107 @@ export function EyeResults({
           >
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
           </svg>
-          <span>Fullscreen</span>
+          <span>Pantalla completa</span>
         </button>
       </div>
 
-      {/* Contenedor de la imagen con contención estricta de altura */}
-      {imageUrl ? (
-        <div
-          className="relative mx-auto overflow-hidden rounded-lg border border-border bg-foreground/5 shadow-xs"
-          style={{
-            aspectRatio: `${width} / ${height}`,
-            maxHeight,
-            maxWidth: `min(100%, calc(${maxHeight} * ${ratio}))`,
-            width: "100%",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- signed private storage URL */}
-          <img
-            src={imageUrl}
-            alt={title}
-            className="absolute inset-0 size-full"
-            draggable={false}
-          />
-          {renderSvg("", false)}
-        </div>
-      ) : (
-        <p className="text-sm text-muted">
-          No se pudo abrir la imagen almacenada.
-        </p>
-      )}
+      <div className="grid items-start gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <div className="min-w-0 space-y-3">
+          {/* Contenedor de la imagen con contención estricta de altura */}
+          {imageUrl ? (
+            <div
+              className="relative overflow-hidden rounded-lg border border-border bg-foreground/5 shadow-xs"
+              style={{
+                aspectRatio: `${width} / ${height}`,
+                maxHeight,
+                maxWidth: `min(100%, calc(${maxHeight} * ${ratio}))`,
+                width: "100%",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- signed private storage URL */}
+              <img
+                src={imageUrl}
+                alt={title}
+                className="absolute inset-0 size-full"
+                draggable={false}
+              />
+              {renderSvg("", false)}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">
+              No se pudo abrir la imagen almacenada.
+            </p>
+          )}
 
-      {/* Nota explicativa del modo activo */}
-      <p className="text-xs text-muted">
-        {view === "heatmap"
-          ? "Amarillo → naranja → rojo: mayor intensidad relativa a esta selección. Se suman fijaciones por tiempo de exposición, sin ponderar por FPS. El heatmap es una visualización, no un KPI independiente."
-          : view === "gaze"
-            ? "Cada color representa una sesión. Los números indican el orden y el tamaño indica duración; las líneas unen fijaciones con señal continua de esa misma sesión. Selecciona un participante para leer su recorrido."
-            : "Cada rectángulo delimita un elemento. Las AOI superpuestas se calculan de forma independiente; sus porcentajes pueden sumar más de 100 %."}
-      </p>
+          {/* Nota explicativa del modo activo */}
+          <p className="text-xs text-muted">
+            {view === "heatmap"
+              ? "Crema a café indica intensidad creciente dentro de esta selección. Las fijaciones se ponderan por tiempo de exposición. La escala cambia con la selección."
+              : view === "gaze"
+                ? "Cada color representa una sesión. Los números indican el orden y el tamaño indica duración; las líneas unen fijaciones con señal continua de esa misma sesión. Selecciona un participante para leer su recorrido."
+                : "Cada rectángulo delimita un elemento. Las AOI superpuestas se calculan de forma independiente; sus porcentajes pueden sumar más de 100 %."}
+          </p>
 
-      {!fixationCount ? (
-        <p role="status" className="text-sm text-muted">
-          Todavía no hay fijaciones detectables en esta selección.
-        </p>
-      ) : null}
+          {view === "heatmap" && fixationCount > 0 ? (
+            <div className="flex items-center gap-2 text-xs text-muted">
+              Poca mirada{" "}
+              <span
+                aria-hidden="true"
+                className="h-2 flex-1 rounded-full bg-[linear-gradient(to_right,#fff7e6,#ffb000,#ff6a00,#8a2c00)]"
+              />{" "}
+              Mucha mirada
+            </div>
+          ) : null}
 
-      {/* Tarjetas rápidas de KPIs */}
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
-          <dt className="text-xs font-medium text-muted">Fijaciones detectadas</dt>
-          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
-            {fmt(fixationCount, 0)}
-          </dd>
+          {!fixationCount ? (
+            <p role="status" className="text-sm text-muted">
+              Todavía no hay fijaciones detectables en esta selección.
+            </p>
+          ) : null}
         </div>
-        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
-          <dt className="text-xs font-medium text-muted">FD media</dt>
-          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
-            {fmt(fixationCount ? totalDuration / fixationCount : null)} ms
-          </dd>
+        <div className="min-w-0 space-y-3">
+          <h3 className="text-base font-bold">Fijaciones y recorrido</h3>
+          {/* Tarjetas rápidas de KPIs */}
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+            <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+              <dt className="text-xs font-medium text-muted">
+                Fijaciones detectadas
+              </dt>
+              <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+                {fmt(fixationCount, 0)}
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+              <dt className="text-xs font-medium text-muted">FD media</dt>
+              <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+                {fmt(fixationCount ? totalDuration / fixationCount : null)} ms
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+              <dt className="text-xs font-medium text-muted">
+                Amplitud entre fijaciones
+              </dt>
+              <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+                {fmt(mean(transitions.map((t) => t.amplitudeDiagonalPct)))}{" "}
+                <span className="text-xs font-normal text-muted">
+                  % diagonal
+                </span>
+              </dd>
+            </div>
+            <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
+              <dt className="text-xs font-medium text-muted">
+                Duración entre fijaciones
+              </dt>
+              <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
+                {fmt(mean(transitions.map((t) => t.durationMs)))}{" "}
+                <span className="text-xs font-normal text-muted">
+                  ms ({transitions.length} trans.)
+                </span>
+              </dd>
+            </div>
+          </dl>
         </div>
-        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
-          <dt className="text-xs font-medium text-muted">Amplitud entre fijaciones</dt>
-          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
-            {fmt(mean(transitions.map((t) => t.amplitudeDiagonalPct)))}{" "}
-            <span className="text-xs font-normal text-muted">% diagonal</span>
-          </dd>
-        </div>
-        <div className="rounded-lg border border-border bg-surface/60 p-3 shadow-2xs">
-          <dt className="text-xs font-medium text-muted">Duración entre fijaciones</dt>
-          <dd className="mt-1 font-display text-xl font-bold text-heading tabular-nums">
-            {fmt(mean(transitions.map((t) => t.durationMs)))}{" "}
-            <span className="text-xs font-normal text-muted">
-              ms ({transitions.length} trans.)
-            </span>
-          </dd>
-        </div>
-      </dl>
+      </div>
 
       {/* Tabla de KPIs por AOI con botones de descarga */}
       <div className="space-y-3">
@@ -685,7 +719,11 @@ export function EyeResults({
               <thead className="border-b border-border bg-surface-muted/50 text-xs font-semibold text-muted">
                 <tr>
                   {headers.map((h) => (
-                    <th key={h} scope="col" className="whitespace-nowrap px-3 py-2.5">
+                    <th
+                      key={h}
+                      scope="col"
+                      className="whitespace-nowrap px-3 py-2.5"
+                    >
                       {h}
                     </th>
                   ))}
@@ -704,7 +742,10 @@ export function EyeResults({
                           {v}
                         </th>
                       ) : (
-                        <td key={i} className="whitespace-nowrap px-3 py-2 tabular-nums">
+                        <td
+                          key={i}
+                          className="whitespace-nowrap px-3 py-2 tabular-nums"
+                        >
                           {fmt(typeof v === "number" ? v : null)}
                         </td>
                       ),
@@ -726,9 +767,11 @@ export function EyeResults({
 
       {/* Desplegable de scanpath / secuencia */}
       <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs">
-        <summary className="flex cursor-pointer items-center justify-between font-medium text-sm text-heading hover:text-primary">
+        <summary className="flex cursor-pointer items-center justify-between font-medium text-sm text-heading hover:text-accent-ink">
           <span>Scanpath / secuencia de mirada</span>
-          <span className="text-xs text-muted group-open:rotate-180 transition-transform">▼</span>
+          <span className="text-xs text-muted group-open:rotate-180 transition-transform">
+            ▼
+          </span>
         </summary>
         <div className="mt-3 space-y-3 pt-2">
           {visible.map((p) => (
@@ -736,14 +779,18 @@ export function EyeResults({
               key={p.sessionId}
               className="rounded-md border border-border/80 bg-background/50 p-3"
             >
-              <p className="font-mono text-xs font-medium text-heading">{p.participant}</p>
+              <p className="font-mono text-xs font-medium text-heading">
+                {p.participant}
+              </p>
               <ol className="mt-2 flex flex-wrap gap-2">
                 {p.metrics.fixations.map((f, i) => (
                   <li
                     key={i}
                     className="rounded border border-border bg-surface px-2.5 py-1 text-xs text-heading"
                   >
-                    <span className="font-semibold text-primary">{i + 1}.</span>{" "}
+                    <span className="font-semibold text-accent-ink">
+                      {i + 1}.
+                    </span>{" "}
                     {aois
                       .filter(
                         (a) =>
@@ -759,7 +806,9 @@ export function EyeResults({
                 ))}
               </ol>
               {!p.metrics.fixations.length ? (
-                <p className="mt-1 text-xs text-muted">Sin fijaciones detectables.</p>
+                <p className="mt-1 text-xs text-muted">
+                  Sin fijaciones detectables.
+                </p>
               ) : null}
             </div>
           ))}
@@ -770,9 +819,11 @@ export function EyeResults({
 
       {/* Desplegable de definiciones y método */}
       <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs text-xs text-muted">
-        <summary className="flex cursor-pointer items-center justify-between font-medium text-heading hover:text-primary">
+        <summary className="flex cursor-pointer items-center justify-between font-medium text-heading hover:text-accent-ink">
           <span>Definiciones y método de cálculo</span>
-          <span className="text-xs text-muted group-open:rotate-180 transition-transform">▼</span>
+          <span className="text-xs text-muted group-open:rotate-180 transition-transform">
+            ▼
+          </span>
         </summary>
         <div className="mt-3 space-y-2 pt-2 border-t border-border">
           <p>
@@ -855,8 +906,8 @@ export function EyeResults({
               >
                 {(
                   [
-                    ["heatmap", "Heatmap"],
-                    ["gaze", "Gaze plot"],
+                    ["heatmap", "Calor"],
+                    ["gaze", "Recorrido"],
                     ["aois", "Áreas de interés"],
                   ] as const
                 ).map(([id, label]) => (
@@ -887,7 +938,10 @@ export function EyeResults({
                     }
                     className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white shadow-2xs backdrop-blur-sm cursor-pointer"
                   >
-                    <option value="duration" className="bg-neutral-900 text-white">
+                    <option
+                      value="duration"
+                      className="bg-neutral-900 text-white"
+                    >
                       Duración de fijaciones
                     </option>
                     <option value="count" className="bg-neutral-900 text-white">

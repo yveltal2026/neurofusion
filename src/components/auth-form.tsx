@@ -25,13 +25,24 @@ export function AuthForm({
   const isLogin = mode === "login";
 
   return (
-    <div className="w-full max-w-sm space-y-6">
+    <div className="w-full space-y-5">
       <AuthHeading title={isLogin ? "Iniciar sesión" : "Crear cuenta"} />
 
       {resetOk ? <Alert>Listo, actualizamos tu contraseña. Inicia sesión con la nueva.</Alert> : null}
       {urlError ? <Alert tone="error">No se pudo completar el inicio de sesión. Inténtalo de nuevo.</Alert> : null}
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
       {state.message ? <Alert>{state.message}</Alert> : null}
+
+      <form action={signInWithGoogle}>
+        {next ? <input type="hidden" name="next" value={next} /> : null}
+        <Button type="submit" variant="inverse" className="w-full">
+          Continuar con Google
+        </Button>
+      </form>
+
+      <div className="flex items-center gap-3 text-xs text-muted">
+        <div className="h-px flex-1 bg-border" />o con tu correo<div className="h-px flex-1 bg-border" />
+      </div>
 
       <form action={action} className="space-y-4">
         {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -61,17 +72,6 @@ export function AuthForm({
         ) : null}
         <Button type="submit" className="w-full" disabled={pending}>
           {pending ? "Procesando…" : isLogin ? "Entrar" : "Crear cuenta"}
-        </Button>
-      </form>
-
-      <div className="flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-border" />o<div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form action={signInWithGoogle}>
-        {next ? <input type="hidden" name="next" value={next} /> : null}
-        <Button type="submit" variant="secondary" className="w-full">
-          Continuar con Google
         </Button>
       </form>
 

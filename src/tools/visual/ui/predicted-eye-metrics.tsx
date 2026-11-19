@@ -1,5 +1,6 @@
 "use client";
 
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -89,9 +90,9 @@ export function PredictedEyeMetrics({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <Card className="space-y-3">
+    <Card className="estimated-panel space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-medium">KPIs estimados por área de interés</h3>
+        <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">KPIs estimados por área de interés</h3><EvidenceBadge kind="estimated" /></div>
         <StatusBadge tone="warning">IA · no medido · no validado</StatusBadge>
       </div>
       <p className="text-sm text-muted">{PREDICTION_NOTICE}</p>

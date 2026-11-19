@@ -11,8 +11,9 @@ it("ofrece un informe canónico de encuesta y conserva las vistas especializadas
   rerender(<StudyTabs id="study" variant="eye" active="report" />);
   expect(screen.getByRole("link", { name: "Informe" }).getAttribute("href")).toBe("/studies/study/report");
   expect(screen.getByRole("link", { name: "Miradas" }).getAttribute("href")).toBe("/studies/study/eye");
+  expect(screen.getByRole("link", { name: "Sesiones" }).getAttribute("href")).toBe("/studies/study/eye?view=sessions");
   const eyeLinks = screen.getAllByRole("link").map((l) => l.textContent?.trim());
-  expect(eyeLinks).toEqual(["Piezas y enlace", "Miradas", "Informe", "Ajustes"]);
+  expect(eyeLinks).toEqual(["Resumen", "Miradas", "Sesiones", "Informe", "Ajustes"]);
   rerender(<StudyTabs id="study" variant="pieces" active="report" />);
   expect(screen.getByRole("link", { name: "Informe" })).toBeTruthy();
   expect(screen.getByRole("link", { name: "Comparativa" })).toBeTruthy();

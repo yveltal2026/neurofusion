@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { setParticipantExcluded } from "../../actions";
@@ -17,22 +18,6 @@ const range = (r: [number, number] | null, d = 2) =>
 const pValue = (p: number | null) =>
   p === null ? "sin dato" : p < 0.001 ? "< 0,001" : nf(3).format(p);
 
-/** Etiqueta de evidencia: qué tan directamente sale del participante. */
-function EvidenceBadge({ kind }: { kind: "medido" | "estimado" }) {
-  const hint =
-    kind === "medido"
-      ? "Lo que el participante hizo o contestó"
-      : "Estadístico inferido de la muestra; depende de cuántos participantes haya";
-  return (
-    <span
-      title={hint}
-      className="rounded-full border border-border px-2 py-0.5 text-xs text-muted"
-    >
-      {kind}
-    </span>
-  );
-}
-
 function Section({
   title,
   evidence,
@@ -43,10 +28,10 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3">
+    <section className="glass-panel space-y-3 rounded-panel p-4 sm:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-xl font-semibold">{title}</h2>
-        {evidence ? <EvidenceBadge kind={evidence} /> : null}
+        {evidence ? <EvidenceBadge kind={evidence === "medido" ? "measured" : "estimated"} /> : null}
       </div>
       {children}
     </section>
@@ -255,7 +240,7 @@ export function ReportView({
               <span className="tabular-nums">{e.nIncluded}</span> participantes
               incluidos vieron las {e.pieces.length}{" "}
               {e.pieces.length === 1 ? "imagen" : "imágenes"} antes de las
-              pruebas siguientes. <EvidenceBadge kind="medido" />
+              pruebas siguientes. <EvidenceBadge kind="measured" />
             </p>
             <p className="text-sm text-muted">
               Es un paso de exposición: garantiza que la persona vio el
@@ -266,7 +251,7 @@ export function ReportView({
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-semibold">Lectura de la IA de cada imagen</h3>
-                <EvidenceBadge kind="estimado" />
+                <EvidenceBadge kind="estimated" />
               </div>
               <Card className="overflow-x-auto">
                 <table className="w-full text-left text-sm">

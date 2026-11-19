@@ -43,7 +43,7 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
     render(vnode);
 
     // Título y encabezado
-    expect(screen.getByRole("heading", { level: 1, name: "Nuevo estudio" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "¿Qué quieres saber?" })).toBeTruthy();
     expect(screen.getByText("Proyecto Anáhuac")).toBeTruthy();
 
     // Categorías
@@ -51,14 +51,13 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
     expect(screen.getByText("Asociaciones implícitas")).toBeTruthy();
     expect(screen.getByText("Percepción y opinión")).toBeTruthy();
     expect(screen.getByText("Diagnóstico digital")).toBeTruthy();
-    expect(screen.getByText("Combinar herramientas")).toBeTruthy();
+    expect(screen.getByText("Crear una batería")).toBeTruthy();
 
     // Cards individuales de estudios
     expect(screen.getByText("Eye tracking con webcam")).toBeTruthy();
-    expect(screen.getByText("Medición con participantes")).toBeTruthy();
 
     expect(screen.getByText("Análisis visual con IA")).toBeTruthy();
-    expect(screen.getByText("Estimaciones con IA · sin participantes")).toBeTruthy();
+    expect(screen.getByText("Estimado")).toBeTruthy();
 
     expect(screen.getByText("Test de Asociación Implícita (IAT)")).toBeTruthy();
     expect(screen.getByText("Variantes del IAT (SC-IAT, Go/No-Go, priming)")).toBeTruthy();
@@ -67,8 +66,7 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
     expect(screen.getByText("Auditoría SEO")).toBeTruthy();
 
     // Card de combinación (batería)
-    expect(screen.getByText("Batería de pasos")).toBeTruthy();
-    expect(screen.getByText("Multi-estudio")).toBeTruthy();
+    expect(screen.getByText("Armar batería")).toBeTruthy();
 
     // Verifica que los enlaces a las rutas de configuración existan
     const links = screen.getAllByRole("link");

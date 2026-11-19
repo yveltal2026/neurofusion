@@ -63,8 +63,8 @@ describe("ReportView", () => {
     expect(
       screen.getByText("Cruces entre lo implícito y lo declarado"),
     ).toBeTruthy();
-    expect(screen.getAllByText("medido").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText("estimado")).toBeTruthy();
+    expect(screen.getAllByText("Medido").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Estimado")).toBeTruthy();
     expect(screen.getByText("Exploratoria")).toBeTruthy();
     expect(screen.getByText("ρ de Spearman")).toBeTruthy();
     expect(screen.getAllByText(/IAT café · Calidad/).length).toBe(2); // fila del IAT + fila del cruce

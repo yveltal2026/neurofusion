@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import type { ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { GgChart, VwChart } from "@/components/charts/price-charts";
@@ -444,6 +445,7 @@ export function SurveyResultsView({
 
   return (
     <div className="space-y-6">
+      <EvidenceBadge kind="measured" />
       <Card>
         <dl className="grid gap-4 sm:grid-cols-3">
           <Stat

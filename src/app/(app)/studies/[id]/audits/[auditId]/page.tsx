@@ -22,7 +22,7 @@ import {
   SeoAuditComparison,
 } from "@/tools/seo/ui/diagnostic-view";
 
-export const metadata = { title: "Auditoría SEO · NeuroFusion" };
+export const metadata = { title: "Auditoría SEO" };
 // La redacción del plan con IA puede tardar.
 export const maxDuration = 120;
 

@@ -128,15 +128,15 @@ function draw(ctx: CanvasRenderingContext2D, mode: ViewMode, aois: Aoi[], select
     for (const a of aois) {
       const [x, y, w, h] = px(a.box);
       const isSel = a.id === selected;
-      ctx.strokeStyle = isSel ? "#E69F00" : "rgba(0,114,178,0.9)";
+      ctx.strokeStyle = isSel ? "#FFB000" : "rgba(20,17,12,0.9)";
       ctx.lineWidth = (isSel ? 4 : 2) * s;
       ctx.strokeRect(x, y, w, h);
-      label(`${a.id} ${a.label}`, x, y, isSel ? "#B26B00" : "rgba(0,90,140,0.9)");
+      label(`${a.id} ${a.label}`, x, y, isSel ? "#B26B00" : "rgba(20,17,12,0.9)");
     }
     if (draft) {
       const [x, y, w, h] = px(draft);
       ctx.setLineDash([6 * s, 4 * s]);
-      ctx.strokeStyle = "#E69F00";
+      ctx.strokeStyle = "#FFB000";
       ctx.lineWidth = 2 * s;
       ctx.strokeRect(x, y, w, h);
       ctx.setLineDash([]);
@@ -159,7 +159,7 @@ function ColdZoneNotes({ cold, total }: { cold: ColdZone[]; total: number }) {
     <ul className="space-y-1 text-sm">
       {cold.map(({ aoi, level }) => (
         <li key={aoi.id}>
-          <span className={`font-medium ${level === "blind" ? "text-[#D55E00]" : "text-[#B26B00]"}`}>{level === "blind" ? "Zona ciega" : "Baja atención"}</span> · {aoi.label} ·{" "}
+          <span className={`font-medium ${level === "blind" ? "text-danger" : "text-accent-ink"}`}>{level === "blind" ? "Zona ciega" : "Baja atención"}</span> · {aoi.label} ·{" "}
           <span className="text-muted">
             importancia {aoi.importance}/5, atención {Math.round(aoi.attention * 100)} %
           </span>
@@ -412,7 +412,7 @@ export function AttentionViewer({
   return (
     <div className="space-y-3">
       {showControls ? (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 shadow-2xs print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 shadow-2xs print:hidden">
           <div className="flex items-center gap-2">
             <label htmlFor="viewer-mode-select" className="text-xs font-semibold text-muted">
               Capa:
@@ -422,7 +422,7 @@ export function AttentionViewer({
               value={mode}
               onChange={(e) => setMode(e.target.value as ViewMode)}
               aria-label="Capa sobre la imagen"
-              className="h-8 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              className="min-h-11 rounded-md border border-control bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
             >
               {MODES.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -438,7 +438,7 @@ export function AttentionViewer({
               onClick={() => setFullscreen(true)}
               title="Ver a pantalla completa"
               aria-label="Fullscreen"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
             >
               <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -450,7 +450,7 @@ export function AttentionViewer({
               onClick={exportPng}
               title="Descargar imagen en PNG"
               aria-label="Descargar PNG"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
             >
               <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -672,7 +672,7 @@ export function AttentionViewer({
                   onClick={handleResetZoom}
                   title="Restablecer zoom al 100% (0)"
                   aria-label={`Nivel de zoom: ${Math.round(zoom * 100)}%`}
-                  className="min-w-12 px-1 text-center font-mono text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
+                  className="min-w-12 px-1 text-center text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
                 >
                   {Math.round(zoom * 100)}%
                 </button>

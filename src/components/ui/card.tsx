@@ -2,11 +2,11 @@ import type { HTMLAttributes } from "react";
 
 /** Contenedor con borde: sólo cuando agrupa una acción o un dato que debe leerse como una unidad. */
 export function Card({ className = "", ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={`rounded-lg border border-border bg-surface p-5 ${className}`} {...props} />;
+  return <div className={`rounded-panel border border-border bg-surface p-5 ${className}`} {...props} />;
 }
 
 /**
- * Bloque abierto (manual v4.1, cap. 11: «bloques abiertos sin cajas»): se separa del anterior con un
+ * Bloque abierto: se separa del anterior con un
  * filete y aire, no con una caja. Es el contenedor por defecto de las secciones de una pantalla.
  */
 export function Block({ className = "", ...props }: HTMLAttributes<HTMLElement>) {

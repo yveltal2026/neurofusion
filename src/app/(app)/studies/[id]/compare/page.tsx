@@ -10,7 +10,7 @@ import { loadVisualStudyPage } from "@/tools/visual/load";
 import { assetUrls, loadAssets } from "@/tools/visual/results";
 import { ScoreDots } from "@/tools/visual/ui/asset-panels";
 
-export const metadata = { title: "Comparativa · NeuroFusion" };
+export const metadata = { title: "Comparativa" };
 
 const KEYS = Object.keys(CRITERIA_LABEL) as (keyof typeof CRITERIA_LABEL)[];
 

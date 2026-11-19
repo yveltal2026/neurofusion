@@ -33,7 +33,7 @@ import { StudyReportView } from "@/tools/reports/ui/StudyReportView";
 import { VisualReportDashboard } from "@/tools/reports/ui/VisualReportDashboard";
 import { RefreshReportButton } from "@/tools/reports/ui/RefreshReportButton";
 
-export const metadata = { title: "Informe · Laboratorio Digital" };
+export const metadata = { title: "Informe" };
 export const maxDuration = 120;
 
 /** Informe imprimible (el navegador lo guarda como PDF). */

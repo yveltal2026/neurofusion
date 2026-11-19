@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/studies/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
   const { data } = await supabase.from("studies").select("name").eq("id", id).maybeSingle();
-  return { title: data?.name ? `${data.name} · NeuroFusion` : "Estudio · NeuroFusion" };
+  return { title: data?.name ? `${data.name}` : "Estudio" };
 }
 
 // La auditoría SEO en vivo y el análisis visual con IA se ejecutan desde esta página.

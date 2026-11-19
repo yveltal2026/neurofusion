@@ -1,88 +1,78 @@
 @import "tailwindcss";
 
-/*
- * Tokens de marca: FRSKO · familia Neuro (Manual de marca v4.1, octubre de 2026).
- * Dos modos de fondo: claro (crema, letras teal) y profundo (teal, letras crema).
- * NeuroFusion es un producto de la división Neuro: el morado de la familia es el color de acción
- * (botones, enlaces activos, selección, foco, series de datos) y sus tonos suaves tiñen superficies;
- * el teal sigue siendo el ancla de títulos y fondos profundos, y la menta queda como acento (≤10%).
- * Reglas del manual que no cambian: las letras del logo nunca se tiñen, el texto va siempre en color
- * sólido y sobre un degradado de Neuro no se escribe (el texto va sobre teal con resplandor).
- *
- * Contrastes verificados (WCAG 2.x), claro: crema sobre morado 6.5:1; morado sobre crema 6.5:1 y sobre
- * blanco 7.2:1. Profundo: teal oscuro sobre morado claro 4.9:1; morado claro sobre #062E30 4.9:1;
- * lila sobre teal #0A4A4C 6.3:1 y sobre #062E30 9.1:1.
- *
- * --primary / --primary-foreground los sobrescribe el corredor del IAT cuando un estudio
- * define un color propio (src/tools/iat/runner/Runner.tsx); por eso el botón principal sigue usándolos.
- */
 :root {
-  --background: #f6f4ec; /* crema */
-  --foreground: #17363a; /* tinta: texto corrido */
-  --heading: #0a4a4c; /* teal profundo: títulos y letras */
-  --surface: #ffffff;
-  --muted: #54706f; /* gris teal */
-  --border: #d9d5c6; /* línea */
-  --mint: #2ee0be; /* menta: acento (burbujas, avisos de novedad); nunca texto sobre claro */
-  --espuma: #d9f7ef;
-  --primary: #8511c9; /* acción: morado Neuro */
-  --primary-foreground: #f6f4ec;
-  --neuro: #8511c9; /* familia Neuro: burbuja grande */
-  --neuro-soft: #b57bea; /* familia Neuro: burbuja pequeña */
-  --neuro-ink: #8511c9; /* morado como texto o borde sobre fondo claro */
-  --neuro-deep: #4a0a73; /* morado hondo: énfasis fuerte, 12:1 sobre crema */
-  --control: #a755d4; /* borde de campos y controles: 3.9:1 sobre crema (WCAG 1.4.11 pide 3:1) */
-  /* Fondo profundo (encabezado, portada, acceso): teal con el resplandor de la familia por la esquina superior derecha. */
-  --deep: #0a4a4c;
-  --deep-2: #052b2e;
-  --on-deep: #f6f4ec;
-  --on-deep-muted: #b4cdc8; /* 6.0:1 sobre #0A4A4C */
-  --neuro-on-deep: #ddc2f7; /* lila: texto de acento sobre teal, 6.3:1 */
-  --success: #0b7a5b;
-  --warning: #9a6400;
-  --danger: #c2412d;
-  --danger-foreground: #ffffff;
-  /*
-   * Paleta categórica de gráficas (un matiz fijo por posición: el sitio principal siempre es
-   * el 1). Validada con el método dataviz contra la superficie de cada modo: en claro pasa
-   * todo (3:1 incluido); en oscuro el contraste queda < 3:1 sobre el teal, así que las
-   * gráficas llevan valores visibles y tabla de datos. La serie 1 es el morado de la familia.
-   */
-  --chart-1: #8511c9;
-  --chart-2: #c4501f;
-  --chart-3: #12825a;
-  --chart-4: #a86f00;
-  --chart-5: #c2457a;
-  --chart-6: #2a78d6;
+  color-scheme: light;
+  --background: #fff7e6;
+  --foreground: #14110c;
+  --heading: #14110c;
+  --surface: #fffbf1;
+  --surface-muted: #f5e9ce;
+  --muted: #5c564b;
+  --border: #d7c8ac;
+  --control: #92846c;
+  --primary: #ffb000;
+  --primary-foreground: #14110c;
+  --accent-ink: #7a3e12;
+  --focus: #7a3e12;
+  --deep: #0b0907;
+  --deep-2: #1b160f;
+  --on-deep: #fff7e6;
+  --on-deep-muted: #c6bba6;
+  --success: #2f6b3f;
+  --warning: #885200;
+  --danger: #b3261e;
+  --danger-foreground: #fff7e6;
+  --chart-1: #b66f00;
+  --chart-2: #7a3e12;
+  --chart-3: #846d43;
+  --chart-4: #5c564b;
+  --chart-5: #a6502e;
+  --chart-6: #40392d;
+  --glass: rgb(255 252 244 / 78%);
+  --glass-border: rgb(255 255 255 / 86%);
+  --glass-shadow: 0 26px 54px -30px rgb(150 96 0 / 35%);
+  --workspace: radial-gradient(ellipse at 100% 0%, #ffd478 0%, transparent 49%),
+    radial-gradient(ellipse at 0% 100%, #ffe3a4 0%, transparent 55%),
+    linear-gradient(135deg, #fff7e6, #fff2d1);
+  --deep-glow: radial-gradient(ellipse at 100% 0%, #3d2a06 0%, transparent 49%),
+    radial-gradient(ellipse at 0% 100%, #2e1708 0%, transparent 50%), #0b0907;
+  --ease-enfocar: cubic-bezier(.16, .84, .24, 1);
+  --duracion-micro: 160ms;
+  --duracion-corta: 360ms;
+  --duracion-media: 720ms;
+}
+
+@utility modo-profundo {
+  color-scheme: dark;
+  --background: #0b0907;
+  --foreground: #fff7e6;
+  --heading: #fff7e6;
+  --surface: #201b13;
+  --surface-muted: #302718;
+  --muted: #c6bba6;
+  --border: #4e4231;
+  --control: #91816a;
+  --accent-ink: #ffca67;
+  --focus: #ffca67;
+  --success: #9fe0b0;
+  --warning: #ffc562;
+  --danger: #ff9b92;
+  --danger-foreground: #14110c;
+  --chart-1: #ffb000;
+  --chart-2: #d9935a;
+  --chart-3: #b59a6a;
+  --chart-4: #bdb3a1;
+  --chart-5: #ef9a73;
+  --chart-6: #fff7e6;
+  --glass: rgb(39 30 18 / 78%);
+  --glass-border: rgb(255 247 230 / 16%);
+  --glass-shadow: 0 28px 50px -34px #000;
+  --workspace: var(--deep-glow);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #062e30;
-    --foreground: #dce9e4;
-    --heading: #f6f4ec;
-    --surface: #0a4a4c;
-    --muted: #9dbdb8;
-    --border: #1b6164;
-    --primary: #b57bea;
-    --primary-foreground: #062e30;
-    --neuro: #b57bea; /* sobre fondo profundo, la familia usa sus tonos claros */
-    --neuro-soft: #ddc2f7;
-    --neuro-ink: #ddc2f7;
-    --neuro-deep: #ddc2f7;
-    --control: #9a7fba; /* 4.2:1 sobre #062E30 */
-    --deep: #041f21;
-    --deep-2: #031516;
-    --success: #5be0b4;
-    --warning: #f8c766;
-    --danger: #ff9a85;
-    --danger-foreground: #062e30;
-    --chart-1: #b57bea;
-    --chart-2: #d95926;
-    --chart-3: #199e70;
-    --chart-4: #c98500;
-    --chart-5: #d55181;
-    --chart-6: #3987e5;
+    @apply modo-profundo;
   }
 }
 
@@ -91,225 +81,209 @@
   --color-foreground: var(--foreground);
   --color-heading: var(--heading);
   --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-mint: var(--mint);
-  --color-espuma: var(--espuma);
-  --color-neuro: var(--neuro);
-  --color-neuro-soft: var(--neuro-soft);
-  --color-neuro-ink: var(--neuro-ink);
-  --color-neuro-deep: var(--neuro-deep);
+  --color-accent-ink: var(--accent-ink);
   --color-control: var(--control);
-  --color-neuro-wash: color-mix(in srgb, var(--neuro) 7%, var(--background));
-  --color-neuro-tint: color-mix(in srgb, var(--neuro) 14%, var(--background));
   --color-deep: var(--deep);
   --color-deep-2: var(--deep-2);
   --color-on-deep: var(--on-deep);
   --color-on-deep-muted: var(--on-deep-muted);
-  --color-neuro-on-deep: var(--neuro-on-deep);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
-  /* next/font inyecta --font-poppins y --font-jakarta en <html> (src/app/layout.tsx). */
-  --font-sans: var(--font-jakarta), "Helvetica Neue", Arial, system-ui, sans-serif;
-  --font-display: var(--font-poppins), "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Nombres heredados de las clases usadas por los módulos y corredores. */
+  --color-neuro: var(--neuro, var(--primary));
+  --color-neuro-soft: color-mix(in srgb, var(--primary) 50%, var(--surface));
+  --color-neuro-ink: var(--neuro-ink, var(--accent-ink));
+  --color-neuro-deep: var(--accent-ink);
+  --color-neuro-on-deep: #ffca67;
+  --color-neuro-wash: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  --color-neuro-tint: color-mix(in srgb, var(--primary) 15%, var(--surface));
+  --color-mint: var(--success);
+  --color-espuma: var(--on-deep);
+  --font-sans: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
 }
 
 @theme {
-  /* Escala de texto de la interfaz: nada por debajo de 13 px (manual v4.1, cap. 9) y el texto de apoyo a 15 px. */
-  --text-xs: 0.8125rem;
+  --text-xs: .8125rem;
   --text-xs--line-height: 1.5;
-  --text-sm: 0.9375rem;
+  --text-sm: .9375rem;
   --text-sm--line-height: 1.55;
-  /* Formas: tarjetas 18 px, campos 12 px, botones y etiquetas en píldora. */
-  --radius-md: 0.75rem;
+  --radius-md: .75rem;
   --radius-lg: 1.125rem;
-  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-bubble: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --radius-panel: 1.625rem;
+  --ease-bubble: cubic-bezier(.16, .84, .24, 1);
 }
 
 @layer base {
-  :root {
-    /* Color del anillo de foco: morado sobre claro, lila sobre profundo (3:1 mínimo en ambos). */
-    --focus: var(--neuro-ink);
-  }
-
   body {
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
     font-size: 16px;
-    line-height: 1.6;
+    line-height: 1.55;
   }
 
-  /* Líquido de la familia Neuro (manual cap. 6): manchas difusas en las esquinas y centro casi sólido.
-     Va fijo detrás de todo para que no se corte con el alto de la página. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--neuro-soft) 16%, transparent) 0, transparent 36%),
-      radial-gradient(circle at 100% 62%, color-mix(in srgb, var(--neuro) 9%, transparent) 0, transparent 34%);
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-family: var(--font-display);
+  h1, h2, h3, h4 {
     color: var(--heading);
     text-wrap: balance;
-    letter-spacing: -0.012em;
+    letter-spacing: -.02em;
   }
 
-  /* El tabulado va en las cifras: tablas, datos y KPIs. */
-  table,
-  dl {
+  table, dl, time {
     font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    outline: 3px solid var(--focus);
-    outline-offset: 2px;
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--neuro) 26%, transparent);
+    background: #ffb000;
+    color: #14110c;
   }
-}
 
-/*
- * Modo profundo (manual cap. 1) dentro de una pantalla clara: fondo teal, letras crema y la familia
- * Neuro en sus tonos claros. Reescribe los tokens para que todo lo de adentro (títulos, texto, botones,
- * foco) se lea sin cambiar clases.
- */
-@utility modo-profundo {
-  --heading: #f6f4ec;
-  --foreground: #dce9e4;
-  --muted: var(--on-deep-muted);
-  --border: #1b6164;
-  --primary: #b57bea;
-  --primary-foreground: #062e30;
-  --neuro: #b57bea;
-  --neuro-soft: #ddc2f7;
-  --neuro-ink: #ddc2f7;
-  --focus: #ddc2f7;
-  color: var(--on-deep);
-}
-
-/*
- * Fondo profundo de la familia (manual cap. 6, «resplandor»): teal sólido y el color de Neuro entrando
- * por la esquina superior derecha. El texto queda sobre teal, lejos del resplandor (9:1 o más).
- */
-@utility bg-resplandor {
-  --heading: #f6f4ec;
-  --foreground: #dce9e4;
-  --muted: var(--on-deep-muted);
-  --border: #1b6164;
-  --primary: #b57bea;
-  --primary-foreground: #062e30;
-  --neuro: #b57bea;
-  --neuro-soft: #ddc2f7;
-  --neuro-ink: #ddc2f7;
-  --focus: #ddc2f7;
-  color: var(--on-deep);
-  background:
-    linear-gradient(to bottom, transparent 60%, var(--deep)),
-    radial-gradient(circle min(80vw, 640px) at 100% 0%, #b57bea99 0, transparent 100%),
-    radial-gradient(circle min(60vw, 440px) at 80% -12%, #8511c9dd 0, transparent 100%),
-    var(--deep);
-}
-
-/* Banda profunda sólida (sin resplandor): encabezados de trabajo. */
-@utility bg-profundo {
-  --heading: #f6f4ec;
-  --foreground: #dce9e4;
-  --muted: var(--on-deep-muted);
-  --border: #1b6164;
-  --primary: #b57bea;
-  --primary-foreground: #062e30;
-  --neuro: #b57bea;
-  --neuro-soft: #ddc2f7;
-  --neuro-ink: #ddc2f7;
-  --focus: #ddc2f7;
-  color: var(--on-deep);
-  background: var(--deep);
-}
-
-/* Entrada de la portada: sube 26 px y aparece; una sola vez. */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(26px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@utility animate-rise {
-  animation: rise 0.75s var(--ease-enter) both;
-  animation-delay: var(--rise-delay, 0s);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  .animate-rise {
-    animation: none;
-  }
-}
-
-/* Informes: impresión limpia (el navegador guarda como PDF). */
-@media print {
-  @page {
-    size: letter;
-    margin: 14mm;
-  }
-  header {
-    display: none;
-  }
-  body::before {
-    display: none;
-  }
-  body {
-    background: #fff;
-    color: #111;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
-
-/* Acento de marca en controles nativos (casillas, radios, deslizadores): el color de acción (Neuro).
-   Teal en el corredor del participante, que lo reescribe. La menta no alcanza 3:1 sobre crema. */
-@layer base {
-  input[type="checkbox"],
-  input[type="radio"],
-  input[type="range"],
-  progress {
+  input[type="checkbox"], input[type="radio"], input[type="range"], progress {
     accent-color: var(--primary);
   }
-}
 
-/* Controles nativos con área táctil mínima (WCAG 2.5.8: 24 × 24 px con su etiqueta). */
-@layer base {
-  input[type="checkbox"],
-  input[type="radio"] {
+  input[type="checkbox"], input[type="radio"] {
     width: 1.125rem;
     height: 1.125rem;
     flex-shrink: 0;
   }
-  label:has(> input[type="checkbox"]),
-  label:has(> input[type="radio"]) {
+
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) {
     min-height: 1.5rem;
+  }
+}
+
+/* Mantiene la paleta neutral de los ensayos existentes y el acento elegido por estudio. */
+@utility reaction-theme {
+  --background: #f6f4ec;
+  --surface: #fff;
+  --heading: #0a4a4c;
+  --foreground: #17363a;
+  --muted: #54706f;
+  --border: #d9d5c6;
+  --accent-ink: var(--heading);
+  @media (prefers-color-scheme: dark) {
+    --background: #062e30;
+    --surface: #0a4a4c;
+    --heading: #f6f4ec;
+    --foreground: #dce9e4;
+    --muted: #9dbdb8;
+    --border: #1b6164;
+  }
+}
+
+@utility bg-profundo {
+  @apply modo-profundo;
+  color: var(--foreground);
+  background: var(--deep);
+}
+
+@utility bg-resplandor {
+  @apply modo-profundo;
+  color: var(--foreground);
+  background: var(--deep-glow);
+}
+
+@utility workspace-background {
+  background: var(--workspace);
+}
+
+@utility glass-panel {
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+@utility estimated-panel {
+  border: 1px solid color-mix(in srgb, var(--primary) 60%, var(--border));
+  box-shadow: 0 0 30px -14px var(--primary);
+}
+
+@utility page-title {
+  font-size: clamp(1.875rem, 3vw, 2.375rem);
+  font-weight: 800;
+  font-stretch: 110%;
+  line-height: 1.1;
+}
+
+progress.brand-progress {
+  display: block;
+  appearance: none;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.brand-progress::-webkit-progress-bar {
+  background: var(--surface-muted);
+}
+
+.brand-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.brand-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+@keyframes aesteros-focus {
+  from { opacity: 0; filter: blur(16px); }
+  to { opacity: 1; filter: none; }
+}
+
+@utility animate-rise {
+  animation: aesteros-focus var(--duracion-media) var(--ease-enfocar) both;
+  animation-delay: var(--rise-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-rise { animation: none; }
+}
+
+@media print {
+  @page { size: letter; margin: 14mm; }
+  :root {
+    color-scheme: light;
+    --background: #fff;
+    --foreground: #14110c;
+    --heading: #14110c;
+    --surface: #fff;
+    --surface-muted: #f5f2eb;
+    --muted: #5c564b;
+    --border: #d7c8ac;
+    --accent-ink: #7a3e12;
+    --chart-1: #946000;
+    --chart-2: #7a3e12;
+    --chart-3: #846d43;
+    --chart-4: #5c564b;
+    --chart-5: #a6502e;
+    --chart-6: #40392d;
+  }
+  body {
+    background: #fff;
+    color: #14110c;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .workspace-background, .glass-panel, .estimated-panel {
+    background: #fff;
+    box-shadow: none;
+    backdrop-filter: none;
   }
 }

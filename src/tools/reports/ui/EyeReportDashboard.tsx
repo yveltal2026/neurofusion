@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import Link from "next/link";
 import { Alert } from "@/components/ui/alert";
 import { Block } from "@/components/ui/card";
@@ -29,7 +30,7 @@ export function EyeReportDashboard({
         compra.
       </Alert>
       <Block className="space-y-3">
-        <h2 className="text-xl font-semibold">Calidad de la muestra</h2>
+        <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">Calidad de la muestra</h2><EvidenceBadge kind="measured" /></div>
         <ReportBars
           rows={[
             {
@@ -71,7 +72,7 @@ export function EyeReportDashboard({
         </EmptyState>
       ) : null}
       {snapshot.assets.map((asset) => (
-        <Block key={asset.id} className="space-y-4 break-inside-avoid">
+        <Block key={asset.id} className="glass-panel space-y-4 break-inside-avoid rounded-panel p-5">
           <div className="flex flex-col gap-4 sm:flex-row">
             {/* La imagen privada ya dispone de una URL firmada; se muestra completa. */}
             {imageUrls[asset.id] ? (

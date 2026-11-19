@@ -118,8 +118,8 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
           ).map(([value, title, desc]) => (
             <label
               key={value}
-              className={`cursor-pointer rounded-lg border p-4 transition ${
-                mediaType === value ? "border-primary bg-primary/5" : "border-border"
+              className={`cursor-pointer rounded-lg border p-4 transition focus-within:outline-2 focus-within:outline-accent-ink ${
+                mediaType === value ? "border-primary bg-neuro-tint" : "border-border"
               }`}
             >
               <input

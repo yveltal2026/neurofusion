@@ -1,3 +1,4 @@
+import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Alert } from "@/components/ui/alert";
 import { Block } from "@/components/ui/card";
 import type { SavedReport } from "../load";
@@ -22,8 +23,8 @@ export function AiReportPanel({
   const report = saved?.result.report;
   return (
     <section aria-label="Reporte breve con IA" className="space-y-4">
-      <Block className="space-y-3">
-        <h2 className="text-xl font-semibold">Reporte breve con IA</h2>
+      <Block className="glass-panel estimated-panel space-y-3 rounded-panel p-5">
+        <div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-semibold">Reporte breve con IA</h2><EvidenceBadge kind="estimated" /></div>
         {loadError ? <Alert tone="warning">{loadError}</Alert> : null}
         <p className="text-sm text-muted">
           Resumen, hallazgos y recomendaciones a partir de los resultados

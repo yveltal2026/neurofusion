@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
 import { NewVisualStudyForm } from "@/tools/visual/ui/new-study-form";
 
-export const metadata = { title: "Nuevo análisis visual · NeuroFusion" };
+export const metadata = { title: "Nuevo análisis visual" };
 
 export default async function NewVisualStudyPage({ params, searchParams }: PageProps<"/projects/[id]/studies/new/visual">) {
   const { id } = await params;
