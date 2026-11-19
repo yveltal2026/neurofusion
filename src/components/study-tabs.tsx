@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/brand/icon";
+import { getStudyTool } from "@/tools/registry";
 
 type TabKey = "overview" | "sessions" | "data" | "analysis" | "compare" | "ratings" | "results" | "report" | "settings" | "responses";
 interface Tab {
@@ -54,19 +55,48 @@ const TABS = {
 
 export type TabsVariant = keyof typeof TABS;
 
+export function studyTabsVariant(study: { tool_type: string; config: unknown }): TabsVariant {
+  switch (getStudyTool(study)?.type) {
+    case "eyetracking": return "eye";
+    case "iat_variant": return "variant";
+    case "survey": return "survey";
+    case "seo": return "seo";
+    case "visual": {
+      const config = study.config;
+      return config !== null && typeof config === "object" && "mode" in config && config.mode === "journey"
+        ? "journey"
+        : "pieces";
+    }
+    default: return "iat";
+  }
+}
+
+export function studyTabForRoute(section: string | undefined, view?: string): TabKey {
+  switch (section) {
+    case "eye": return view === "sessions" ? "sessions" : "results";
+    case "data":
+    case "analysis":
+    case "compare":
+    case "ratings":
+    case "results":
+    case "report":
+    case "settings":
+    case "responses": return section;
+    default: return "overview";
+  }
+}
+
 export function StudyTabs({ id, active, variant = "iat" }: { id: string; active: TabKey; variant?: TabsVariant }) {
   return (
-    <nav aria-label="Secciones del estudio" className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-full bg-surface-muted p-1 print:hidden">
+    <nav aria-label="Secciones del estudio" className="space-y-0.5">
       {TABS[variant].map((tab) => (
         <Link
           key={tab.key}
           href={tab.href(id)}
           aria-current={tab.key === active ? "page" : undefined}
-          className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors duration-150 focus-visible:-outline-offset-2 motion-reduce:transition-none ${
-            tab.key === active ? "bg-surface text-heading shadow-xs" : "text-muted hover:bg-surface hover:text-heading"
-          }`}
+          className="workspace-nav-link"
         >
-          <Icon name={tab.icon} className="size-5" />
+          <Icon name={variant === "eye" && tab.key === "results" ? "eye" : tab.icon} className="size-5" />
           {tab.label}
         </Link>
       ))}

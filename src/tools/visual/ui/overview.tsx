@@ -101,8 +101,6 @@ export async function VisualOverview({
         <StudyHeader
           study={study}
           projectName={projectName}
-          active="overview"
-          variant="pieces"
         />
         <Alert tone="warning">
           La configuración guardada de este estudio no es válida.
@@ -152,8 +150,6 @@ export async function VisualOverview({
         <StudyHeader
           study={study}
           projectName={projectName}
-          active="overview"
-          variant="pieces"
           subtitle="Piezas gráficas"
         />
         {created ? (
@@ -198,8 +194,6 @@ export async function VisualOverview({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="journey"
         subtitle="Journey web + IFD"
       />
       {created ? (

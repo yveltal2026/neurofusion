@@ -1,7 +1,7 @@
 # COG-20261119-redisenio-aesteros — Rediseño de la interfaz
 
 - Fecha: 19 de noviembre de 2026.
-- Estado: implementado en `feat/redisenio-visual`, [PR #27](https://github.com/yveltal2026/neurofusion/pull/27). Revisión del preview del tema y validación con cámara física pendientes.
+- Estado: primera entrega integrada en `main` mediante [PR #27](https://github.com/yveltal2026/neurofusion/pull/27), merge `a28ec45`. La navegación lateral se implementó en `feat/redisenio-visual`. Su integración en `main` y su despliegue quedan pendientes.
 - Tipo: mejora de interfaz y actualización de marca.
 - Alcance: plataforma principal Aesteros (repositorio `yveltal2026/neurofusion`, base `76e146b`).
 
@@ -11,7 +11,15 @@ La interfaz incorpora el kit Aesteros v3.0: marca y favicon oficiales, Archivo v
 
 El piloto de seguimiento ocular reúne ficha, invitación y estímulos. El editor de áreas separa imagen y controles y permite descartar cambios locales. Miradas y Sesiones tienen accesos propios, con las descargas y exclusiones existentes. Video, análisis visual, recorrido web, SEO, asociación implícita, variantes, encuestas, baterías, informes y calculadora comparten el sistema visual y usan las vistas y datos disponibles.
 
-El espacio del investigador permite elegir Claro, Profundo o Sistema desde el encabezado. La cookie de apariencia se lee al renderizar el espacio de trabajo y los activos de marca siguen la selección. Las ligas del participante conservan su apariencia por dispositivo y los informes imprimen en claro.
+El espacio del investigador permite elegir Claro, Profundo o Sistema desde el pie de la barra lateral. La cookie de apariencia se lee al renderizar el espacio de trabajo y los activos de marca siguen la selección. Las ligas del participante conservan su apariencia por dispositivo y los informes imprimen en claro.
+
+## Segunda iteración: navegación lateral
+
+El escritorio tiene una barra lateral fija para Proyectos y Calculadora de muestra. En pantallas estrechas los enlaces se abren desde Menú. Tema y cuenta quedan en un solo lugar. Dentro de un estudio, el panel contextual muestra el proyecto, el selector cuando hay otros estudios en ese proyecto y las secciones de la herramienta. Miradas y Sesiones conservan su selección al alternar entre ambas vistas de la misma ruta.
+
+El marco aplica superficies sólidas en Claro y Profundo a proyectos, formularios, baterías, calculadora, estudios e informes. Proyectos usa tarjetas compactas y abre el formulario de alta en un diálogo. En el resumen de mirada, Participación muestra respuestas y cupo cuando existe, con acceso directo a la liga cuando el estudio está publicado y su estímulo está configurado.
+
+Los layouts de `src/app/(app)` reutilizan `src/components/workspace-appearance.tsx`. El contexto y los enlaces de estudio se resuelven en `src/components/study-navigation.tsx`, `active-study-tabs.tsx` y `study-tabs.tsx` con los permisos existentes del investigador. Los estilos del marco viven en `src/app/globals.css`. Para replicar, aplicar los cambios visuales de esta rama y verificar la navegación por herramienta y la impresión en el entorno de destino. No hay migraciones ni nuevas variables.
 
 ## Decisiones de la entrega de interfaz
 
@@ -40,3 +48,6 @@ La réplica en universidades requiere adaptar el marco visual a cada identidad y
 ## Validación y recuperación
 
 Playwright comprobó seis recorridos del laboratorio en escritorio y móvil con calibración simulada. Chromium cubrió acceso, estudios existentes y nuevos, carga de imágenes, liga de participante, edición de áreas, miradas, sesiones y exportación CSV con un servicio local simulado. Se capturaron ocho vistas a 1440, 768 y 390 px en claro y profundo, y la vista de miradas se verificó en impresión. Lint y tipos aprobados. El selector se verificó en Playwright con Chromium a 1440, 768 y 390 px, con cambios de apariencia del dispositivo, persistencia tras navegar y recargar, render inicial con JavaScript desactivado, foco y versión imprimible. Las pruebas usaron autenticación simulada. El acceso y los datos de producción, el almacenamiento externo y la cámara física requieren verificación en destino. Para revertir, revertir el commit de interfaz. La entrega no introduce migraciones ni requiere revertir datos.
+
+
+En la segunda iteración se verificaron TypeScript, ESLint, compilación de producción y 1 318 pruebas automatizadas. Chromium con Supabase simulado cubrió acceso, alta de proyectos, pantalla de mirada, navegación por consultas, menú móvil por teclado, temas e impresión. Se revisó el ancho a 390, 768, 1024 y 1440 px. Queda pendiente probar la iteración en un despliegue conectado a Supabase.

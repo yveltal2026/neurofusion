@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
-import Link from "next/link";
-import { Logo } from "@/components/brand/logo";
 import { SetupNotice } from "@/components/setup-notice";
 import { Button } from "@/components/ui/button";
 import { WorkspaceAppearance } from "@/components/workspace-appearance";
-import { WorkspaceNav } from "@/components/workspace-nav";
 import { signOut } from "@/lib/auth/actions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -29,27 +26,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <WorkspaceAppearance
       initialTheme={theme}
-      navigation={
-        <>
-          <Link
-            href="/projects"
-            aria-label="Aesteros, ir a proyectos"
-            className="inline-flex min-h-11 shrink-0 items-center"
-          >
-            <Logo width={128} decorative />
-          </Link>
-          <WorkspaceNav />
-        </>
-      }
       account={
         <>
           {user?.email ? (
-            <span className="hidden max-w-52 truncate text-sm text-muted lg:inline">
+            <span className="min-w-0 flex-1 truncate text-xs" title={user.email}>
               {user.email}
             </span>
           ) : null}
-          <form action={signOut}>
-            <Button type="submit" variant="ghost">
+          <form action={signOut} className="ml-auto shrink-0">
+            <Button type="submit" variant="ghost" className="px-2">
               Salir
             </Button>
           </form>

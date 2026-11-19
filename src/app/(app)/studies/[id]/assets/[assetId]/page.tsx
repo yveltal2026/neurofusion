@@ -48,7 +48,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
   if (config.mode === "pieces" && config.eyeTracking) {
     return (
       <div className="space-y-6">
-        <StudyHeader study={study} projectName={projectName} active="overview" variant="eye" subtitle={row.title} />
+        <StudyHeader study={study} projectName={projectName} subtitle={row.title} />
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Volver a las imágenes del estudio
         </Link>
@@ -78,7 +78,6 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
     );
   }
 
-  const variant = config.mode === "journey" ? "journey" : "pieces";
   const placementSpec = getPlacement(row.placement);
   const imgData = { width: row.width, height: row.height, bytes: row.bytes, placement: row.placement };
   const fmtStatus = formatStatus(imgData);
@@ -211,8 +210,6 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant={variant}
         subtitle={site && task ? `${site.name} · ${task.id} ${task.name}` : row.title}
       />
 

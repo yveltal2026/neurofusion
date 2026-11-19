@@ -56,8 +56,6 @@ export default async function ResponsesPage({
       <StudyHeader
         study={study}
         projectName={project?.name}
-        active="responses"
-        variant="variant"
         actions={
           <Link
             href={`/api/studies/${id}/export/variant_results`}

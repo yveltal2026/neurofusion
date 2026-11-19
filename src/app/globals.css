@@ -31,9 +31,6 @@
   --glass: rgb(255 252 244 / 78%);
   --glass-border: rgb(255 255 255 / 86%);
   --glass-shadow: 0 26px 54px -30px rgb(150 96 0 / 35%);
-  --workspace: radial-gradient(ellipse at 100% 0%, #ffd478 0%, transparent 49%),
-    radial-gradient(ellipse at 0% 100%, #ffe3a4 0%, transparent 55%),
-    linear-gradient(135deg, #fff7e6, #fff2d1);
 }
 
 :root {
@@ -71,7 +68,6 @@
   --glass: rgb(39 30 18 / 78%);
   --glass-border: rgb(255 247 230 / 16%);
   --glass-shadow: 0 28px 50px -34px #000;
-  --workspace: var(--deep-glow);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -210,11 +206,6 @@
   background: var(--deep-glow);
 }
 
-@utility workspace-background {
-  background: var(--workspace);
-  color: var(--foreground);
-}
-
 @utility glass-panel {
   border: 1px solid var(--glass-border);
   background: var(--glass);
@@ -296,9 +287,85 @@ progress.brand-progress {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .workspace-background, .glass-panel, .estimated-panel {
+  .glass-panel, .estimated-panel {
     background: #fff;
     box-shadow: none;
     backdrop-filter: none;
+  }
+}
+
+@utility workspace-nav-link {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: .625rem;
+  border-radius: .55rem;
+  padding: .375rem .625rem;
+  color: var(--on-deep-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+
+  &:hover {
+    background: var(--surface-muted);
+    color: var(--on-deep);
+  }
+
+  &[aria-current] {
+    background: color-mix(in srgb, var(--primary) 16%, var(--deep));
+    color: #ffdc91;
+  }
+
+  &[aria-current="page"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+}
+
+.workspace-frame {
+  flex: 1;
+  min-height: 100dvh;
+  color: var(--foreground);
+  background: var(--background);
+  --glass: var(--surface);
+  --glass-border: var(--border);
+  --glass-shadow: none;
+}
+
+.workspace-frame .glass-panel {
+  backdrop-filter: none;
+}
+
+.workspace-sidebar {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+}
+
+@media screen and (min-width: 64rem) {
+  .workspace-frame {
+    display: grid;
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+  }
+
+  .workspace-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+}
+
+@media print {
+  .workspace-frame {
+    min-height: 0;
+    background: #fff;
+  }
+
+  .workspace-sidebar {
+    display: none;
   }
 }

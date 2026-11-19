@@ -62,7 +62,6 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
   const assets = await loadAssets(supabase, id);
   const urls = await assetUrls(supabase, assets.map((a) => a.row.storage_path), "view");
   const today = new Date().toLocaleDateString("es-MX", { dateStyle: "long", timeZone: "America/Mexico_City" });
-  const variant = config.mode === "journey" ? "journey" : "pieces";
 
   const disclaimer = (
     <Card className="space-y-1 text-xs text-muted break-inside-avoid">
@@ -80,7 +79,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
     const saved = await loadSavedReport(supabase, id, "visual");
     return (
       <div className="space-y-8">
-        <StudyHeader study={study} projectName={projectName} active="report" variant={variant} subtitle={today} actions={<><RefreshReportButton /><PrintButton /></>} />
+        <StudyHeader study={study} projectName={projectName} subtitle={today} actions={<><RefreshReportButton /><PrintButton /></>} />
         <Card className="space-y-1 text-sm">
           <p>
             <span className="text-muted">Objetivo:</span> {config.objective}
@@ -212,7 +211,7 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
 
   return (
     <div className="space-y-8">
-      <StudyHeader study={study} projectName={projectName} active="report" variant={variant} subtitle={today} actions={<PrintButton />} />
+      <StudyHeader study={study} projectName={projectName} subtitle={today} actions={<PrintButton />} />
       <Card className="space-y-1 text-sm">
         <p>
           <span className="text-muted">Objetivo:</span> {config.objective}

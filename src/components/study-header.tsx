@@ -2,26 +2,21 @@ import type { ReactNode } from "react";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StudyStatus } from "@/lib/db/types";
-import { getTool } from "@/tools/registry";
-import { StudyTabs, type TabsVariant } from "./study-tabs";
+import { getStudyTool } from "@/tools/registry";
 
-/** Encabezado común de las páginas de un estudio (enlace al proyecto, título, pestañas). */
+/** Encabezado común de las páginas de un estudio (proyecto, título y acciones). */
 export function StudyHeader({
   study,
   projectName,
-  active,
-  variant,
   subtitle,
   actions,
 }: {
-  study: { id: string; project_id: string; name: string; tool_type: string; status?: StudyStatus };
+  study: { id: string; project_id: string; name: string; tool_type: string; config: unknown; status?: StudyStatus };
   projectName?: string | null;
-  active: Parameters<typeof StudyTabs>[0]["active"];
-  variant: TabsVariant;
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
-  const tool = getTool(variant === "eye" ? "eyetracking" : study.tool_type);
+  const tool = getStudyTool(study);
   const status = study.status && { published: "Publicado", closed: "Cerrado", draft: "Borrador" }[study.status];
   return (
     <div className="space-y-3">
@@ -39,7 +34,6 @@ export function StudyHeader({
         </div>
         {actions ? <div className="flex flex-wrap gap-2 print:hidden">{actions}</div> : null}
       </div>
-      <StudyTabs id={study.id} active={active} variant={variant} />
     </div>
   );
 }

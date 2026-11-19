@@ -1,7 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { createContext, useContext, useId, useRef, useState, type ReactNode } from "react";
+import { Icon } from "@/components/brand/icon";
+import { Logo } from "@/components/brand/logo";
+import { WorkspaceNav } from "@/components/workspace-nav";
 import { WorkspaceThemeContext } from "./workspace-theme-context";
 import {
   readWorkspaceTheme,
@@ -9,14 +13,17 @@ import {
   type WorkspaceTheme,
 } from "@/lib/workspace-theme";
 
+const WorkspaceControls = createContext<{
+  account: ReactNode;
+  selectTheme: (value: string) => void;
+}>({ account: null, selectTheme: () => {} });
+
 export function WorkspaceAppearance({
   initialTheme,
-  navigation,
   account,
   children,
 }: {
   initialTheme: WorkspaceTheme;
-  navigation: ReactNode;
   account: ReactNode;
   children: ReactNode;
 }) {
@@ -33,43 +40,111 @@ export function WorkspaceAppearance({
 
   return (
     <WorkspaceThemeContext.Provider value={theme}>
-      <div
-        data-workspace-theme={theme}
-        className="workspace-background flex min-h-dvh flex-1 flex-col"
+      <WorkspaceControls.Provider value={{ account, selectTheme }}>
+        <div data-workspace-theme={theme} className="flex min-h-dvh flex-1 flex-col print:min-h-0">
+          {children}
+        </div>
+      </WorkspaceControls.Provider>
+    </WorkspaceThemeContext.Provider>
+  );
+}
+
+export function WorkspaceFrame({ studyNav, children }: {
+  studyNav?: ReactNode;
+  children: ReactNode;
+}) {
+  const theme = useContext(WorkspaceThemeContext);
+  const { account, selectTheme } = useContext(WorkspaceControls);
+  const pathname = usePathname();
+  const panelId = useId();
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const [openFor, setOpenFor] = useState<string | null>(null);
+  const menuOpen = openFor === pathname;
+
+  return (
+    <div className="workspace-frame">
+      <a
+        href="#workspace-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 print:hidden"
       >
-        <a
-          href="#workspace-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-surface focus:px-4 focus:py-2"
+        Ir al contenido
+      </a>
+      <aside
+        aria-label="Barra lateral"
+        className="workspace-sidebar bg-profundo print:hidden"
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && menuOpen) {
+            setOpenFor(null);
+            menuButton.current?.focus();
+          }
+        }}
+      >
+        <div className="flex min-h-17 items-center justify-between gap-3 px-4 lg:px-5">
+          <Link
+            href="/projects"
+            aria-label="Aesteros, ir a proyectos"
+            className="inline-flex min-h-11 shrink-0 items-center"
+            onClick={() => setOpenFor(null)}
+          >
+            <Logo width={132} tone="deep" decorative />
+          </Link>
+          <button
+            ref={menuButton}
+            type="button"
+            aria-controls={panelId}
+            aria-expanded={menuOpen}
+            onClick={() => setOpenFor(menuOpen ? null : pathname)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-sm font-semibold text-on-deep hover:bg-surface lg:hidden"
+          >
+            <span aria-hidden="true" className="grid w-4 gap-1">
+              <span className="h-px bg-current" />
+              <span className="h-px bg-current" />
+              <span className="h-px bg-current" />
+            </span>
+            Menú
+          </button>
+        </div>
+        <div
+          id={panelId}
+          className={`${menuOpen ? "flex" : "hidden"} min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-3 pt-2 pb-4 lg:flex`}
+          onClick={(event) => {
+            if (event.target instanceof Element && event.target.closest("a[href]")) {
+              const disclosure = event.target.closest("details");
+              if (disclosure) disclosure.open = false;
+              if (menuOpen) setOpenFor(null);
+            }
+          }}
         >
-          Ir al contenido
-        </a>
-        <header className="border-b border-border/50 bg-surface/80 print:hidden">
-          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-x-4 px-4 py-2 sm:px-8">
-            {navigation}
-            <div className="ml-auto flex items-center gap-2">
-              <label className="inline-flex items-center">
-                <span className="sr-only">Tema de apariencia</span>
-                <select
-                  className="min-h-11 rounded-full border border-control bg-surface py-1.5 ps-3 text-sm font-semibold text-heading hover:bg-surface-muted"
-                  value={theme}
-                  onChange={(event) => selectTheme(event.currentTarget.value)}
-                >
-                  <option value="light">Claro</option>
-                  <option value="dark">Profundo</option>
-                  <option value="system">Sistema</option>
-                </select>
-              </label>
+          <WorkspaceNav />
+          {studyNav}
+          <div className="mt-auto space-y-3 border-t border-border pt-3">
+            <label className="flex min-h-11 items-center justify-between gap-2 px-2 text-sm text-on-deep-muted">
+              Tema
+              <select
+                aria-label="Tema de apariencia"
+                className="min-h-11 rounded-md border border-control bg-surface px-2 text-sm font-semibold text-heading hover:bg-surface-muted"
+                value={theme}
+                onChange={(event) => selectTheme(event.currentTarget.value)}
+              >
+                <option value="light">Claro</option>
+                <option value="dark">Profundo</option>
+                <option value="system">Sistema</option>
+              </select>
+            </label>
+            <div className="flex min-w-0 items-center gap-2 px-2 text-sm text-on-deep-muted">
+              <Icon name="user" className="size-5" />
               {account}
             </div>
           </div>
-        </header>
-        <main
-          id="workspace-content"
-          className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-4 pt-6 pb-12 sm:px-8 md:pt-8"
-        >
-          {children}
-        </main>
-      </div>
-    </WorkspaceThemeContext.Provider>
+        </div>
+      </aside>
+      <main
+        id="workspace-content"
+        tabIndex={-1}
+        className="mx-auto w-full min-w-0 max-w-[1440px] px-4 pt-6 pb-12 sm:px-8 lg:pt-10 print:max-w-none print:p-0"
+      >
+        {children}
+      </main>
+    </div>
   );
 }

@@ -42,39 +42,24 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Breadcrumbs items={[{ label: "Proyectos", href: "/projects" }]} />
-          <h1 className="mt-1 text-3xl font-bold tracking-tight">{project.name}</h1>
+          <h1 className="page-title mt-2 break-words">{project.name}</h1>
           {project.description ? <p className="mt-1 text-sm text-muted">{project.description}</p> : null}
         </div>
-        <form action={deleteProject}>
-          <input type="hidden" name="id" value={project.id} />
-          <Button type="submit" variant="ghost" className="text-danger">
-            <Icon name="trash" className="size-5" />
-            Eliminar proyecto
-          </Button>
-        </form>
+        <Link href={`/projects/${project.id}/studies/new`} className={buttonClass()}>
+          <Icon name="plus" className="size-5" />
+          Nuevo estudio
+        </Link>
       </div>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Estudios</h2>
-          <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
-            <Icon name="plus" className="size-5" />
-            Nuevo estudio
-          </Link>
-        </div>
+        <h2 className="text-xl font-semibold">Estudios</h2>
         {(studies ?? []).length === 0 ? (
           <EmptyState
             icon="layers"
             title="Este proyecto aún no tiene estudios"
-            action={
-              <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("secondary")}>
-                <Icon name="plus" className="size-5" />
-                Crear el primer estudio
-              </Link>
-            }
           >
             Elige una herramienta (IAT, encuesta, SEO o análisis visual) y arma tu primer estudio.
           </EmptyState>
@@ -126,6 +111,13 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           </RowList>
         )}
       </section>
+      <form action={deleteProject} className="border-t border-border pt-4">
+        <input type="hidden" name="id" value={project.id} />
+        <Button type="submit" variant="ghost" className="text-danger">
+          <Icon name="trash" className="size-5" />
+          Eliminar proyecto
+        </Button>
+      </form>
     </div>
   );
 }

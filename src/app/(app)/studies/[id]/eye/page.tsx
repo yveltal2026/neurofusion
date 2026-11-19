@@ -108,8 +108,6 @@ export default async function EyeResultsPage({ params, searchParams }: PageProps
       <StudyHeader
         study={study}
         projectName={project?.name}
-        active={showSessions ? "sessions" : "results"}
-        variant="eye"
         subtitle={isVideo ? "Miradas y Facial Coding en video" : "Miradas medidas con webcam"}
         actions={<a href={`/api/studies/${id}/eye/export`} className={buttonClass("secondary")}>Descargar lecturas CSV</a>}
       />

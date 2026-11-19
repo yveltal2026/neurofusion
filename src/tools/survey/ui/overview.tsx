@@ -42,8 +42,6 @@ export function SurveyOverview({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="survey"
         subtitle={STATUS_LABEL[study.status]}
       />
 

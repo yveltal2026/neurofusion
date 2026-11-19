@@ -2,7 +2,6 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CopyLink } from "@/components/copy-link";
 import { DuplicateStudyForm } from "@/components/duplicate-study-form";
-import { StudyTabs } from "@/components/study-tabs";
 import { StudySettingsForm } from "@/components/study-settings-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -111,7 +110,6 @@ async function IatOverview({
   copied: boolean;
   blocked: boolean;
 }) {
-  const id = study.id;
   const config = iatConfigSchema.safeParse(study.config);
   const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
 
@@ -132,8 +130,6 @@ async function IatOverview({
           </div>
         </div>
       </div>
-
-      <StudyTabs id={id} active="overview" />
 
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}

@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { Icon } from "@/components/brand/icon";
-import { NewProjectForm } from "@/components/new-project-form";
+import { NewProjectDialog } from "@/components/new-project-dialog";
 import { ProjectList } from "@/components/project-list";
 import { Alert } from "@/components/ui/alert";
-import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
@@ -38,10 +36,7 @@ export default async function ProjectsPage() {
             {projects.length ? `${projects.length} ${projects.length === 1 ? "proyecto" : "proyectos"}` : "Organiza tus estudios en proyectos."}
           </p>
         </div>
-        <a href="#nuevo-proyecto" className={buttonClass()}>
-          <Icon name="plus" className="size-4" />
-          Nuevo proyecto
-        </a>
+        <NewProjectDialog />
       </div>
 
       {projectResult.error ? (
@@ -53,7 +48,7 @@ export default async function ProjectsPage() {
       )}
 
       {recent.length ? (
-        <section className="glass-panel min-w-0 rounded-panel p-4 sm:p-6" aria-labelledby="recent-studies">
+        <section className="glass-panel min-w-0 rounded-lg p-4 sm:p-6" aria-labelledby="recent-studies">
           <h2 id="recent-studies" className="mb-3 text-lg font-bold">Estudios recientes</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -83,11 +78,6 @@ export default async function ProjectsPage() {
           </div>
         </section>
       ) : null}
-
-      <section id="nuevo-proyecto" className="glass-panel max-w-xl scroll-mt-4 rounded-panel p-5 sm:p-6" tabIndex={-1} aria-labelledby="new-project-heading">
-        <h2 id="new-project-heading" className="mb-4 text-lg font-bold">Nuevo proyecto</h2>
-        <NewProjectForm />
-      </section>
     </div>
   );
 }
