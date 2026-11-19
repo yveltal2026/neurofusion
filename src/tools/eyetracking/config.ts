@@ -1,8 +1,15 @@
 import { z } from "zod";
-import { piecesConfigSchema } from "@/tools/visual/config";
+import {
+  eyeTrackingConfigSchema,
+  isEyeFacialCodingEnabled,
+  piecesConfigSchema,
+  resolveEyeMediaType,
+} from "@/tools/visual/config";
+
+export { isEyeFacialCodingEnabled, resolveEyeMediaType };
 
 export const eyeStudyConfigSchema = piecesConfigSchema.extend({
-  eyeTracking: z.object({ durationSeconds: z.number().int().min(5).max(30) }),
+  eyeTracking: eyeTrackingConfigSchema,
 });
 
 export const createEyeStudySchema = z.object({

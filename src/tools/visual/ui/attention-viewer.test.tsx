@@ -23,15 +23,16 @@ const AOIS: Aoi[] = [
 describe("AttentionViewer", () => {
   it("muestra las capas y cuenta las zonas ciegas", () => {
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} />);
-    expect(screen.getByRole("button", { name: "Mapa de atención" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Zonas ciegas (1)" })).toBeTruthy();
+    const select = screen.getByRole("combobox", { name: "Capa sobre la imagen" }) as HTMLSelectElement;
+    expect(select.value).toBe("heatmap");
+    expect(screen.getByRole("option", { name: "Zonas ciegas (1)" })).toBeTruthy();
     expect(screen.getByText(/No es eye tracking/)).toBeTruthy();
   });
 
   it("el analista edita un área y la guarda como revisada", async () => {
     const user = userEvent.setup();
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} studyId="s" assetId="a" editable />);
-    await user.click(screen.getByRole("button", { name: "Áreas de interés" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Capa sobre la imagen" }), "boxes");
     expect((screen.getByRole("button", { name: "Sin cambios" }) as HTMLButtonElement).disabled).toBe(true);
     await user.click(screen.getByRole("button", { name: "E2 · Logo" }));
     const label = screen.getByRole("textbox", { name: "Etiqueta" });
@@ -77,12 +78,12 @@ describe("AttentionViewer · zonas frías y recorrido", () => {
     const user = userEvent.setup();
     const sinFrios: Aoi[] = [{ ...AOIS[0] }, { ...AOIS[1], attention: 0.9 }];
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={sinFrios} />);
-    expect(screen.getByRole("button", { name: "Zonas ciegas" })).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Zonas ciegas" }));
+    expect(screen.getByRole("option", { name: "Zonas ciegas" })).toBeTruthy();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Capa sobre la imagen" }), "blind");
     expect(screen.getByRole("status").textContent).toMatch(/No se detectaron zonas ciegas/);
   });
 
-  it("lista las zonas ciegas y las de baja atención con sus valores, y las cuenta en el botón", async () => {
+  it("lista las zonas ciegas y las de baja atención con sus valores, y las cuenta en la opción", async () => {
     const user = userEvent.setup();
     const aois: Aoi[] = [
       ...AOIS,
@@ -90,7 +91,8 @@ describe("AttentionViewer · zonas frías y recorrido", () => {
       { id: "E4", label: "Decorativo", kind: "image", box: [0.1, 0.5, 0.2, 0.6], attention: 0.1, importance: 1, order: null },
     ];
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={aois} />);
-    await user.click(screen.getByRole("button", { name: "Zonas ciegas (2)" }));
+    expect(screen.getByRole("option", { name: "Zonas ciegas (2)" })).toBeTruthy();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Capa sobre la imagen" }), "blind");
     expect(screen.getByText("Zona ciega")).toBeTruthy();
     expect(screen.getByText("Baja atención")).toBeTruthy();
     expect(screen.getByText(/Correo de contacto/)).toBeTruthy();
@@ -101,14 +103,14 @@ describe("AttentionViewer · zonas frías y recorrido", () => {
   it("«Recorrido» avisa qué elementos importantes quedaron fuera", async () => {
     const user = userEvent.setup();
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={AOIS} />);
-    await user.click(screen.getByRole("button", { name: "Recorrido" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Capa sobre la imagen" }), "gaze");
     expect(screen.getByText(/Fuera del recorrido:/).parentElement?.textContent).toContain("Logo");
   });
 
   it("no muestra la nota de recorrido si todo está dentro", async () => {
     const user = userEvent.setup();
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1080} aois={[AOIS[0]]} />);
-    await user.click(screen.getByRole("button", { name: "Recorrido" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Capa sobre la imagen" }), "gaze");
     expect(screen.queryByText(/Fuera del recorrido:/)).toBeNull();
   });
 });
@@ -211,5 +213,32 @@ describe("AttentionViewer · dibujo sobre el canvas", () => {
     // x = centro (0.75 · 800); y = cabeza (0.1 + 0.8 · 0.2 = 0.26 · 800), no el centro vertical (0.5 · 800)
     expect(arcs[0].args[0]).toBeCloseTo(600, 5);
     expect(arcs[0].args[1]).toBeCloseTo(208, 5);
+  });
+
+  it("abre y cierra el modo de pantalla completa con botón o tecla Escape y permite zoom", async () => {
+    const user = userEvent.setup();
+    render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1920} aois={AOIS} />);
+
+    expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Fullscreen" }));
+
+    expect(screen.getByRole("dialog", { name: "Visor a pantalla completa" })).toBeTruthy();
+
+    // Zoom in / out
+    expect(screen.getByRole("button", { name: "Nivel de zoom: 100%" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Acercar zoom" }));
+    expect(screen.getByRole("button", { name: "Nivel de zoom: 125%" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Alejar zoom" }));
+    expect(screen.getByRole("button", { name: "Nivel de zoom: 100%" })).toBeTruthy();
+
+    // Cierra con Escape
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();
+
+    // Abre de nuevo y cierra con el botón
+    await user.click(screen.getByRole("button", { name: "Fullscreen" }));
+    expect(screen.getByRole("dialog", { name: "Visor a pantalla completa" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cerrar ✕" }));
+    expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();
   });
 });

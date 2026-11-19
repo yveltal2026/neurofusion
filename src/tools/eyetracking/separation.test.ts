@@ -67,4 +67,28 @@ describe("Separación de herramientas", () => {
     await expect(loadVisualStudyPage(supabase, id, "pieces")).rejects.toThrow("NOT_FOUND");
     await expect(loadVisualStudyPage(supabase, id, undefined, true)).resolves.toMatchObject({ study, config: eyeConfig });
   });
+
+  it("permite crear estudios de eye tracking en video con Facial Coding y almacenamiento nativo", async () => {
+    const insert = vi.fn().mockReturnValue({ select: () => ({ single: async () => ({ data: { id }, error: null }) }) });
+    mocks.requireUser.mockResolvedValue({ supabase: { from: () => ({ insert }) } });
+    const videoConfig = {
+      mode: "pieces",
+      objective: "Evaluar atención y emoción en spot",
+      brand: "Anáhuac",
+      audience: "Aspirantes",
+      eyeTracking: {
+        mediaType: "video",
+        durationSeconds: 10,
+        facialCoding: true,
+        video: {
+          storage: "cloudflare_r2",
+          maxDurationSeconds: 90,
+          scenes: [{ id: "scene-1", label: "Hook", startMs: 0, endMs: 10000 }],
+          aois: [],
+        },
+      },
+    };
+    await expect(createEyeTrackingStudy({ projectId: id, name: "Spot", config: videoConfig })).rejects.toThrow("REDIRECT");
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ config: videoConfig }));
+  });
 });

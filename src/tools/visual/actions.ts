@@ -195,6 +195,7 @@ export async function registerAsset(raw: unknown): Promise<VisualFormState> {
     if (!loaded.config.tasks.some((t) => t.id === input.taskId)) return fail("Elige la tarea de la captura");
   }
   if (input.placement && !getPlacement(input.placement)) return fail("Formato desconocido");
+  if (loaded.config.mode === "pieces" && !eyeStudy && !input.placement) return fail("Elige el formato antes de subir las imágenes");
 
   const buf = await download(supabase, input.path);
   if (!buf) return fail("No se pudo leer el archivo subido");
@@ -251,6 +252,11 @@ export async function updateAssetMeta(_prev: VisualFormState, fd: FormData): Pro
   if (!title.success) return { error: title.error.issues[0].message };
   if (placement && !getPlacement(placement)) return { error: "Formato desconocido" };
   const { supabase } = await requireUser();
+  if (!placement) {
+    const loaded = await loadVisualStudy(supabase, studyId.data);
+    if (!loaded) return { error: "Estudio no encontrado" };
+    if (loaded.config.mode === "pieces" && !loaded.config.eyeTracking) return { error: "Elige el formato de la pieza" };
+  }
   const { data, error } = await supabase.from("visual_assets").update({ title: title.data, placement }).eq("id", assetId.data).eq("study_id", studyId.data).select("id");
   if (error || !data?.length) return { error: "No se pudo guardar" };
   revalidatePath(`/studies/${studyId.data}/assets/${assetId.data}`);

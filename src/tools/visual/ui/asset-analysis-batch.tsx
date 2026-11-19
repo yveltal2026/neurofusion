@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { analyzeAsset } from "../actions";
-import { AnalysisActivity } from "./analysis-activity";
 
 export interface BatchAsset {
   id: string;
@@ -82,6 +81,18 @@ export function AssetAnalysisBatch({
     (id) => items[id]?.status === "success",
   ).length;
   const current = batch.find((id) => items[id]?.status === "running");
+  // Agrupación por formato (las piezas llegan ordenadas por formato desde la vista general).
+  const groups: { key: string; label: string; items: BatchAsset[] }[] = [];
+  for (const asset of assets) {
+    const key = asset.placement ?? "";
+    let group = groups.find((g) => g.key === key);
+    if (!group) {
+      group = { key, label: key || "Sin formato", items: [] };
+      groups.push(group);
+    }
+    group.items.push(asset);
+  }
+  const grouped = groups.length > 1 || Boolean(groups[0]?.key);
 
   const run = async () => {
     if (pending || runningRef.current || !selection.length) return;
@@ -156,7 +167,7 @@ export function AssetAnalysisBatch({
   };
 
   return (
-    <section className="space-y-4" aria-label="Análisis de imágenes por lote">
+    <section className="space-y-6" aria-label="Análisis de imágenes por lote">
       <Card className="space-y-3 print:hidden">
         <div>
           <h2 className="font-medium">Analizar imágenes con IA</h2>
@@ -278,101 +289,251 @@ export function AssetAnalysisBatch({
             aria-label="Imágenes procesadas"
           />
         ) : null}
-        {pending && current ? <AnalysisActivity key={current} /> : null}
       </Card>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {assets.map((asset) => {
-          const state = items[asset.id];
-          return (
-            <Card
-              key={asset.id}
-              className={`h-full space-y-3 p-3 ${selection.includes(asset.id) ? "ring-2 ring-primary" : ""}`}
-            >
-              <label className="flex items-center gap-2 text-sm print:hidden">
-                <input
-                  type="checkbox"
-                  checked={selection.includes(asset.id)}
+      {groups.map((group) => {
+        const groupIds = group.items.map((a) => a.id);
+        const allIn = groupIds.every((id) => selection.includes(id));
+        const analyzedCount = group.items.filter((a) => a.analyzed || items[a.id]?.status === "success").length;
+        return (
+          <section key={group.key} className="space-y-3" aria-label={grouped ? `Formato ${group.label}` : undefined}>
+            {grouped ? (
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
+                <h3 className="font-display text-base font-semibold text-heading">
+                  {group.label}{" "}
+                  <span className="font-sans text-sm font-normal text-muted">
+                    · {group.items.length} {group.items.length === 1 ? "pieza" : "piezas"} · {analyzedCount} analizadas
+                  </span>
+                </h3>
+                <button
+                  type="button"
                   disabled={pending}
-                  onChange={(e) =>
+                  aria-label={`${allIn ? "Quitar del lote" : "Seleccionar"} el grupo ${group.label}`}
+                  onClick={() =>
                     setSelected((previous) =>
-                      e.target.checked
-                        ? [...previous, asset.id]
-                        : previous.filter((id) => id !== asset.id),
+                      allIn ? previous.filter((id) => !groupIds.includes(id)) : [...new Set([...previous, ...groupIds])],
                     )
                   }
-                />
-                <span>Seleccionar {asset.title}</span>
-              </label>
-              <Link
-                href={`/studies/${studyId}/assets/${asset.id}`}
-                className="group block space-y-2"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden rounded bg-foreground/5">
-                  {asset.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- signed private Storage URL
-                    <img
-                      src={asset.url}
-                      alt={asset.title}
-                      className="absolute inset-0 size-full object-contain object-top"
-                      loading="lazy"
-                    />
-                  ) : null}
-                  {state?.status === "running" ? (
-                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-background/80 text-sm font-medium">
-                      <span aria-hidden="true" className="size-5 rounded-full border-2 border-primary/25 border-t-primary motion-safe:animate-spin" />
-                      Analizando esta imagen…
-                    </div>
-                  ) : null}
-                </div>
-                <p className="truncate font-medium group-hover:underline">
-                  {asset.title}
-                </p>
-                <p className="text-xs text-muted">
-                  {asset.width}×{asset.height}
-                  {asset.placement ? ` · ${asset.placement}` : ""}
-                </p>
-              </Link>
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge
-                  tone={
-                    state
-                      ? TONES[state.status]
-                      : asset.analyzed
-                        ? "success"
-                        : "neutral"
-                  }
+                  className="py-1 text-sm font-medium text-heading underline underline-offset-4 disabled:opacity-50 print:hidden"
                 >
-                  {state
-                    ? LABELS[state.status]
-                    : asset.analyzed
-                      ? "Analizada"
-                      : "Sin analizar"}
-                </StatusBadge>
-                {asset.reviewed ? (
-                  <StatusBadge tone="neutral">AOI revisadas</StatusBadge>
-                ) : null}
+                  {allIn ? "Quitar grupo del lote" : "Seleccionar grupo"}
+                </button>
               </div>
-              {state?.message ? (
-                <p
-                  className={`text-xs ${state.status === "error" ? "text-danger" : "text-muted"}`}
-                >
-                  {state.message}
-                </p>
-              ) : null}
-              {asset.strength ? (
-                <p className="text-xs">
-                  <strong>Acierto:</strong> {asset.strength}
-                </p>
-              ) : null}
-              {asset.weakness ? (
-                <p className="text-xs">
-                  <strong>Debilidad principal:</strong> {asset.weakness}
-                </p>
-              ) : null}
-            </Card>
-          );
-        })}
-      </div>
+            ) : null}
+            {(() => {
+              const isSingle = group.items.length === 1;
+              const isDouble = group.items.length === 2;
+              const isTriple = group.items.length === 3;
+
+              const gridClass = isSingle
+                ? "grid grid-cols-1 max-w-2xl"
+                : isDouble
+                  ? "grid gap-4 sm:grid-cols-2 max-w-4xl"
+                  : isTriple
+                    ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                    : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+
+              return (
+                <div className={gridClass}>
+                  {group.items.map((asset) => {
+                    const state = items[asset.id];
+                    const ratio = asset.width && asset.height ? `${asset.width} / ${asset.height}` : "4/3";
+
+                    if (isSingle) {
+                      return (
+                        <Card
+                          key={asset.id}
+                          className={`h-full p-4 ${selection.includes(asset.id) ? "ring-2 ring-primary" : ""} sm:grid sm:grid-cols-[240px_1fr] sm:gap-5 space-y-4 sm:space-y-0`}
+                        >
+                          <div
+                            className="relative mx-auto overflow-hidden rounded-lg bg-foreground/5 shadow-2xs w-full flex items-center justify-center"
+                            style={{ aspectRatio: ratio, maxHeight: "300px" }}
+                          >
+                            <Link href={`/studies/${studyId}/assets/${asset.id}`} className="block size-full">
+                              {asset.url ? (
+                                // eslint-disable-next-line @next/next/no-img-element -- signed private Storage URL
+                                <img
+                                  src={asset.url}
+                                  alt={asset.title}
+                                  className="size-full object-contain"
+                                  loading="lazy"
+                                />
+                              ) : null}
+                            </Link>
+                          </div>
+
+                          <div className="flex flex-col justify-between space-y-3">
+                            <div className="space-y-2">
+                              <label className="flex items-center gap-2 text-sm font-medium print:hidden">
+                                <input
+                                  type="checkbox"
+                                  checked={selection.includes(asset.id)}
+                                  disabled={pending}
+                                  onChange={(e) =>
+                                    setSelected((previous) =>
+                                      e.target.checked
+                                        ? [...previous, asset.id]
+                                        : previous.filter((id) => id !== asset.id),
+                                    )
+                                  }
+                                />
+                                <span className="truncate">Seleccionar {asset.title}</span>
+                              </label>
+
+                              <Link
+                                href={`/studies/${studyId}/assets/${asset.id}`}
+                                className="group block space-y-0.5"
+                              >
+                                <p className="truncate font-semibold text-base text-heading group-hover:underline">
+                                  {asset.title}
+                                </p>
+                                <p className="text-xs text-muted">
+                                  {asset.width}×{asset.height}
+                                  {asset.placement && !grouped ? ` · ${asset.placement}` : ""}
+                                </p>
+                              </Link>
+
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                <StatusBadge
+                                  tone={
+                                    state
+                                      ? TONES[state.status]
+                                      : asset.analyzed
+                                        ? "success"
+                                        : "neutral"
+                                  }
+                                >
+                                  {state
+                                    ? LABELS[state.status]
+                                    : asset.analyzed
+                                      ? "Analizada"
+                                      : "Sin analizar"}
+                                </StatusBadge>
+                                {asset.reviewed ? (
+                                  <StatusBadge tone="neutral">AOI revisadas</StatusBadge>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 text-xs pt-2 border-t border-border/60">
+                              {state?.message ? (
+                                <p
+                                  className={`text-xs ${state.status === "error" ? "text-danger" : "text-muted"}`}
+                                >
+                                  {state.message}
+                                </p>
+                              ) : null}
+                              {asset.strength ? (
+                                <p>
+                                  <strong className="text-foreground">Acierto:</strong> {asset.strength}
+                                </p>
+                              ) : null}
+                              {asset.weakness ? (
+                                <p>
+                                  <strong className="text-foreground">Debilidad principal:</strong> {asset.weakness}
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    }
+
+                    return (
+                      <Card
+                        key={asset.id}
+                        className={`h-full space-y-3 p-3 ${selection.includes(asset.id) ? "ring-2 ring-primary" : ""}`}
+                      >
+                        <label className="flex items-center gap-2 text-sm print:hidden">
+                          <input
+                            type="checkbox"
+                            checked={selection.includes(asset.id)}
+                            disabled={pending}
+                            onChange={(e) =>
+                              setSelected((previous) =>
+                                e.target.checked
+                                  ? [...previous, asset.id]
+                                  : previous.filter((id) => id !== asset.id),
+                              )
+                            }
+                          />
+                          <span className="truncate">Seleccionar {asset.title}</span>
+                        </label>
+                        <Link
+                          href={`/studies/${studyId}/assets/${asset.id}`}
+                          className="group block space-y-2"
+                        >
+                          <div
+                            className="relative mx-auto overflow-hidden rounded bg-foreground/5"
+                            style={{
+                              aspectRatio: ratio,
+                              maxHeight: "220px",
+                              width: "100%",
+                            }}
+                          >
+                            {asset.url ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- signed private Storage URL
+                              <img
+                                src={asset.url}
+                                alt={asset.title}
+                                className="size-full object-contain"
+                                loading="lazy"
+                              />
+                            ) : null}
+                          </div>
+                          <p className="truncate font-medium group-hover:underline">
+                            {asset.title}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {asset.width}×{asset.height}
+                            {asset.placement && !grouped ? ` · ${asset.placement}` : ""}
+                          </p>
+                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                          <StatusBadge
+                            tone={
+                              state
+                                ? TONES[state.status]
+                                : asset.analyzed
+                                  ? "success"
+                                  : "neutral"
+                            }
+                          >
+                            {state
+                              ? LABELS[state.status]
+                              : asset.analyzed
+                                ? "Analizada"
+                                : "Sin analizar"}
+                          </StatusBadge>
+                          {asset.reviewed ? (
+                            <StatusBadge tone="neutral">AOI revisadas</StatusBadge>
+                          ) : null}
+                        </div>
+                        {state?.message ? (
+                          <p
+                            className={`text-xs ${state.status === "error" ? "text-danger" : "text-muted"}`}
+                          >
+                            {state.message}
+                          </p>
+                        ) : null}
+                        {asset.strength ? (
+                          <p className="line-clamp-3 text-xs">
+                            <strong>Acierto:</strong> {asset.strength}
+                          </p>
+                        ) : null}
+                        {asset.weakness ? (
+                          <p className="line-clamp-3 text-xs">
+                            <strong>Debilidad principal:</strong> {asset.weakness}
+                          </p>
+                        ) : null}
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </section>
+        );
+      })}
       {!assets.length ? <Alert>No hay imágenes para analizar.</Alert> : null}
     </section>
   );

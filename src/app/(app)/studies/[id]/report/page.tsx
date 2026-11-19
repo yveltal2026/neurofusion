@@ -10,7 +10,20 @@ import { loadVisualStudyPage } from "@/tools/visual/load";
 import type { SiteSummary } from "@/tools/visual/journey/model";
 import { rubricItems } from "@/tools/visual/journey/rubric";
 import { assetUrls, loadAssets } from "@/tools/visual/results";
-import { AiReading, MetricsPanel } from "@/tools/visual/ui/asset-panels";
+import {
+  AiSummary,
+  AllStrengths,
+  BlindZones,
+  CriteriaScores,
+  FormatChecks,
+  ImageMetrics,
+  IssuesList,
+  TextContrast,
+  TopFindings,
+  formatStatus,
+} from "@/tools/visual/ui/asset-panels";
+import { getPlacement } from "@/tools/visual/engine/placements";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { AttentionViewer } from "@/tools/visual/ui/attention-viewer";
 import { MethodNote } from "@/tools/visual/ui/journey-views";
 import { loadReportSource, loadSavedReport, reportHash } from "@/tools/reports/load";
@@ -20,7 +33,7 @@ import { StudyReportView } from "@/tools/reports/ui/StudyReportView";
 import { VisualReportDashboard } from "@/tools/reports/ui/VisualReportDashboard";
 import { RefreshReportButton } from "@/tools/reports/ui/RefreshReportButton";
 
-export const metadata = { title: "Informe · NeuroFusion" };
+export const metadata = { title: "Informe · Laboratorio Digital" };
 export const maxDuration = 120;
 
 /** Informe imprimible (el navegador lo guarda como PDF). */
@@ -82,23 +95,108 @@ export default async function ReportPage({ params }: PageProps<"/studies/[id]/re
         <VisualReportDashboard studyId={id} snapshot={snapshot}>
           <AiReportPanel studyId={id} snapshot={snapshot} sourceHash={reportHash(snapshot)} saved={saved.report} loadError={saved.error} />
         </VisualReportDashboard>
-        {assets.map((a, i) => (
-          <section key={a.row.id} className={`space-y-4 ${i ? "break-before-page" : ""}`}>
-            <h2 className="text-xl font-semibold">
-              {i + 1}. {a.row.title}
-            </h2>
-            {urls[a.row.storage_path] ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <AttentionViewer imageUrl={urls[a.row.storage_path]} width={a.row.width} height={a.row.height} aois={a.aois} initialMode="heatmap" showControls={false} />
-                <AttentionViewer imageUrl={urls[a.row.storage_path]} width={a.row.width} height={a.row.height} aois={a.aois} initialMode="gaze" showControls={false} />
+        {assets.map((a, i) => {
+          const placementSpec = getPlacement(a.row.placement);
+          const imgData = { width: a.row.width, height: a.row.height, bytes: a.row.bytes, placement: a.row.placement };
+          const fmt = formatStatus(imgData);
+
+          return (
+            <section key={a.row.id} className={`space-y-6 rounded-2xl border border-border bg-surface p-6 ${i ? "break-before-page" : ""}`}>
+              {/* Encabezado de la pieza con metadatos y badges */}
+              <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border pb-3">
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold text-heading">
+                    {i + 1}. {a.row.title}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <span>{a.row.width}×{a.row.height} px</span>
+                    <span>·</span>
+                    <span>{(a.row.bytes / 1024).toFixed(0)} KB</span>
+                    {placementSpec ? (
+                      <>
+                        <span>·</span>
+                        <span className="font-medium text-foreground">{placementSpec.label}</span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {fmt ? (
+                    <StatusBadge tone={fmt.passed === fmt.total ? "success" : "warning"}>
+                      {fmt.passed === fmt.total ? "Cumple formato" : `${fmt.passed}/${fmt.total} en formato`}
+                    </StatusBadge>
+                  ) : (
+                    <StatusBadge tone="neutral">Sin formato</StatusBadge>
+                  )}
+                  <StatusBadge tone={a.ai ? "success" : "neutral"}>
+                    {a.ai ? "Analizada con IA" : "Sin análisis de IA"}
+                  </StatusBadge>
+                </div>
               </div>
-            ) : null}
-            <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-              {a.ai ? <AiReading result={a.ai.result} aois={a.aois} analyzedAois={a.ai.aois} asset={{ id: a.row.id, title: a.row.title }} /> : <Card className="text-sm text-muted">Sin análisis de IA.</Card>}
-              {a.metrics ? <MetricsPanel metrics={a.metrics} img={{ width: a.row.width, height: a.row.height, bytes: a.row.bytes, placement: a.row.placement }} /> : null}
-            </div>
-          </section>
-        ))}
+
+              {/* Visores de atención: Mapa de atención y Recorrido visual lado a lado */}
+              {urls[a.row.storage_path] ? (
+                <div className="space-y-2">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted">Mapa de atención estimado</p>
+                      <AttentionViewer
+                        imageUrl={urls[a.row.storage_path]}
+                        width={a.row.width}
+                        height={a.row.height}
+                        aois={a.aois}
+                        initialMode="heatmap"
+                        showControls={false}
+                        maxHeight="320px"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted">Recorrido visual previsto</p>
+                      <AttentionViewer
+                        imageUrl={urls[a.row.storage_path]}
+                        width={a.row.width}
+                        height={a.row.height}
+                        aois={a.aois}
+                        initialMode="gaze"
+                        showControls={false}
+                        maxHeight="320px"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Diagnóstico de IA: Calificador de criterios arriba + hallazgos principales */}
+              {a.ai ? (
+                <div className="space-y-6 pt-2">
+                  <CriteriaScores result={a.ai.result} />
+                  <AiSummary result={a.ai.result} />
+                  <TopFindings result={a.ai.result} aois={a.aois} />
+                  {a.ai.result.strengths.length > 3 ? (
+                    <AllStrengths result={a.ai.result} from={3} title="Otros aciertos identificados" />
+                  ) : null}
+                  <IssuesList result={a.ai.result} />
+                  <BlindZones aois={a.aois} />
+                </div>
+              ) : (
+                <Card className="text-sm text-muted">Aún no se ha realizado el análisis de IA para esta pieza.</Card>
+              )}
+
+              {/* Verificación de formato y métricas de imagen deterministas */}
+              <div className="space-y-4 border-t border-border pt-4">
+                <h3 className="font-semibold text-heading text-base">Verificación técnica y píxeles</h3>
+                <FormatChecks img={imgData} />
+                {a.metrics ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <TextContrast metrics={a.metrics} />
+                    <ImageMetrics metrics={a.metrics} />
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          );
+        })}
         {disclaimer}
       </div>
     );

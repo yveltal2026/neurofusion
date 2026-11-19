@@ -138,6 +138,13 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoParkingRef = useRef<HTMLDivElement | null>(null);
   const videoPreviewRef = useRef<HTMLDivElement | null>(null);
+  const errorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (error && typeof errorRef.current?.scrollIntoView === "function") {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [error]);
 
   // El mismo elemento conserva el stream al pasar de carga a posición o recuperación.
   // React administra los contenedores; este efecto administra únicamente el video.
@@ -1025,8 +1032,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               </ReadingPanel>
             </Section>
 
-            {error ? <Alert tone="error">{error}</Alert> : null}
-
             <Section icon="device" title="Tu pantalla">
               <ReadingPanel>
                 <div className="space-y-4">{screenFields}</div>
@@ -1039,6 +1044,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
               <ConsentCheck checked={consent} onChange={setConsent}>
                 Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
               </ConsentCheck>
+              {error ? (
+                <div ref={errorRef} className="scroll-mt-6">
+                  <Alert tone="error">{error}</Alert>
+                </div>
+              ) : null}
               {stage === "loading" ? <div ref={videoPreviewRef} data-testid="camera-loading-preview" /> : null}
               <Button size="lg" onClick={start} disabled={stage === "loading"} className="w-full">
                 {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
@@ -1065,8 +1075,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </p>
           </Alert>
 
-          {error ? <Alert tone="error">{error}</Alert> : null}
-
           <Card className="space-y-4">
             <Field label="Código de la persona" hint="Por ejemplo P01. No pongas nombres ni correos.">
               <Input value={participant} onChange={(e) => setParticipant(e.target.value)} maxLength={24} autoComplete="off" />
@@ -1075,6 +1083,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             {screenFields}
 
             {conditionFields}
+
+            {error ? (
+              <div ref={errorRef} className="scroll-mt-6">
+                <Alert tone="error">{error}</Alert>
+              </div>
+            ) : null}
 
             {stage === "loading" ? <div ref={videoPreviewRef} data-testid="camera-loading-preview" /> : null}
             <Button onClick={start} disabled={stage === "loading"} className="w-full">
@@ -1100,7 +1114,6 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             <li>No lo muevas ni lo gires durante toda la prueba.</li>
             <li>Mantén la cabeza lo más quieta que puedas.</li>
           </ul>
-          {error ? <Alert tone="error">{error}</Alert> : null}
           <p role="status" className="flex flex-wrap items-center gap-2 text-base">
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
             <span className="text-sm text-muted">Análisis por segundo: {live.fps} · Lecturas de mirada válidas: {live.validFps}/s</span>
@@ -1113,6 +1126,11 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           <details className="text-sm text-muted"><summary>Ayuda con la cámara</summary><p className="mt-2">El diagnóstico permite revisar la velocidad de cámara y el tiempo de análisis. No incluye imágenes ni video.</p><Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button></details>
           {live.faceOk && !live.gazeOk ? <p role="status" className="text-sm text-muted">Vemos tu rostro. Mira de frente con los ojos abiertos y coloca la cámara a la altura de los ojos para detectar tu mirada.</p> : null}
           <div ref={videoPreviewRef} data-testid="camera-preview" />
+          {error ? (
+            <div ref={errorRef} className="scroll-mt-6">
+              <Alert tone="error">{error}</Alert>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-3">
             <Button size="lg" onClick={startCalibration} disabled={!live.gazeOk || lightingStatus !== "good"}>
               Comenzar calibración
@@ -1167,7 +1185,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "calibration" && calibPoints[calibIndex] ? (
         <div className="fixed inset-0 z-50 touch-manipulation bg-background select-none">
           <p className="absolute top-4 right-0 left-0 px-4 text-center text-sm text-muted" role="status">
-            {reviewingCalibration ? "Revisión selectiva" : calibIndex < 9 ? "Calibración base" : "Ajuste fino"} · Punto {calibIndex + 1} de {calibPoints.length}. Mira el punto y, cuando se ponga verde, tócalo o haz clic sin
+            {reviewingCalibration ? "Revisión selectiva" : calibIndex < 9 ? "Calibración base" : "Ajuste fino"} · Punto {calibIndex + 1} de {calibPoints.length}. Mira el punto y, cuando se rellene, tócalo o haz clic sin
             dejar de mirarlo. Mantén la mirada hasta que cambie de posición.
             {dotSampling ? " Registrando mirada… sigue mirando el punto." : ""}
           </p>

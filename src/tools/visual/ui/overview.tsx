@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { StudyRow } from "@/lib/db/types";
 import { createClient } from "@/lib/supabase/server";
 import { visualConfigSchema } from "../config";
-import { getPlacement } from "../engine/placements";
+import { getPlacement, PLACEMENTS } from "../engine/placements";
 import { assetUrls, loadAssets, type VisualAsset } from "../results";
 import { AssetUploader } from "./uploader";
 import { AssetAnalysisBatch } from "./asset-analysis-batch";
@@ -37,14 +37,19 @@ function Thumb({
         }
       >
         <div
-          className={`relative aspect-[4/3] overflow-hidden rounded bg-foreground/5 ${plain ? "ring-1 ring-border transition group-hover:ring-2 group-hover:ring-heading" : ""}`}
+          className={`relative mx-auto overflow-hidden rounded bg-foreground/5 ${plain ? "ring-1 ring-border transition group-hover:ring-2 group-hover:ring-heading" : ""}`}
+          style={{
+            aspectRatio: row.width && row.height ? `${row.width} / ${row.height}` : "4/3",
+            maxHeight: "240px",
+            width: "100%",
+          }}
         >
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage
             <img
               src={url}
               alt=""
-              className="absolute inset-0 h-full w-full object-contain object-top"
+              className="size-full object-contain"
               loading="lazy"
             />
           ) : null}
@@ -113,7 +118,13 @@ export async function VisualOverview({
     assets.map((a) => a.row.storage_path),
     "thumb",
   );
-  const batchAssets = assets.map((a) => {
+  const formatOrder = (id: string | null) => {
+    const i = PLACEMENTS.findIndex((p) => p.id === id);
+    return i < 0 ? PLACEMENTS.length : i;
+  };
+  const batchAssets = [...assets]
+    .sort((a, b) => formatOrder(a.row.placement) - formatOrder(b.row.placement))
+    .map((a) => {
     const findings = a.result ? primaryFindings(a.result, a.aois) : null;
     const site =
       config.mode === "journey"
@@ -164,8 +175,8 @@ export async function VisualOverview({
           <div>
             <SectionTitle icon="image">Subir piezas</SectionTitle>
             <p className="text-sm text-muted">
-              PNG, JPEG o WebP de hasta 10 MB. Elige el formato para revisar
-              tamaño, proporción y peso.
+              Primero elige el formato (redes, display, impresos o web) y
+              después las imágenes: PNG, JPEG o WebP de hasta 10 MB.
             </p>
           </div>
           <AssetUploader studyId={study.id} withPlacement />

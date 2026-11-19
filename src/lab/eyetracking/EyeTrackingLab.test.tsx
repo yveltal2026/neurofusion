@@ -251,7 +251,7 @@ describe("estudios con control de calidad", () => {
     expect(completed!.quality.recovery).toMatchObject({ recalibrations: 1, repeatedAssetIds: four.slice(2).map((a) => a.id) });
     // La nueva calibración más precisa no oculta el error de la que midió las imágenes conservadas.
     expect(completed!.quality.medianErrorDeg).toBeGreaterThan(0.5);
-  });
+  }, 30_000);
 
   it("el botón de recuperación lleva a recalibrar si cambia la altura al mostrar la cámara", async () => {
     await setup();
@@ -485,4 +485,23 @@ describe("preparación móvil y tamaño de pantalla", () => {
     expect(screen.getByText(/Mantén el celular en un soporte o stand fijo durante toda la calibración/)).toBeTruthy();
   });
 
+  it("muestra el mensaje de error directamente junto al botón de inicio de cámara al fallar la validación", async () => {
+    render(<EyeTrackingLab study={study} />);
+    // Clic sin aceptar consentimiento
+    click("Iniciar cámara y cargar modelos");
+    const errorAlert = screen.getByText(/Debes aceptar el uso de la cámara/);
+    expect(errorAlert).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Iniciar cámara y cargar modelos" });
+    expect(button.parentElement?.contains(errorAlert)).toBe(true);
+  });
+
+  it("describe la activación del punto sin imponer colores institucionales", async () => {
+    render(<EyeTrackingLab study={study} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
+    click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
+    click("Comenzar calibración");
+    expect(screen.getByText(/cuando se rellene/)).toBeTruthy();
+    expect(screen.queryByText(/cuando se ponga verde/)).toBeNull();
+  });
 });

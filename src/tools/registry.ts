@@ -90,7 +90,7 @@ export const TOOLS: ToolDefinition[] = [
     shortName: "Eye tracking",
     icon: "eye",
     description:
-      "Mide la mirada de participantes sobre hasta 5 imágenes. Incluye calibración, controles de calidad y mapas de atención medidos con webcam.",
+      "Mide la mirada de participantes sobre hasta 5 imágenes o un video (MP4/WebM) con Facial Coding opcional. Incluye calibración, controles de calidad, AOIs dinámicas y mapas de atención con webcam.",
     newStudyPath: (projectId) =>
       `/projects/${projectId}/studies/new/eyetracking`,
   },

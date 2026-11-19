@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { analyzeAsset, runIfd, saveRating, suggestRatings, updateAssetMeta, updateVisualContext, type VisualFormState } from "../actions";
 import type { VisualConfig } from "../config";
-import { PLACEMENTS } from "../engine/placements";
+import { PlacementHint, PlacementSelect } from "./placement-select";
 import type { RubricItem } from "../journey/rubric";
-import { AnalysisActivity } from "./analysis-activity";
 
 const initial: VisualFormState = {};
 const select = "w-full rounded-md border border-control bg-background px-3 py-2 text-sm";
@@ -25,37 +24,57 @@ export function AnalyzeAssetForm({ studyId, assetId, hasAnalysis }: { studyId: s
     <form action={action} className="space-y-3 print:hidden">
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="assetId" value={assetId} />
-      {!pending ? <State state={state} okText="Análisis guardado." /> : null}
+      <State state={state} />
       <Button type="submit" variant={hasAnalysis ? "secondary" : "primary"} disabled={pending}>
-        {pending ? "Analizando la imagen…" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
+        {pending ? "Analizando la imagen… (puede tardar un minuto)" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
       </Button>
-      {pending ? <AnalysisActivity /> : null}
     </form>
   );
 }
 
-export function AssetMetaForm({ studyId, assetId, title, placement, withPlacement = true }: { studyId: string; assetId: string; title: string; placement: string | null; withPlacement?: boolean }) {
+export function AssetMetaForm({
+  studyId,
+  assetId,
+  title,
+  placement,
+  withPlacement = true,
+  requirePlacement = false,
+}: {
+  studyId: string;
+  assetId: string;
+  title: string;
+  placement: string | null;
+  withPlacement?: boolean;
+  requirePlacement?: boolean;
+}) {
   const [state, action, pending] = useActionState(updateAssetMeta, initial);
+  const [value, setValue] = useState(placement ?? "");
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-4">
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="assetId" value={assetId} />
       <Field label="Título">
         <Input name="title" defaultValue={title} maxLength={160} required />
       </Field>
-      {withPlacement ? <Field label="Formato / colocación" hint="Activa la revisión de tamaño, proporción y peso.">
-        <select name="placement" defaultValue={placement ?? ""} className={select}>
-          <option value="">Sin especificar</option>
-          {PLACEMENTS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-      </Field> : null}
+      {withPlacement ? (
+        <div className="space-y-1.5">
+          <label htmlFor={`placement-${assetId}`} className="block text-sm font-medium text-heading">
+            Formato
+          </label>
+          <PlacementSelect
+            id={`placement-${assetId}`}
+            name="placement"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            required={requirePlacement}
+            placeholder={requirePlacement ? "Elige un formato…" : "Sin especificar"}
+          />
+          {value ? <PlacementHint id={value} /> : <p className="text-xs text-muted">Activa la revisión de tamaño, proporción y peso.</p>}
+        </div>
+      ) : null}
       <State state={state} okText="Guardado." />
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? "Guardando…" : "Guardar"}
+      <Button type="submit" variant="secondary" size="sm" disabled={pending}>
+        {pending ? "Guardando…" : "Guardar cambios"}
       </Button>
     </form>
   );

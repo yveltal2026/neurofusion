@@ -35,7 +35,12 @@ const TABS = {
     t("report", "Informe", "/report"),
     t("settings", "Ajustes", "/settings"),
   ],
-  eye: [t("overview", "Piezas y enlace"), t("report", "Informe", "/report"), t("results", "Miradas", "/eye"), t("settings", "Ajustes", "/settings")],
+  eye: [
+    t("overview", "Piezas y enlace"),
+    t("results", "Miradas", "/eye"),
+    t("report", "Informe", "/report"),
+    t("settings", "Ajustes", "/settings"),
+  ],
   journey: [
     t("overview", "Capturas"),
     t("ratings", "Calificación", "/ratings"),
@@ -56,7 +61,7 @@ export function StudyTabs({ id, active, variant = "iat" }: { id: string; active:
           href={tab.href(id)}
           aria-current={tab.key === active ? "page" : undefined}
           className={`-mb-px inline-flex items-center gap-2 whitespace-nowrap rounded-t-lg border-b-[3px] px-4 py-2.5 font-display text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none ${
-            tab.key === active ? "border-primary bg-neuro/10 text-neuro-ink" : "border-transparent text-muted hover:bg-neuro/5 hover:text-neuro-ink"
+            tab.key === active ? "border-primary bg-surface text-neuro-ink" : "border-transparent text-muted hover:bg-surface hover:text-neuro-ink"
           }`}
         >
           <Icon name={tab.icon} className="size-5" />
