@@ -51,3 +51,10 @@ Playwright comprobó seis recorridos del laboratorio en escritorio y móvil con 
 
 
 En la segunda iteración se verificaron TypeScript, ESLint, compilación de producción y 1 318 pruebas automatizadas. Chromium con Supabase simulado cubrió acceso, alta de proyectos, pantalla de mirada, navegación por consultas, menú móvil por teclado, temas e impresión. Se revisó el ancho a 390, 768, 1024 y 1440 px. Queda pendiente probar la iteración en un despliegue conectado a Supabase.
+
+## Tercera iteración: galería de proyectos y galería de estudios
+
+Se actualizó la galería de proyectos en `src/app/(app)/projects/page.tsx` y `src/components/project-list.tsx` con buscador directo con atajo `⌘K` / `Ctrl+K`, conteo de estudios por proyecto, cifras tabulares y acción táctil `Abrir` en cada tarjeta. En la vista de detalle del proyecto (`src/app/(app)/projects/[id]/page.tsx`) se sustituyó la lista plana por `src/components/study-gallery.tsx`: cuadrícula de 2 columnas en escritorio con buscador `⌘K`, control segmentado por estado (`Todos`, `Publicados`, `Borradores`, `Cerrados`), chips por herramienta y accesos directos por tarjeta (`Abrir` y `Ver informe` / `Análisis` / `Resultados` según la herramienta).
+
+Validación local de esta iteración: `npm run typecheck` aprobado, `npx eslint src` aprobado sin errores ni advertencias, y pruebas unitarias nuevas aprobadas en `src/components/project-list.test.tsx` y `src/components/study-gallery.test.tsx` (2 archivos, 2 pruebas). Pendiente: commit/push en `feat/redisenio-visual`, integración en `main` y verificación visual en despliegue conectado a Supabase.
+

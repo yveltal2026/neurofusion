@@ -15,7 +15,7 @@ const STATUS = { draft: "Borrador", published: "Publicado", closed: "Cerrado" } 
 
 export default async function ProjectsPage() {
   const { supabase } = await requireUser();
-  const [projectResult, studyResult] = await Promise.all([
+  const [projectResult, studyResult, studyCountsResult] = await Promise.all([
     supabase.from("projects").select("id, name, description, created_at")
       .order("created_at", { ascending: false })
       .returns<Pick<ProjectRow, "id" | "name" | "description" | "created_at">[]>(),
@@ -23,8 +23,16 @@ export default async function ProjectsPage() {
       .order("updated_at", { ascending: false })
       .limit(5)
       .returns<RecentStudy[]>(),
+    supabase.from("studies").select("project_id").returns<Pick<StudyRow, "project_id">[]>(),
   ]);
-  const projects = projectResult.data ?? [];
+  const countsByProject = new Map<string, number>();
+  for (const row of studyCountsResult.data ?? []) {
+    countsByProject.set(row.project_id, (countsByProject.get(row.project_id) ?? 0) + 1);
+  }
+  const projects = (projectResult.data ?? []).map((p) => ({
+    ...p,
+    studyCount: countsByProject.get(p.id) ?? 0,
+  }));
   const recent = studyResult.data ?? [];
 
   return (
@@ -32,8 +40,10 @@ export default async function ProjectsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Proyectos</h1>
-          <p className="mt-2 text-muted">
-            {projects.length ? `${projects.length} ${projects.length === 1 ? "proyecto" : "proyectos"}` : "Organiza tus estudios en proyectos."}
+          <p className="mt-1.5 text-sm text-muted">
+            {projects.length
+              ? `${projects.length} ${projects.length === 1 ? "proyecto activo" : "proyectos activos"}`
+              : "Organiza tus estudios por cliente, curso o línea de investigación."}
           </p>
         </div>
         <NewProjectDialog />

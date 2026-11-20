@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { StudyGallery } from "@/components/study-gallery";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
@@ -9,7 +10,6 @@ import { RowLink, RowList } from "@/components/ui/rows";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
-import { getStudyTool } from "@/tools/registry";
 import { deleteProject } from "../actions";
 
 const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
@@ -40,13 +40,21 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     .order("created_at", { ascending: false })
     .returns<Pick<BatteryRow, "id" | "name" | "status">[]>();
 
+  const studyList = studies ?? [];
+  const publishedCount = studyList.filter((s) => s.status === "published").length;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Breadcrumbs items={[{ label: "Proyectos", href: "/projects" }]} />
           <h1 className="page-title mt-2 break-words">{project.name}</h1>
-          {project.description ? <p className="mt-1 text-sm text-muted">{project.description}</p> : null}
+          <p className="mt-1.5 text-sm text-muted">
+            {studyList.length
+              ? `${studyList.length} ${studyList.length === 1 ? "estudio" : "estudios"} · ${publishedCount} ${publishedCount === 1 ? "publicado" : "publicados"}`
+              : "Sin estudios aún"}
+            {project.description ? ` — ${project.description}` : ""}
+          </p>
         </div>
         <Link href={`/projects/${project.id}/studies/new`} className={buttonClass()}>
           <Icon name="plus" className="size-5" />
@@ -56,7 +64,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Estudios</h2>
-        {(studies ?? []).length === 0 ? (
+        {studyList.length === 0 ? (
           <EmptyState
             icon="layers"
             title="Este proyecto aún no tiene estudios"
@@ -64,22 +72,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
             Elige una herramienta (IAT, encuesta, SEO o análisis visual) y arma tu primer estudio.
           </EmptyState>
         ) : (
-          <RowList>
-            {(studies ?? []).map((s) => (
-              <RowLink
-                key={s.id}
-                href={`/studies/${s.id}`}
-                icon={getStudyTool(s)?.icon ?? "layers"}
-                title={s.name}
-                meta={
-                  <>
-                    {getStudyTool(s)?.shortName ?? s.tool_type}
-                    {s.tool_type === "iat" ? <StatusBadge tone={STATUS_TONE[s.status]}>{STATUS_LABEL[s.status]}</StatusBadge> : null}
-                  </>
-                }
-              />
-            ))}
-          </RowList>
+          <StudyGallery studies={studyList} />
         )}
       </section>
 
