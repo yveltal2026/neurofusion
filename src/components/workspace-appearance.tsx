@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useId, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Icon, type IconName } from "@/components/brand/icon";
 import { Logo } from "@/components/brand/logo";
 import { WorkspaceNav } from "@/components/workspace-nav";
@@ -19,21 +27,33 @@ export interface RecentSidebarStudy {
   icon: IconName;
 }
 
+export interface AccountInfo {
+  label: string;
+  email: string | null;
+}
+
 const WorkspaceControls = createContext<{
-  account: ReactNode;
+  accountInfo: AccountInfo;
   recentStudies: RecentSidebarStudy[];
+  signOutAction?: () => Promise<void>;
   selectTheme: (value: string) => void;
-}>({ account: null, recentStudies: [], selectTheme: () => {} });
+}>({
+  accountInfo: { label: "Cuenta", email: null },
+  recentStudies: [],
+  selectTheme: () => {},
+});
 
 export function WorkspaceAppearance({
   initialTheme,
-  account,
+  accountInfo = { label: "Cuenta", email: null },
   recentStudies = [],
+  signOutAction,
   children,
 }: {
   initialTheme: WorkspaceTheme;
-  account: ReactNode;
+  accountInfo?: AccountInfo;
   recentStudies?: RecentSidebarStudy[];
+  signOutAction?: () => Promise<void>;
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState(initialTheme);
@@ -49,7 +69,9 @@ export function WorkspaceAppearance({
 
   return (
     <WorkspaceThemeContext.Provider value={theme}>
-      <WorkspaceControls.Provider value={{ account, recentStudies, selectTheme }}>
+      <WorkspaceControls.Provider
+        value={{ accountInfo, recentStudies, signOutAction, selectTheme }}
+      >
         <div data-workspace-theme={theme} className="flex min-h-dvh flex-1 flex-col print:min-h-0">
           {children}
         </div>
@@ -71,12 +93,131 @@ const THEME_OPTIONS: { value: WorkspaceTheme; label: string }[] = [
   { value: "system", label: "Auto" },
 ];
 
+function LogoutIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+
+function AccountPopover({ onNavigate }: { onNavigate?: () => void }) {
+  const { accountInfo, signOutAction } = useContext(WorkspaceControls);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  const initial = accountInfo.label.slice(0, 1).toLocaleUpperCase("es-MX") || "A";
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      {open ? (
+        <div
+          id={menuId}
+          role="dialog"
+          aria-label="Opciones de cuenta"
+          className="mb-2 origin-bottom rounded-xl border border-border bg-surface p-1.5 shadow-[0_14px_32px_-12px_rgba(20,17,12,0.22)] lg:absolute lg:right-0 lg:bottom-full lg:left-0 lg:z-40"
+        >
+          {accountInfo.email ? (
+            <p
+              className="truncate border-b border-border/70 px-2.5 py-2 text-xs font-medium text-muted"
+              title={accountInfo.email}
+            >
+              {accountInfo.email}
+            </p>
+          ) : null}
+          <div className="mt-1 space-y-0.5">
+            <Link
+              href="/settings"
+              onClick={() => {
+                setOpen(false);
+                onNavigate?.();
+              }}
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-heading transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98]"
+            >
+              <Icon name="settings" className="size-4 shrink-0 text-muted" />
+              Ajustes
+            </Link>
+            {signOutAction ? (
+              <form action={signOutAction}>
+                <button
+                  type="submit"
+                  className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-danger transition-colors duration-[var(--duracion-micro)] hover:bg-danger/10 active:scale-[0.98]"
+                >
+                  <LogoutIcon className="size-4 shrink-0" />
+                  Cerrar sesión
+                </button>
+              </form>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98]"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border bg-neuro-tint text-xs font-bold text-heading">
+          {initial}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs font-semibold text-heading">
+            {accountInfo.label}
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className={`size-2 shrink-0 border-r border-b border-muted transition-transform duration-[var(--duracion-micro)] ${
+            open ? "-translate-y-0.5 rotate-[225deg]" : "-translate-y-0.5 rotate-45"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function WorkspaceFrame({ studyNav, children }: {
   studyNav?: ReactNode;
   children: ReactNode;
 }) {
   const theme = useContext(WorkspaceThemeContext);
-  const { account, recentStudies, selectTheme } = useContext(WorkspaceControls);
+  const { recentStudies, selectTheme } = useContext(WorkspaceControls);
   const pathname = usePathname();
   const panelId = useId();
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -157,7 +298,7 @@ export function WorkspaceFrame({ studyNav, children }: {
               </ul>
             </section>
           ) : null)}
-          <div className="mt-auto space-y-2.5 rounded-xl border border-border bg-surface/80 p-2.5">
+          <div className="mt-auto space-y-2 rounded-xl border border-border bg-surface/80 p-2">
             <div
               role="group"
               aria-label="Tema de apariencia"
@@ -182,16 +323,8 @@ export function WorkspaceFrame({ studyNav, children }: {
                 );
               })}
             </div>
-            <div className="flex min-w-0 items-center gap-2 border-t border-border/70 pt-2 text-xs text-muted">
-              <Link
-                href="/settings"
-                aria-label="Abrir ajustes de usuario"
-                title="Ajustes de usuario"
-                className="grid size-7 shrink-0 place-items-center rounded-full border border-border bg-surface text-heading transition-colors hover:bg-surface-muted"
-              >
-                <Icon name="user" className="size-3.5" />
-              </Link>
-              {account}
+            <div className="border-t border-border/70 pt-1.5">
+              <AccountPopover onNavigate={() => setOpenFor(null)} />
             </div>
           </div>
         </div>

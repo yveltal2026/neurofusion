@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { SetupNotice } from "@/components/setup-notice";
-import { Button } from "@/components/ui/button";
 import { WorkspaceAppearance } from "@/components/workspace-appearance";
 import { signOut } from "@/lib/auth/actions";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -40,24 +39,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     icon: getStudyTool(study)?.icon ?? ("layers" as const),
   }));
 
+  const fullName =
+    typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()
+      ? user.user_metadata.full_name.trim()
+      : null;
+  const email = user?.email ?? null;
+  const displayLabel = fullName ?? (email ? email.split("@")[0] : "Cuenta");
+
   return (
     <WorkspaceAppearance
       initialTheme={theme}
       recentStudies={recentStudies}
-      account={
-        <>
-          {user?.email ? (
-            <span className="min-w-0 flex-1 truncate text-xs" title={user.email}>
-              {user.email}
-            </span>
-          ) : null}
-          <form action={signOut} className="ml-auto shrink-0">
-            <Button type="submit" variant="ghost" className="px-2">
-              Salir
-            </Button>
-          </form>
-        </>
-      }
+      accountInfo={{ label: displayLabel, email }}
+      signOutAction={signOut}
     >
       {children}
     </WorkspaceAppearance>

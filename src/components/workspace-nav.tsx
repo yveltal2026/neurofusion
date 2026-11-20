@@ -7,7 +7,6 @@ import { Icon } from "@/components/brand/icon";
 const LINKS = [
   { href: "/projects", label: "Proyectos", icon: "folder", match: /^\/(projects|studies|batteries)(\/|$)/ },
   { href: "/muestra", label: "Calculadora de muestra", icon: "target", match: /^\/muestra\/?$/ },
-  { href: "/settings", label: "Ajustes", icon: "settings", match: /^\/settings(\/|$)/ },
 ] as const;
 
 export function WorkspaceNav() {
