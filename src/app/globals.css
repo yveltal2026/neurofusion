@@ -296,29 +296,47 @@ progress.brand-progress {
 
 @utility workspace-nav-link {
   display: flex;
-  min-height: 2.75rem;
+  min-height: 2.5rem;
   align-items: center;
   gap: .625rem;
-  border-radius: .55rem;
-  padding: .375rem .625rem;
-  color: var(--on-deep-muted);
+  border: 1px solid transparent;
+  border-radius: .75rem;
+  padding: .375rem .75rem;
+  color: var(--muted);
   font-size: var(--text-sm);
   font-weight: 600;
   overflow-wrap: anywhere;
+  transition: background-color var(--duracion-micro) var(--ease-enfocar),
+    color var(--duracion-micro) var(--ease-enfocar),
+    border-color var(--duracion-micro) var(--ease-enfocar),
+    transform var(--duracion-micro) var(--ease-enfocar);
 
   &:hover {
     background: var(--surface-muted);
-    color: var(--on-deep);
+    color: var(--heading);
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 
   &[aria-current] {
-    background: color-mix(in srgb, var(--primary) 16%, var(--deep));
-    color: #ffdc91;
+    background: var(--surface-muted);
+    color: var(--heading);
   }
 
   &[aria-current="page"] {
-    background: var(--primary);
-    color: var(--primary-foreground);
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: var(--color-neuro-tint);
+    color: var(--heading);
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active {
+      transform: none;
+    }
   }
 }
 
@@ -341,6 +359,8 @@ progress.brand-progress {
   min-width: 0;
   flex-direction: column;
   border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
 }
 
 @media screen and (min-width: 64rem) {

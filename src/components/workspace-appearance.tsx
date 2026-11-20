@@ -71,7 +71,7 @@ export function WorkspaceFrame({ studyNav, children }: {
       </a>
       <aside
         aria-label="Barra lateral"
-        className="workspace-sidebar bg-profundo print:hidden"
+        className="workspace-sidebar print:hidden"
         onKeyDown={(event) => {
           if (event.key === "Escape" && menuOpen) {
             setOpenFor(null);
@@ -86,7 +86,7 @@ export function WorkspaceFrame({ studyNav, children }: {
             className="inline-flex min-h-11 shrink-0 items-center"
             onClick={() => setOpenFor(null)}
           >
-            <Logo width={132} tone="deep" decorative />
+            <Logo width={132} tone="auto" decorative />
           </Link>
           <button
             ref={menuButton}
@@ -94,7 +94,7 @@ export function WorkspaceFrame({ studyNav, children }: {
             aria-controls={panelId}
             aria-expanded={menuOpen}
             onClick={() => setOpenFor(menuOpen ? null : pathname)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 text-sm font-semibold text-on-deep hover:bg-surface lg:hidden"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-sm font-semibold text-heading transition-colors hover:bg-surface-muted active:scale-[0.97] lg:hidden"
           >
             <span aria-hidden="true" className="grid w-4 gap-1">
               <span className="h-px bg-current" />
@@ -117,12 +117,12 @@ export function WorkspaceFrame({ studyNav, children }: {
         >
           <WorkspaceNav />
           {studyNav}
-          <div className="mt-auto space-y-3 border-t border-border pt-3">
-            <label className="flex min-h-11 items-center justify-between gap-2 px-2 text-sm text-on-deep-muted">
+          <div className="mt-auto space-y-2.5 rounded-lg border border-border bg-surface-muted/50 p-3">
+            <label className="flex min-h-10 items-center justify-between gap-2 text-xs font-semibold text-muted">
               Tema
               <select
                 aria-label="Tema de apariencia"
-                className="min-h-11 rounded-md border border-control bg-surface px-2 text-sm font-semibold text-heading hover:bg-surface-muted"
+                className="min-h-9 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-heading hover:bg-surface-muted"
                 value={theme}
                 onChange={(event) => selectTheme(event.currentTarget.value)}
               >
@@ -131,8 +131,8 @@ export function WorkspaceFrame({ studyNav, children }: {
                 <option value="system">Sistema</option>
               </select>
             </label>
-            <div className="flex min-w-0 items-center gap-2 px-2 text-sm text-on-deep-muted">
-              <Icon name="user" className="size-5" />
+            <div className="flex min-w-0 items-center gap-2 border-t border-border/70 pt-2 text-xs text-muted">
+              <Icon name="user" className="size-4 shrink-0" />
               {account}
             </div>
           </div>

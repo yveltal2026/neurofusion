@@ -53,14 +53,8 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
             }}
             placeholder="Buscar proyecto..."
             aria-label="Buscar proyecto por nombre o descripción"
-            className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pr-14 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/30"
+            className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/30"
           />
-          <kbd
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded-md border border-border bg-surface-muted px-1.5 py-0.5 font-sans text-[11px] font-semibold text-muted sm:inline-block"
-          >
-            ⌘K
-          </kbd>
         </div>
         <p className="text-xs font-semibold tabular-nums text-muted">
           {needle

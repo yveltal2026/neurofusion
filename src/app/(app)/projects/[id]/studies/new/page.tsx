@@ -47,19 +47,19 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
           const tools = TOOLS.filter((tool) => tool.category === category.id)
             .sort((a, b) => Number(b.type === "eyetracking") - Number(a.type === "eyetracking"));
           return (
-            <section key={category.id} aria-labelledby={`category-${category.id}`} className="glass-panel min-w-0 space-y-3 rounded-panel p-4 sm:p-5">
+            <section key={category.id} aria-labelledby={`category-${category.id}`} className="min-w-0 space-y-3 rounded-panel border border-border bg-surface p-4 sm:p-5">
               <div>
-                <p className="text-xs font-medium text-muted">{category.name}</p>
-                <h2 id={`category-${category.id}`} className="text-2xl font-extrabold">{category.question}</h2>
+                <p className="text-xs font-semibold text-muted">{category.name}</p>
+                <h2 id={`category-${category.id}`} className="text-xl font-extrabold text-heading">{category.question}</h2>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {tools.map((tool) => (
                   <li key={tool.type}>
                     <Link
                       href={tool.newStudyPath(id)}
-                      className={`group flex items-start gap-3 rounded-lg border border-border/70 bg-surface/80 p-3 hover:border-accent-ink sm:items-center ${tool.type === "visual" ? "estimated-panel" : ""}`}
+                      className={`group flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3.5 transition-[border-color,background-color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/70 hover:bg-surface active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:items-center ${tool.type === "visual" ? "estimated-panel" : ""}`}
                     >
-                      <span className="grid size-14 shrink-0 place-items-center rounded-md bg-neuro-tint sm:size-19">
+                      <span className="grid size-14 shrink-0 place-items-center rounded-xl border border-border/70 bg-neuro-tint sm:size-18">
                         <BrandIllustration name={ILLUSTRATIONS[tool.type]} className="block w-full" />
                       </span>
                       <span className="min-w-0 flex-1 space-y-1">
@@ -67,7 +67,7 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
                         <span className="block text-xs text-muted">{tool.description}</span>
                         {tool.type === "visual" ? <EvidenceBadge kind="estimated" /> : null}
                       </span>
-                      <Icon name="arrow" className="mt-1 hidden size-5 text-muted sm:block" />
+                      <Icon name="arrow" className="mt-1 hidden size-5 text-muted transition-transform duration-[var(--duracion-micro)] group-hover:translate-x-0.5 group-hover:text-heading motion-reduce:transition-none sm:block" />
                     </Link>
                   </li>
                 ))}
