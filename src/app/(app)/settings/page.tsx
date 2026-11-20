@@ -1,4 +1,5 @@
 import { SettingsAppearancePanel, SettingsPasswordForm } from "@/components/settings-panels";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { signOut } from "@/lib/auth/actions";
@@ -24,10 +25,11 @@ export default async function SettingsPage() {
       : null;
 
   return (
-    <div className="space-y-6">
-      <div className="border-b border-border/70 pb-4">
+    <div className="max-w-4xl space-y-6">
+      <div className="space-y-2 border-b border-border/70 pb-4">
+        <Breadcrumbs items={[{ label: "Proyectos", href: "/projects" }, { label: "Ajustes" }]} />
         <h1 className="page-title">Ajustes</h1>
-        <p className="mt-1.5 text-sm text-muted">
+        <p className="text-sm text-muted">
           Administra tu cuenta, seguridad, apariencia y detalles de la plataforma.
         </p>
       </div>
@@ -35,14 +37,14 @@ export default async function SettingsPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <section
           aria-labelledby="settings-account"
-          className="space-y-4 rounded-[18px] border border-border bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(20,17,12,0.12)]"
+          className="space-y-4 rounded-panel border border-border bg-surface p-5 sm:p-6"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 id="settings-account" className="text-lg font-bold text-heading">
                 Cuenta y sesión
               </h2>
-              <p className="text-xs text-muted">Información de acceso en Aesteros.</p>
+              <p className="text-xs text-muted">Acceso con correo electrónico en Aesteros.</p>
             </div>
             <StatusBadge tone="success">Activa</StatusBadge>
           </div>
@@ -58,10 +60,8 @@ export default async function SettingsPage() {
               <dd className="truncate font-semibold text-heading">{user.email ?? "Sin correo"}</dd>
             </div>
             <div className="flex items-center justify-between gap-4 py-2.5">
-              <dt className="text-muted">Actividad</dt>
-              <dd className="font-semibold tabular-nums text-heading">
-                {projectCount} proyectos · {studyCount} estudios
-              </dd>
+              <dt className="text-muted">Acceso</dt>
+              <dd className="font-semibold text-heading">Correo y contraseña</dd>
             </div>
           </dl>
           <form action={signOut} className="pt-1">
@@ -72,43 +72,40 @@ export default async function SettingsPage() {
         </section>
 
         <section
-          aria-labelledby="settings-credits"
-          className="space-y-4 rounded-[18px] border border-border bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(20,17,12,0.12)]"
+          aria-labelledby="settings-activity"
+          className="space-y-4 rounded-panel border border-border bg-surface p-5 sm:p-6"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 id="settings-credits" className="text-lg font-bold text-heading">
-                Créditos de IA y versión
+              <h2 id="settings-activity" className="text-lg font-bold text-heading">
+                Actividad y plataforma
               </h2>
-              <p className="text-xs text-muted">Uso de síntesis con IA y compilación actual.</p>
+              <p className="text-xs text-muted">Resumen de tu espacio de trabajo en Aesteros.</p>
             </div>
             <StatusBadge tone="neutral">v{pkg.version}</StatusBadge>
           </div>
           <dl className="divide-y divide-border/70 text-sm">
+            <div className="flex items-center justify-between gap-4 py-2.5">
+              <dt className="text-muted">Proyectos</dt>
+              <dd className="font-semibold tabular-nums text-heading">{projectCount}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-2.5">
+              <dt className="text-muted">Estudios</dt>
+              <dd className="font-semibold tabular-nums text-heading">{studyCount}</dd>
+            </div>
             <div className="flex items-center justify-between gap-4 py-2.5">
               <dt className="text-muted">Síntesis e informes IA</dt>
               <dd className="font-semibold tabular-nums text-heading">
                 {aiAnalysisCount} generados
               </dd>
             </div>
-            <div className="flex items-center justify-between gap-4 py-2.5">
-              <dt className="text-muted">Cuota de créditos</dt>
-              <dd className="font-semibold text-heading">Sin límite por cuenta</dd>
-            </div>
-            <div className="flex items-center justify-between gap-4 py-2.5">
-              <dt className="text-muted">Versión</dt>
-              <dd className="font-semibold tabular-nums text-heading">Aesteros {pkg.version}</dd>
-            </div>
           </dl>
-          <p className="text-xs text-muted">
-            Cuando se active una cuota por institución o agencia, aquí verás tu saldo disponible y fecha de renovación.
-          </p>
         </section>
       </div>
 
       <section
         aria-labelledby="settings-appearance"
-        className="space-y-4 rounded-[18px] border border-border bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(20,17,12,0.12)]"
+        className="space-y-4 rounded-panel border border-border bg-surface p-5 sm:p-6"
       >
         <div>
           <h2 id="settings-appearance" className="text-lg font-bold text-heading">
@@ -121,13 +118,15 @@ export default async function SettingsPage() {
 
       <section
         aria-labelledby="settings-security"
-        className="space-y-4 rounded-[18px] border border-border bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(20,17,12,0.12)]"
+        className="space-y-4 rounded-panel border border-border bg-surface p-5 sm:p-6"
       >
         <div>
           <h2 id="settings-security" className="text-lg font-bold text-heading">
             Seguridad
           </h2>
-          <p className="text-xs text-muted">Actualiza tu contraseña de acceso sin cerrar tu sesión actual.</p>
+          <p className="text-xs text-muted">
+            Confirma tu contraseña actual para actualizarla sin cerrar tu sesión.
+          </p>
         </div>
         <SettingsPasswordForm />
       </section>

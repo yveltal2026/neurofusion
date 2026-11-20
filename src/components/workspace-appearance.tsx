@@ -18,6 +18,7 @@ import { WorkspaceThemeContext } from "./workspace-theme-context";
 import {
   readWorkspaceTheme,
   WORKSPACE_THEME_COOKIE,
+  WORKSPACE_THEME_OPTIONS,
   type WorkspaceTheme,
 } from "@/lib/workspace-theme";
 
@@ -87,11 +88,6 @@ export function useWorkspaceThemeControls() {
   };
 }
 
-const THEME_OPTIONS: { value: WorkspaceTheme; label: string }[] = [
-  { value: "light", label: "Claro" },
-  { value: "dark", label: "Oscuro" },
-  { value: "system", label: "Auto" },
-];
 
 function LogoutIcon({ className = "size-4" }: { className?: string }) {
   return (
@@ -314,7 +310,7 @@ export function WorkspaceFrame({ studyNav, children }: {
               aria-label="Tema de apariencia"
               className="grid grid-cols-3 gap-0.5 rounded-full border border-border/70 bg-surface-muted/80 p-0.5"
             >
-              {THEME_OPTIONS.map((option) => {
+              {WORKSPACE_THEME_OPTIONS.map((option) => {
                 const active = theme === option.value;
                 return (
                   <button
@@ -322,7 +318,7 @@ export function WorkspaceFrame({ studyNav, children }: {
                     type="button"
                     aria-pressed={active}
                     onClick={() => selectTheme(option.value)}
-                    className={`min-h-10 rounded-full px-2 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                    className={`min-h-10 rounded-full px-2 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-1 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
                       active
                         ? "bg-surface text-heading shadow-xs"
                         : "text-muted hover:text-heading"

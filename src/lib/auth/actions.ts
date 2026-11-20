@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 export interface AuthState {
+  ok?: boolean;
   error?: string;
   message?: string;
 }
@@ -140,8 +141,13 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
   redirect("/login?reset=ok");
 }
 
-/** Cambia la contraseña desde Ajustes de usuario manteniendo la sesión activa. */
+/** Cambia la contraseña desde Ajustes de usuario verificando la contraseña actual. */
 export async function changeAccountPassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const currentPassword = String(formData.get("current_password") ?? "");
+  if (!currentPassword) {
+    return { error: "Ingresa tu contraseña actual para confirmar el cambio." };
+  }
+
   const parsed = newPasswordSchema.safeParse({
     password: formData.get("password"),
     confirm: formData.get("confirm"),
@@ -152,13 +158,21 @@ export async function changeAccountPassword(_prev: AuthState, formData: FormData
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+  if (!user || !user.email) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+
+  const { error: verifyError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: currentPassword,
+  });
+  if (verifyError) {
+    return { error: "La contraseña actual no es correcta." };
+  }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
     return { error: authErrorMessage(error, "No pudimos actualizar tu contraseña. Inténtalo de nuevo.") };
   }
-  return { message: "Contraseña actualizada correctamente." };
+  return { ok: true, message: "Contraseña actualizada correctamente." };
 }
 
 export async function signOut() {

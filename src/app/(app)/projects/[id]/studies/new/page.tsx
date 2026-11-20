@@ -29,19 +29,6 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
         <p className="text-muted">Elige la herramienta para tu nuevo estudio.</p>
       </div>
 
-      <div className="bg-profundo flex flex-wrap items-center justify-between gap-4 rounded-panel p-5 sm:p-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <BrandIllustration name="mod-baterias" tone="deep" className="hidden w-20 shrink-0 sm:block" />
-          <div>
-            <h2 className="text-lg font-bold">Crear una batería</h2>
-            <p className="text-sm text-muted">Combina varias herramientas en una liga con un solo consentimiento.</p>
-          </div>
-        </div>
-        <Link href={`/projects/${id}/batteries/new`} className={buttonClass()}>
-          Armar batería <Icon name="arrow" className="size-4" />
-        </Link>
-      </div>
-
       <div className="grid gap-4 lg:grid-cols-2">
         {TOOL_CATEGORIES.map((category) => {
           const tools = TOOLS.filter((tool) => tool.category === category.id)
@@ -57,17 +44,22 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
                   <li key={tool.type}>
                     <Link
                       href={tool.newStudyPath(id)}
-                      className={`group flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3.5 transition-[border-color,background-color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/70 hover:bg-surface active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:items-center ${tool.type === "visual" ? "estimated-panel" : ""}`}
+                      className="group flex items-start gap-3 rounded-lg border border-border bg-background/60 p-3.5 transition-[border-color,background-color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/70 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink focus-visible:ring-offset-2 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 sm:items-center"
                     >
-                      <span className="grid size-14 shrink-0 place-items-center rounded-xl border border-border/70 bg-neuro-tint sm:size-18">
+                      <span className="grid size-14 shrink-0 place-items-center rounded-xl border border-border/70 bg-neuro-tint p-1.5 sm:size-18">
                         <BrandIllustration name={ILLUSTRATIONS[tool.type]} className="block w-full" />
                       </span>
-                      <span className="min-w-0 flex-1 space-y-1">
+                      <span className="min-w-0 flex-1 space-y-1.5">
                         <span className="block font-bold text-heading group-hover:underline">{tool.name}</span>
                         <span className="block text-xs text-muted">{tool.description}</span>
-                        {tool.type === "visual" ? <EvidenceBadge kind="estimated" /> : null}
+                        <span className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <EvidenceBadge kind={tool.evidence} />
+                          <span className="inline-flex items-center rounded-full border border-border/80 bg-background px-2.5 py-0.5 text-xs font-medium text-muted">
+                            {tool.modality}
+                          </span>
+                        </span>
                       </span>
-                      <Icon name="arrow" className="mt-1 hidden size-5 text-muted transition-transform duration-[var(--duracion-micro)] group-hover:translate-x-0.5 group-hover:text-heading motion-reduce:transition-none sm:block" />
+                      <Icon name="arrow" className="mt-1 hidden size-5 shrink-0 text-muted transition-transform duration-[var(--duracion-micro)] group-hover:translate-x-0.5 group-hover:text-heading motion-reduce:transition-none sm:block" />
                     </Link>
                   </li>
                 ))}
@@ -75,6 +67,26 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
             </section>
           );
         })}
+      </div>
+
+      <p className="text-xs text-muted">
+        <strong className="font-semibold text-heading">Sellos de evidencia:</strong>{" "}
+        <span className="font-medium text-heading">Medido</span> = datos reales de participantes ·{" "}
+        <span className="font-medium text-heading">Estimado</span> = predicción con IA ·{" "}
+        <span className="font-medium text-heading">Modelado</span> = reglas técnicas sobre URL o HTML.
+      </p>
+
+      <div className="modo-profundo flex flex-wrap items-center justify-between gap-4 rounded-panel border border-border bg-deep-2 p-5 text-foreground sm:p-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandIllustration name="mod-baterias" tone="deep" className="hidden w-20 shrink-0 sm:block" />
+          <div>
+            <h2 className="text-lg font-bold">Crear una batería</h2>
+            <p className="text-sm text-muted">Combina varias herramientas en una liga con un solo consentimiento.</p>
+          </div>
+        </div>
+        <Link href={`/projects/${id}/batteries/new`} className={buttonClass()}>
+          Armar batería <Icon name="arrow" className="size-4" />
+        </Link>
       </div>
     </div>
   );
