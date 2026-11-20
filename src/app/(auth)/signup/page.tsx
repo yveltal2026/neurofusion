@@ -1,8 +1,5 @@
-import { AuthForm } from "@/components/auth-form";
-import { SetupNotice } from "@/components/setup-notice";
-import { isSupabaseConfigured } from "@/lib/env";
+import { redirect } from "next/navigation";
 
 export default function SignupPage() {
-  if (!isSupabaseConfigured()) return <SetupNotice />;
-  return <AuthForm mode="signup" />;
+  redirect("/entrar?modo=registro");
 }

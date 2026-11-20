@@ -1,11 +1,10 @@
-import { AuthForm } from "@/components/auth-form";
-import { SetupNotice } from "@/components/setup-notice";
-import { isSupabaseConfigured } from "@/lib/env";
+import { redirect } from "next/navigation";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  if (!isSupabaseConfigured()) return <SetupNotice />;
   const sp = await searchParams;
-  const next = typeof sp.next === "string" ? sp.next : undefined;
-  const error = typeof sp.error === "string" ? sp.error : undefined;
-  return <AuthForm mode="login" next={next} urlError={error} resetOk={sp.reset === "ok"} />;
+  const params = new URLSearchParams();
+  if (typeof sp.next === "string") params.set("next", sp.next);
+  if (typeof sp.error === "string") params.set("error", sp.error);
+  const qs = params.toString();
+  redirect(qs ? `/entrar?${qs}` : "/entrar");
 }

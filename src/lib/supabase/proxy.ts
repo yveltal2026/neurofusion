@@ -4,7 +4,7 @@ import { publicEnv } from "@/lib/env";
 
 // /reset-password es pública a nivel de proxy: la propia página valida la sesión de recuperación y,
 // si no la hay, manda a pedir un enlace nuevo en vez de al login sin explicación.
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/auth"];
+const PUBLIC_PATHS = ["/", "/entrar", "/login", "/signup", "/forgot-password", "/reset-password", "/auth"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)));
@@ -34,11 +34,14 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!user && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/entrar";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  if (
+    user &&
+    (pathname === "/" || pathname === "/entrar" || pathname === "/login" || pathname === "/signup")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/projects";
     url.search = "";

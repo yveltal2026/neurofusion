@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { authErrorMessage } from "@/lib/auth/errors";
 import { newPasswordSchema, resetRequestSchema } from "@/lib/auth/password-reset";
-import { publicEnv } from "@/lib/env";
+import { isSupabaseConfigured, publicEnv } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,6 +33,9 @@ function safeNext(value: FormDataEntryValue | null): string {
 }
 
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  if (!isSupabaseConfigured()) {
+    return { error: "Falta configurar Supabase (.env.local) para iniciar sesión." };
+  }
   const parsed = credentials.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -46,6 +49,9 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  if (!isSupabaseConfigured()) {
+    return { error: "Falta configurar Supabase (.env.local) para crear cuentas." };
+  }
   const parsed = credentials.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -73,13 +79,14 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
 }
 
 export async function signInWithGoogle(formData: FormData) {
+  if (!isSupabaseConfigured()) redirect("/entrar?error=config");
   const supabase = await createClient();
   const next = safeNext(formData.get("next"));
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(next)}` },
   });
-  if (error || !data.url) redirect("/login?error=oauth");
+  if (error || !data.url) redirect("/entrar?error=oauth");
   redirect(data.url);
 }
 
@@ -141,7 +148,9 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
 }
 
 export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  }
+  redirect("/entrar");
 }
