@@ -14,12 +14,12 @@ export const TOOL_CATEGORIES = [
     name: "Asociaciones implícitas",
     question: "¿Qué asocian?",
   },
-  { id: "perception", name: "Percepción y opinión", question: "¿Qué opinan?" },
   {
     id: "digital",
     name: "Diagnóstico digital",
     question: "¿Cómo funciona tu sitio?",
   },
+  { id: "perception", name: "Percepción y opinión", question: "¿Qué opinan?" },
 ] as const;
 
 export interface ToolDefinition {
@@ -70,7 +70,7 @@ export const TOOLS: ToolDefinition[] = [
     shortName: "Eye Web",
     icon: "eye",
     description:
-      "Mide la mirada real de participantes en tu sitio web mediante snippet en el <head> (estilo RealEye) o con capturas web sin código, guiados por pasos e instrucciones.",
+      "Mide la mirada real de participantes en tu sitio web mediante snippet en el <head> o con capturas web sin código, guiados por pasos e instrucciones.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/web-eyetracking`,
   },
   {

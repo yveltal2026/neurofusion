@@ -115,7 +115,7 @@ export function NewWebEyetrackingStudyForm({
             [
               [
                 "live_snippet",
-                "Sitio en vivo (snippet en <head>, estilo RealEye)",
+                "Sitio en vivo (snippet en <head>)",
                 "Inserta un script ligero en el sitio. El usuario navega la web real guiado por una barra flotante de pasos.",
               ],
               [
