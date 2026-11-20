@@ -15,7 +15,7 @@ export default async function NewEyeTrackingStudyPage({ params }: PageProps<"/pr
     <div className="space-y-6">
       <div>
         <Breadcrumbs items={newStudyCrumbs(id, project.name, "Eye tracking")} />
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">Nuevo estudio de eye tracking</h1>
+        <h1 className="page-title mt-1 text-3xl font-bold tracking-tight">Nuevo estudio de eye tracking</h1>
         <p className="mt-1 text-sm text-muted">Mide dónde miran tus participantes (y sus expresiones faciales en video) mientras observan imágenes o video con webcam.</p>
       </div>
       <Card><NewEyeTrackingStudyForm projectId={project.id} /></Card>

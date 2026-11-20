@@ -6,6 +6,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
+| [COG-20261120-critique-eyetracking-visual](cambios/COG-20261120-critique-eyetracking-visual.md) | Mejoras UX/UI en Eye tracking con webcam y Análisis visual con IA | Implementado localmente en `feat/redisenio-visual`; integración y despliegue pendientes | Compartido |
 | [COG-20261119-redisenio-aesteros](cambios/COG-20261119-redisenio-aesteros.md) | Marca Aesteros, temas y navegación lateral contextual | Primera entrega integrada mediante [PR #27](https://github.com/yveltal2026/neurofusion/pull/27). Navegación lateral implementada en `feat/redisenio-visual`, integración y despliegue pendientes | Plataforma principal |
 | [COG-20261111-analisis-imagenes-ia](cambios/COG-20261111-analisis-imagenes-ia.md) | Formatos impresos, análisis dividido, zoom/paneo y resultados reorganizados | Réplica Anáhuac → CognIA implementada localmente; integración y despliegue pendientes | Compartido |
 | [COG-20261112-video-facial-eyetracking](cambios/COG-20261112-video-facial-eyetracking.md) | Video con mirada, señales faciales, R2 y CSV | Réplica adaptada localmente; credenciales/CORS, producción y cámara física pendientes | Compartido |

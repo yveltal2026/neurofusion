@@ -29,6 +29,7 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
   const [productTarget, setProductTarget] = useState("");
   const [sites, setSites] = useState<Omit<JourneySite, "key">[]>([{ name: "", url: "", competitor: false }]);
   const [tasks, setTasks] = useState<JourneyTask[]>(DEFAULT_TASKS);
+  const [customizeTasks, setCustomizeTasks] = useState(false);
   const [quotas, setQuotas] = useState<Quotas>(DEFAULT_QUOTAS);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -119,51 +120,69 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
                 {i === 0 ? (
                   <span className="text-xs text-muted">Principal</span>
                 ) : (
-                  <button type="button" className="text-sm text-danger hover:underline" onClick={() => setSites((xs) => xs.filter((_, j) => j !== i))}>
+                  <button type="button" className="inline-flex min-h-11 items-center text-sm text-danger hover:underline" onClick={() => setSites((xs) => xs.filter((_, j) => j !== i))}>
                     Quitar
                   </button>
                 )}
               </div>
             ))}
             {sites.length < 6 ? (
-              <button type="button" className="text-sm font-medium text-heading underline underline-offset-4" onClick={() => setSites((xs) => [...xs, { name: "", url: "", competitor: true }])}>
+              <button type="button" className="inline-flex min-h-11 items-center text-sm font-medium text-heading underline underline-offset-4" onClick={() => setSites((xs) => [...xs, { name: "", url: "", competitor: true }])}>
                 + Agregar competidor
               </button>
             ) : null}
           </fieldset>
 
           <fieldset className="space-y-3">
-            <legend className="text-sm font-medium">Tareas del recorrido</legend>
-            {tasks.map((t, i) => (
-              <div key={t.id} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[60px_1fr_180px_auto]">
-                <span className="pt-2 text-sm font-medium">{t.id}</span>
-                <div className="space-y-2">
-                  <Input value={t.name} onChange={(e) => setTask(i, { name: e.target.value })} required maxLength={80} aria-label={`Nombre de ${t.id}`} />
-                  <Input value={t.instruction} onChange={(e) => setTask(i, { instruction: e.target.value })} required maxLength={400} aria-label={`Instrucción de ${t.id}`} />
-                </div>
-                <select value={t.kind} onChange={(e) => setTask(i, { kind: e.target.value as TaskKind })} className={select} aria-label={`Tipo de ${t.id}`}>
-                  {TASK_KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {TASK_KIND_DEFS[k].label}
-                    </option>
-                  ))}
-                </select>
-                {tasks.length > 1 ? (
-                  <button type="button" className="text-sm text-danger hover:underline" onClick={() => setTasks((xs) => xs.filter((_, j) => j !== i))}>
-                    Quitar
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <legend className="text-sm font-medium">Tareas del recorrido ({tasks.length})</legend>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setCustomizeTasks((v) => !v)}
+              >
+                {customizeTasks ? "Ocultar detalle de tareas" : "Personalizar tareas"}
+              </Button>
+            </div>
+            {customizeTasks ? (
+              <>
+                {tasks.map((t, i) => (
+                  <div key={t.id} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[60px_1fr_180px_auto]">
+                    <span className="pt-2 text-sm font-medium">{t.id}</span>
+                    <div className="space-y-2">
+                      <Input value={t.name} onChange={(e) => setTask(i, { name: e.target.value })} required maxLength={80} aria-label={`Nombre de ${t.id}`} />
+                      <Input value={t.instruction} onChange={(e) => setTask(i, { instruction: e.target.value })} required maxLength={400} aria-label={`Instrucción de ${t.id}`} />
+                    </div>
+                    <select value={t.kind} onChange={(e) => setTask(i, { kind: e.target.value as TaskKind })} className={select} aria-label={`Tipo de ${t.id}`}>
+                      {TASK_KINDS.map((k) => (
+                        <option key={k} value={k}>
+                          {TASK_KIND_DEFS[k].label}
+                        </option>
+                      ))}
+                    </select>
+                    {tasks.length > 1 ? (
+                      <button type="button" className="inline-flex min-h-11 items-center text-sm text-danger hover:underline" onClick={() => setTasks((xs) => xs.filter((_, j) => j !== i))}>
+                        Quitar
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+                {tasks.length < 8 ? (
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 items-center text-sm font-medium text-heading underline underline-offset-4"
+                    onClick={() => setTasks((xs) => [...xs, { id: nextTaskId(), name: "", instruction: "", kind: "otra" }])}
+                  >
+                    + Agregar tarea
                   </button>
                 ) : null}
-              </div>
-            ))}
-            {tasks.length < 8 ? (
-              <button
-                type="button"
-                className="text-sm font-medium text-heading underline underline-offset-4"
-                onClick={() => setTasks((xs) => [...xs, { id: nextTaskId(), name: "", instruction: "", kind: "otra" }])}
-              >
-                + Agregar tarea
-              </button>
-            ) : null}
+              </>
+            ) : (
+              <p className="rounded-lg border border-border bg-surface-muted/30 px-3 py-2.5 text-xs text-muted">
+                Se incluyen {tasks.length} tareas estándar ({tasks.map((t) => t.name).filter(Boolean).join(", ")}).
+              </p>
+            )}
             <p className="text-xs text-muted">El tipo de tarea define qué fricciones influyen en su éxito dentro del modelo.</p>
           </fieldset>
 
@@ -178,29 +197,34 @@ export function NewVisualStudyForm({ projectId }: { projectId: string }) {
                   ["age", AGE_GROUPS, "Edad"],
                   ["literacy", LITERACY, "Alfabetización digital"],
                 ] as const
-              ).map(([dim, groups, label]) => (
-                <div key={dim}>
-                  <p className="font-medium">
-                    {label} · suma {sum(quotas[dim]).toFixed(2)} %
-                  </p>
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {groups.map((g) => (
-                      <label key={g} className="flex items-center gap-1">
-                        {g}
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.01}
-                          value={(quotas[dim] as Record<string, number>)[g]}
-                          onChange={(e) => setQuotas((q) => ({ ...q, [dim]: { ...q[dim], [g]: Number(e.target.value) } }))}
-                          className="w-20 rounded border border-control bg-background px-2 py-1 tabular-nums"
-                        />
-                      </label>
-                    ))}
+              ).map(([dim, groups, label]) => {
+                const total = sum(quotas[dim]);
+                const validTotal = Math.abs(total - 100) <= 0.1;
+                return (
+                  <div key={dim}>
+                    <p className={`font-medium ${validTotal ? "" : "text-danger"}`}>
+                      {label} · suma <span className="tabular-nums">{total.toFixed(2)} %</span>
+                      {!validTotal ? " (debe sumar 100 %)" : ""}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {groups.map((g) => (
+                        <label key={g} className="flex items-center gap-1">
+                          {g}
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.01}
+                            value={(quotas[dim] as Record<string, number>)[g]}
+                            onChange={(e) => setQuotas((q) => ({ ...q, [dim]: { ...q[dim], [g]: Number(e.target.value) } }))}
+                            className="w-20 rounded border border-control bg-background px-2 py-1 tabular-nums"
+                          />
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </details>
         </>

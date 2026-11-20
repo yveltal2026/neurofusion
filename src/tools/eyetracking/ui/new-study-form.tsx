@@ -52,6 +52,25 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
     const fd = new FormData(e.currentTarget);
     setError(null);
 
+    const normalizedScenes = scenes.map((s, idx) => ({
+      index: idx + 1,
+      id: s.id,
+      label: s.label.trim(),
+      startMs: Math.round((Number(s.startSec) || 0) * 1000),
+      endMs: Math.round((Number(s.endSec) || 0) * 1000),
+    }));
+    if (mediaType === "video") {
+      const bad = normalizedScenes.find((s) => s.label.length === 0 || s.endMs <= s.startMs);
+      if (bad) {
+        setError(
+          bad.label.length === 0
+            ? `La escena ${bad.index} necesita un nombre.`
+            : `En la escena ${bad.index} («${bad.label}»), el segundo final debe ser mayor que el inicial.`,
+        );
+        return;
+      }
+    }
+
     const eyeTracking =
       mediaType === "image"
         ? {
@@ -66,14 +85,7 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
             video: {
               storage: "cloudflare_r2" as const,
               maxDurationSeconds: Number(fd.get("maxDurationSeconds") ?? 120),
-              scenes: scenes
-                .map((s) => ({
-                  id: s.id,
-                  label: s.label.trim(),
-                  startMs: Math.round((Number(s.startSec) || 0) * 1000),
-                  endMs: Math.round((Number(s.endSec) || 0) * 1000),
-                }))
-                .filter((s) => s.label.length > 0 && s.endMs > s.startMs),
+              scenes: normalizedScenes.map(({ id, label, startMs, endMs }) => ({ id, label, startMs, endMs })),
             },
           };
 
@@ -119,7 +131,7 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
             <label
               key={value}
               className={`cursor-pointer rounded-lg border p-4 transition focus-within:outline-2 focus-within:outline-accent-ink ${
-                mediaType === value ? "border-primary bg-neuro-tint" : "border-border"
+                mediaType === value ? "border-primary bg-primary/5" : "border-border"
               }`}
             >
               <input
@@ -159,9 +171,9 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
               className="mt-0.5"
             />
             <span>
-              <span className="font-medium">Medir expresiones faciales (Facial Coding opcional)</span>
+              <span className="font-medium">Medir expresiones faciales (opcional)</span>
               <span className="block text-xs text-muted">
-                Analiza 12 gestos faciales (FACS) y 4 emociones clave (sonrisa, fricción, valencia y sorpresa) directo en el dispositivo del participante.
+                Detecta gestos del rostro (sistema FACS, por ejemplo ceño fruncido o sonrisa) y estima valencia (agrado o rechazo) y sorpresa directo en el dispositivo del participante.
               </span>
             </span>
           </label>
@@ -180,9 +192,9 @@ export function NewEyeTrackingStudyForm({ projectId }: { projectId: string }) {
               className="mt-0.5"
             />
             <span>
-              <span className="font-medium">Medir expresiones faciales (Facial Coding · 12 gestos FACS)</span>
+              <span className="font-medium">Medir expresiones faciales (opcional)</span>
               <span className="block text-xs text-muted">
-                Mide sonrisa, fricción/ceño, valencia y sorpresa sincronizados con lo que el participante está mirando (calibración neutral de 3 s al inicio).
+                Mide sonrisa, fricción/ceño, agrado o rechazo (valencia) y sorpresa sincronizados con lo que el participante mira (calibración neutral de 3 s al inicio).
               </span>
             </span>
           </label>

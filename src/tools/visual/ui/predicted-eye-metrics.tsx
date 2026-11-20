@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,18 @@ const columns = [
   "Visitas",
   "Regresos",
 ];
+const HEADER_HINTS: Record<string, string> = {
+  AOI: "Área de interés evaluada",
+  "TTFF (ms)": "Tiempo hasta la primera fijación estimada (milisegundos)",
+  FC: "Conteo de fijaciones estimadas dentro del área",
+  "FD media (ms)": "Duración promedio estimada de cada fijación (milisegundos)",
+  "TFD (ms)": "Tiempo total de fijación acumulado estimado (milisegundos)",
+  "Dwell (ms)": "Tiempo de permanencia continua estimado (milisegundos)",
+  "Hit rate (%)": "Porcentaje hipotético de exposición que mira el área",
+  "Primera fijación (%)": "Porcentaje hipotético cuya primera mirada cae en esta área",
+  Visitas: "Número estimado de entradas al área",
+  Regresos: "Veces estimadas que la mirada vuelve al área",
+};
 const fmt = (n: number | null | undefined) =>
   n == null ? "—" : n.toLocaleString("es-MX", { maximumFractionDigits: 1 });
 
@@ -40,6 +53,7 @@ export function PredictedEyeMetrics({
   analyzedAois: Aoi[];
   asset?: { id: string; title: string };
 }) {
+  const [activeHint, setActiveHint] = useState<string | null>(null);
   const rows = aoiPredictions(result, aois, analyzedAois);
   function exportCsv() {
     const csv = toCsv(
@@ -115,9 +129,26 @@ export function PredictedEyeMetrics({
                   <th
                     key={label}
                     scope="col"
+                    title={HEADER_HINTS[label]}
                     className="whitespace-nowrap px-3 py-2 print:whitespace-normal print:px-1"
                   >
-                    {label}
+                    {label !== "AOI" && HEADER_HINTS[label] ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span>{label}</span>
+                        <button
+                          type="button"
+                          aria-expanded={activeHint === label}
+                          aria-label={`Definición de ${label}`}
+                          title={HEADER_HINTS[label]}
+                          onClick={() => setActiveHint((prev) => (prev === label ? null : label))}
+                          className="inline-flex size-5 items-center justify-center rounded-full border border-border text-xs font-bold text-muted hover:text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink print:hidden"
+                        >
+                          ?
+                        </button>
+                      </span>
+                    ) : (
+                      label
+                    )}
                   </th>
                 ))}
               </tr>
@@ -168,6 +199,11 @@ export function PredictedEyeMetrics({
           No hay áreas de interés disponibles para este desglose.
         </p>
       )}
+      {activeHint && HEADER_HINTS[activeHint] ? (
+        <p role="status" className="rounded-lg border border-border bg-surface-muted/50 px-3 py-2 text-xs text-heading print:hidden">
+          <strong className="font-semibold">{activeHint}:</strong> {HEADER_HINTS[activeHint]}
+        </p>
+      ) : null}
       {!rows.some((r) => r.prediction) ? (
         <p className="text-sm text-muted">
           Los análisis anteriores conservan sus resultados. Para obtener estas

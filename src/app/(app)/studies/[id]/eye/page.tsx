@@ -3,6 +3,7 @@ import { StudyHeader } from "@/components/study-header";
 import { setSessionExcluded } from "@/app/(app)/studies/[id]/data/actions";
 import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
+import { ConfirmActionDialog } from "@/components/ui/confirm-action";
 import { StatStrip } from "@/components/ui/stat-strip";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
@@ -216,7 +217,13 @@ export default async function EyeResultsPage({ params, searchParams }: PageProps
                       {run.session.participant_ref}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-muted">
-                      {run.session.device_type}
+                      {run.session.device_type === "desktop"
+                        ? "Escritorio"
+                        : run.session.device_type === "mobile"
+                          ? "Celular"
+                          : run.session.device_type === "tablet"
+                            ? "Tableta"
+                            : run.session.device_type}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
                       {run.quality.medianErrorDeg !== null && run.quality.medianErrorDeg !== undefined
@@ -252,21 +259,34 @@ export default async function EyeResultsPage({ params, searchParams }: PageProps
                       ) : null}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                      <form action={setSessionExcluded}>
-                        <input type="hidden" name="studyId" value={study.id} />
-                        <input type="hidden" name="sessionId" value={run.id} />
-                        <input
-                          type="hidden"
-                          name="excluded"
-                          value={run.session.excluded ? "false" : "true"}
-                        />
-                        <button
-                          type="submit"
-                          className="min-h-11 text-xs font-semibold text-heading underline underline-offset-4 hover:text-accent-ink"
+                      {run.session.excluded ? (
+                        <form action={setSessionExcluded}>
+                          <input type="hidden" name="studyId" value={study.id} />
+                          <input type="hidden" name="sessionId" value={run.id} />
+                          <input type="hidden" name="excluded" value="false" />
+                          <button
+                            type="submit"
+                            className="min-h-11 text-xs font-semibold text-heading underline underline-offset-4 hover:text-accent-ink"
+                          >
+                            Reincorporar
+                          </button>
+                        </form>
+                      ) : (
+                        <ConfirmActionDialog
+                          triggerLabel="Excluir"
+                          triggerVariant="ghost"
+                          triggerSize="sm"
+                          title="Excluir sesión de los resultados"
+                          description={`Se excluirá la sesión de ${run.session.participant_ref ?? "este participante"} de los mapas y métricas agregadas. Podrás reincorporarla después desde esta misma tabla.`}
+                          confirmLabel="Excluir sesión"
+                          confirmVariant="danger"
+                          action={setSessionExcluded}
                         >
-                          {run.session.excluded ? "Reincorporar" : "Excluir"}
-                        </button>
-                      </form>
+                          <input type="hidden" name="studyId" value={study.id} />
+                          <input type="hidden" name="sessionId" value={run.id} />
+                          <input type="hidden" name="excluded" value="true" />
+                        </ConfirmActionDialog>
+                      )}
                     </td>
                   </tr>
                 ))}
