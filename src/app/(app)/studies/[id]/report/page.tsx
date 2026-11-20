@@ -40,7 +40,7 @@ export const maxDuration = 120;
 export default async function ReportPage({ params }: PageProps<"/studies/[id]/report">) {
   const { id } = await params;
   const { supabase } = await requireUser();
-  const { data: candidate } = await supabase.from("studies").select("*").eq("id", id).in("tool_type", ["survey", "visual"]).maybeSingle<StudyRow>();
+  const { data: candidate } = await supabase.from("studies").select("*").eq("id", id).in("tool_type", ["survey", "visual", "web_visual"]).maybeSingle<StudyRow>();
   if (!candidate) notFound();
   if (candidate.tool_type === "survey") {
     const source = await loadReportSource(supabase, candidate);

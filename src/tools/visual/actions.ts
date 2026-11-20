@@ -30,6 +30,8 @@ import { imageForVision, imageMetrics, imageRenditions, inspectImage, textContra
 import { buildRatings, missingRatings } from "./journey/ratings";
 import { DEFAULT_PANEL_N, ENGINE_VERSION, generatePanel, IFD_VERSION, runSite, sensitivity } from "./journey/model";
 import { RUBRIC_VERSION, rubricItems } from "./journey/rubric";
+import { buildWebVisualContextText } from "@/tools/web-visual/analysis/prompt";
+import { webVisualConfigSchema, type WebVisualConfig } from "@/tools/web-visual/config";
 import { renditionPath, storedAiSchema, toVisualAsset, type StoredAi } from "./results";
 
 export interface VisualFormState {
@@ -51,9 +53,21 @@ const REVIEW_DEADLINE_MS = 105_000;
 
 type Supabase = Awaited<ReturnType<typeof requireUser>>["supabase"];
 
-async function loadVisualStudy(supabase: Supabase, id: string): Promise<{ study: StudyRow; config: VisualConfig } | null> {
-  const { data } = await supabase.from("studies").select("*").eq("id", id).eq("tool_type", "visual").maybeSingle<StudyRow>();
-  if (!data) return null;
+async function loadVisualStudy(
+  supabase: Supabase,
+  id: string,
+): Promise<{ study: StudyRow; config: VisualConfig; webConfig?: WebVisualConfig } | null> {
+  const { data } = await supabase.from("studies").select("*").eq("id", id).maybeSingle<StudyRow>();
+  if (!data || (data.tool_type && data.tool_type !== "visual" && data.tool_type !== "web_visual")) return null;
+  if (data.tool_type === "web_visual") {
+    const web = webVisualConfigSchema.safeParse(data.config);
+    if (!web.success) return null;
+    return {
+      study: data,
+      config: { mode: "pieces", objective: web.data.objective, brand: web.data.brand, audience: web.data.audience },
+      webConfig: web.data,
+    };
+  }
   const config = visualConfigSchema.safeParse(data.config);
   return config.success ? { study: data, config: config.data } : null;
 }
@@ -195,7 +209,7 @@ export async function registerAsset(raw: unknown): Promise<VisualFormState> {
     if (!loaded.config.tasks.some((t) => t.id === input.taskId)) return fail("Elige la tarea de la captura");
   }
   if (input.placement && !getPlacement(input.placement)) return fail("Formato desconocido");
-  if (loaded.config.mode === "pieces" && !eyeStudy && !input.placement) return fail("Elige el formato antes de subir las imágenes");
+  if (loaded.study.tool_type !== "web_visual" && loaded.config.mode === "pieces" && !eyeStudy && !input.placement) return fail("Elige el formato antes de subir las imágenes");
 
   const buf = await download(supabase, input.path);
   if (!buf) return fail("No se pudo leer el archivo subido");
@@ -309,20 +323,24 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   const cfg = loaded.config;
   const site = cfg.mode === "journey" ? cfg.sites.find((s) => s.key === row.site_key) : null;
   const task = cfg.mode === "journey" ? cfg.tasks.find((t) => t.id === row.task_id) : null;
+  const placementLabel = getPlacement(row.placement)?.label ?? null;
+  const baseText = buildPieceUserText({
+    objective: cfg.objective,
+    brand: cfg.brand,
+    audience: cfg.audience,
+    title: row.title,
+    placement: placementLabel,
+    journey: site && task ? { site: site.name, task: `${task.name}: ${task.instruction}` } : null,
+    tiles: parts.length,
+    coverage: plan.coverage,
+  });
   const user: ContentPart[] = [
     ...parts,
     {
       type: "text",
-      text: buildPieceUserText({
-        objective: cfg.objective,
-        brand: cfg.brand,
-        audience: cfg.audience,
-        title: row.title,
-        placement: getPlacement(row.placement)?.label ?? null,
-        journey: site && task ? { site: site.name, task: `${task.name}: ${task.instruction}` } : null,
-        tiles: parts.length,
-        coverage: plan.coverage,
-      }),
+      text: loaded.webConfig
+        ? `${baseText}\n\n${buildWebVisualContextText(loaded.webConfig, row.title, placementLabel)}`
+        : baseText,
     },
   ];
 
