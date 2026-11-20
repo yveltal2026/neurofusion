@@ -279,25 +279,35 @@ export function WorkspaceFrame({ studyNav, children }: {
           }}
         >
           <WorkspaceNav />
-          {studyNav ?? (recentStudies.length ? (
-            <section aria-label="Estudios recientes" className="space-y-1.5 border-t border-border/70 pt-4">
-              <p className="px-3 text-xs font-semibold text-muted">Recientes</p>
-              <ul className="space-y-0.5">
-                {recentStudies.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      href={`/studies/${item.id}`}
-                      className="workspace-nav-link text-xs"
-                      prefetch={false}
-                    >
-                      <Icon name={item.icon} className="size-4 shrink-0" />
-                      <span className="min-w-0 truncate">{item.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null)}
+          {studyNav}
+          {(() => {
+            const visibleRecent = recentStudies
+              .filter((item) => !pathname.startsWith(`/studies/${item.id}`))
+              .slice(0, 3);
+            if (!visibleRecent.length) return null;
+            return (
+              <section
+                aria-label="Estudios recientes"
+                className={`${studyNav ? "hidden lg:block " : ""}space-y-1.5 border-t border-border/70 pt-4`}
+              >
+                <p className="px-3 text-xs font-semibold text-muted">Recientes</p>
+                <ul className="space-y-0.5">
+                  {visibleRecent.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        href={`/studies/${item.id}`}
+                        className="workspace-nav-link text-xs"
+                        prefetch={false}
+                      >
+                        <Icon name={item.icon} className="size-4 shrink-0" />
+                        <span className="min-w-0 truncate">{item.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })()}
           <div className="mt-auto space-y-2 rounded-xl border border-border bg-surface/80 p-2">
             <div
               role="group"

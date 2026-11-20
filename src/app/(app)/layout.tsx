@@ -27,7 +27,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       .from("studies")
       .select("id, name, tool_type, config")
       .order("updated_at", { ascending: false })
-      .limit(3)
+      .limit(4)
       .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "config">[]>(),
   ]);
   const theme = readWorkspaceTheme(
