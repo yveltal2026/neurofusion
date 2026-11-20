@@ -359,14 +359,14 @@ progress.brand-progress {
   min-width: 0;
   flex-direction: column;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 58%, var(--surface));
   backdrop-filter: blur(20px) saturate(140%);
 }
 
 @media screen and (min-width: 64rem) {
   .workspace-frame {
     display: grid;
-    grid-template-columns: 15.5rem minmax(0, 1fr);
+    grid-template-columns: 14.5rem minmax(0, 1fr);
   }
 
   .workspace-sidebar {

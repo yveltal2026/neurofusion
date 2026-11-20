@@ -10,7 +10,10 @@ import { getStudyTool } from "@/tools/registry";
 export type StudyGalleryItem = Pick<
   StudyRow,
   "id" | "name" | "tool_type" | "config" | "status" | "created_at"
->;
+> & {
+  max_responses?: number | null;
+  metricCount?: number;
+};
 
 type StatusFilter = "all" | StudyRow["status"];
 
@@ -32,6 +35,30 @@ const STATUS_TONE: Record<StudyRow["status"], "neutral" | "success" | "warning">
   published: "success",
   closed: "warning",
 };
+
+function studyMetricSummary(study: StudyGalleryItem): { label: string; progress?: number } {
+  const count = study.metricCount ?? 0;
+  if (study.tool_type === "visual") {
+    return {
+      label: count === 0 ? "Sin piezas aún" : `${count} ${count === 1 ? "pieza" : "piezas"}`,
+    };
+  }
+  if (study.tool_type === "seo") {
+    return {
+      label: count === 0 ? "Sin auditorías aún" : `${count} ${count === 1 ? "auditoría" : "auditorías"}`,
+    };
+  }
+  if (study.max_responses && study.max_responses > 0) {
+    const pct = Math.min(100, Math.round((count / study.max_responses) * 100));
+    return {
+      label: `${count} de ${study.max_responses} participantes`,
+      progress: pct,
+    };
+  }
+  return {
+    label: count === 0 ? "Sin participantes aún" : `${count} ${count === 1 ? "participante" : "participantes"}`,
+  };
+}
 
 export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
   const [query, setQuery] = useState("");
@@ -109,48 +136,60 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
       </div>
 
       {shown.length ? (
-        <ul className="grid gap-5 md:grid-cols-2" aria-label="Estudios del proyecto">
+        <ul className="grid gap-4 md:grid-cols-2" aria-label="Estudios del proyecto">
           {shown.map((study) => {
             const tool = getStudyTool(study);
+            const metric = studyMetricSummary(study);
             return (
               <li key={study.id}>
                 <Link
                   href={`/studies/${study.id}`}
-                  className="group flex h-full min-w-0 flex-col justify-between gap-5 rounded-[22px] border border-border/80 bg-surface p-6 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+                  className="group flex h-full min-w-0 flex-col justify-between gap-4 rounded-[18px] border border-border/80 bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
                 >
                   <div>
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <span className="grid size-11 place-items-center rounded-2xl border border-border/70 bg-neuro-wash text-accent-ink">
+                    <div className="mb-3.5 flex items-center justify-between gap-3">
+                      <span className="grid size-10 place-items-center rounded-xl border border-border/70 bg-neuro-wash text-accent-ink">
                         <Icon name={tool?.icon ?? "layers"} className="size-5" />
                       </span>
                       <StatusBadge tone={STATUS_TONE[study.status]}>
                         {STATUS_LABEL[study.status]}
                       </StatusBadge>
                     </div>
-                    <h3 className="break-words text-xl font-bold tracking-tight text-heading group-hover:underline">
+                    <h3 className="break-words text-lg font-bold tracking-tight text-heading group-hover:underline">
                       {study.name}
                     </h3>
-                    <p className="mt-1 text-sm text-muted">
+                    <p className="mt-0.5 text-sm text-muted">
                       {tool?.shortName ?? study.tool_type}
                     </p>
                   </div>
 
-                  <p className="text-xs text-muted">
-                    {study.status === "published" ? "Publicado · " : ""}
-                    Creado el{" "}
-                    <time dateTime={study.created_at}>
-                      {new Date(study.created_at).toLocaleDateString("es-MX", {
-                        timeZone: "America/Mexico_City",
-                      })}
-                    </time>
-                  </p>
+                  <div className="space-y-2 border-t border-border/60 pt-3">
+                    {typeof metric.progress === "number" ? (
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-[width] duration-300"
+                          style={{ width: `${metric.progress}%` }}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs tabular-nums text-muted">
+                      <span className="font-semibold text-foreground/80">{metric.label}</span>
+                      <span>
+                        <time dateTime={study.created_at}>
+                          {new Date(study.created_at).toLocaleDateString("es-MX", {
+                            timeZone: "America/Mexico_City",
+                          })}
+                        </time>
+                      </span>
+                    </div>
+                  </div>
                 </Link>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="rounded-[22px] border border-border/80 bg-surface p-6 text-sm text-muted" role="status">
+        <p className="rounded-[18px] border border-border/80 bg-surface p-5 text-sm text-muted" role="status">
           Ningún estudio coincide con los filtros actuales.
         </p>
       )}

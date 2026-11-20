@@ -102,12 +102,12 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
       </div>
 
       {shown.length ? (
-        <ul className="grid gap-5 md:grid-cols-2" aria-label="Proyectos">
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Proyectos">
           {shown.map(({ id, name, description, created_at, studyCount }) => (
             <li key={id}>
               <Link
                 href={`/projects/${id}`}
-                className="group flex h-full min-w-0 flex-col justify-between gap-5 rounded-[22px] border border-border/80 bg-surface p-6 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+                className="group flex h-full min-w-0 flex-col justify-between gap-4 rounded-[18px] border border-border/80 bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
               >
                 <div>
                   <div className="mb-4 flex items-center justify-between gap-3">

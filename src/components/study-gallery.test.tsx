@@ -12,6 +12,8 @@ const STUDIES: StudyGalleryItem[] = [
     tool_type: "iat",
     config: {},
     status: "published",
+    max_responses: 60,
+    metricCount: 42,
     created_at: "2026-11-10T12:00:00Z",
   },
   {
@@ -20,6 +22,7 @@ const STUDIES: StudyGalleryItem[] = [
     tool_type: "visual",
     config: { mode: "pieces" },
     status: "draft",
+    metricCount: 4,
     created_at: "2026-11-11T12:00:00Z",
   },
   {
@@ -28,12 +31,17 @@ const STUDIES: StudyGalleryItem[] = [
     tool_type: "seo",
     config: {},
     status: "closed",
+    metricCount: 2,
     created_at: "2026-11-12T12:00:00Z",
   },
 ];
 
-it("filtra estudios por estado y búsqueda en tarjetas de Opción 1", () => {
+it("muestra métricas reales y filtra estudios por estado y búsqueda", () => {
   render(<StudyGallery studies={STUDIES} />);
+
+  expect(screen.getByText("42 de 60 participantes")).toBeTruthy();
+  expect(screen.getByText("4 piezas")).toBeTruthy();
+  expect(screen.getByText("2 auditorías")).toBeTruthy();
 
   const link = screen.getByRole("link", { name: /Empaque de jugo A frente a B/i });
   expect(link.getAttribute("href")).toBe("/studies/s1");

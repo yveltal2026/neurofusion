@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useId, useRef, useState, type ReactNode } from "react";
-import { Icon } from "@/components/brand/icon";
+import { Icon, type IconName } from "@/components/brand/icon";
 import { Logo } from "@/components/brand/logo";
 import { WorkspaceNav } from "@/components/workspace-nav";
 import { WorkspaceThemeContext } from "./workspace-theme-context";
@@ -13,18 +13,27 @@ import {
   type WorkspaceTheme,
 } from "@/lib/workspace-theme";
 
+export interface RecentSidebarStudy {
+  id: string;
+  name: string;
+  icon: IconName;
+}
+
 const WorkspaceControls = createContext<{
   account: ReactNode;
+  recentStudies: RecentSidebarStudy[];
   selectTheme: (value: string) => void;
-}>({ account: null, selectTheme: () => {} });
+}>({ account: null, recentStudies: [], selectTheme: () => {} });
 
 export function WorkspaceAppearance({
   initialTheme,
   account,
+  recentStudies = [],
   children,
 }: {
   initialTheme: WorkspaceTheme;
   account: ReactNode;
+  recentStudies?: RecentSidebarStudy[];
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState(initialTheme);
@@ -40,7 +49,7 @@ export function WorkspaceAppearance({
 
   return (
     <WorkspaceThemeContext.Provider value={theme}>
-      <WorkspaceControls.Provider value={{ account, selectTheme }}>
+      <WorkspaceControls.Provider value={{ account, recentStudies, selectTheme }}>
         <div data-workspace-theme={theme} className="flex min-h-dvh flex-1 flex-col print:min-h-0">
           {children}
         </div>
@@ -54,7 +63,7 @@ export function WorkspaceFrame({ studyNav, children }: {
   children: ReactNode;
 }) {
   const theme = useContext(WorkspaceThemeContext);
-  const { account, selectTheme } = useContext(WorkspaceControls);
+  const { account, recentStudies, selectTheme } = useContext(WorkspaceControls);
   const pathname = usePathname();
   const panelId = useId();
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -116,7 +125,25 @@ export function WorkspaceFrame({ studyNav, children }: {
           }}
         >
           <WorkspaceNav />
-          {studyNav}
+          {studyNav ?? (recentStudies.length ? (
+            <section aria-label="Estudios recientes" className="space-y-1.5 border-t border-border/70 pt-4">
+              <p className="px-3 text-xs font-semibold text-muted">Recientes</p>
+              <ul className="space-y-0.5">
+                {recentStudies.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={`/studies/${item.id}`}
+                      className="workspace-nav-link text-xs"
+                      prefetch={false}
+                    >
+                      <Icon name={item.icon} className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{item.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null)}
           <div className="mt-auto space-y-2.5 rounded-lg border border-border bg-surface-muted/50 p-3">
             <label className="flex min-h-10 items-center justify-between gap-2 text-xs font-semibold text-muted">
               Tema

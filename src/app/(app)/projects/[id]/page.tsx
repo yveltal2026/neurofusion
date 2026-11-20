@@ -28,10 +28,10 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
 
   const { data: studies } = await supabase
     .from("studies")
-    .select("id, name, tool_type, config, status, created_at")
+    .select("id, name, tool_type, config, status, max_responses, created_at")
     .eq("project_id", id)
     .order("created_at", { ascending: false })
-    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "config" | "status" | "created_at">[]>();
+    .returns<Pick<StudyRow, "id" | "name" | "tool_type" | "config" | "status" | "max_responses" | "created_at">[]>();
 
   const { data: batteries } = await supabase
     .from("batteries")
@@ -40,7 +40,39 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
     .order("created_at", { ascending: false })
     .returns<Pick<BatteryRow, "id" | "name" | "status">[]>();
 
-  const studyList = studies ?? [];
+  const studyIds = (studies ?? []).map((s) => s.id);
+  const [sessionsRes, assetsRes, auditsRes] = studyIds.length
+    ? await Promise.all([
+        supabase.from("sessions").select("study_id, status").in("study_id", studyIds),
+        supabase.from("visual_assets").select("study_id").in("study_id", studyIds),
+        supabase.from("seo_audits").select("study_id").in("study_id", studyIds),
+      ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const sessionCounts = new Map<string, number>();
+  for (const row of sessionsRes.data ?? []) {
+    if (row.status === "completed") {
+      sessionCounts.set(row.study_id, (sessionCounts.get(row.study_id) ?? 0) + 1);
+    }
+  }
+  const assetCounts = new Map<string, number>();
+  for (const row of assetsRes.data ?? []) {
+    assetCounts.set(row.study_id, (assetCounts.get(row.study_id) ?? 0) + 1);
+  }
+  const auditCounts = new Map<string, number>();
+  for (const row of auditsRes.data ?? []) {
+    auditCounts.set(row.study_id, (auditCounts.get(row.study_id) ?? 0) + 1);
+  }
+
+  const studyList = (studies ?? []).map((s) => ({
+    ...s,
+    metricCount:
+      s.tool_type === "visual"
+        ? (assetCounts.get(s.id) ?? 0)
+        : s.tool_type === "seo"
+          ? (auditCounts.get(s.id) ?? 0)
+          : (sessionCounts.get(s.id) ?? 0),
+  }));
   const publishedCount = studyList.filter((s) => s.status === "published").length;
 
   return (
