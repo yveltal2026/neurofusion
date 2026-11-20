@@ -159,7 +159,7 @@ function AccountPopover({ onNavigate }: { onNavigate?: () => void }) {
                 setOpen(false);
                 onNavigate?.();
               }}
-              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-heading transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98]"
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-heading transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
             >
               <Icon name="settings" className="size-4 shrink-0 text-muted" />
               Ajustes
@@ -168,7 +168,7 @@ function AccountPopover({ onNavigate }: { onNavigate?: () => void }) {
               <form action={signOutAction}>
                 <button
                   type="submit"
-                  className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-danger transition-colors duration-[var(--duracion-micro)] hover:bg-danger/10 active:scale-[0.98]"
+                  className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold text-danger transition-colors duration-[var(--duracion-micro)] hover:bg-danger/10 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
                 >
                   <LogoutIcon className="size-4 shrink-0" />
                   Cerrar sesión
@@ -185,7 +185,7 @@ function AccountPopover({ onNavigate }: { onNavigate?: () => void }) {
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98]"
+        className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors duration-[var(--duracion-micro)] hover:bg-surface-muted active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
       >
         <span className="grid size-7 shrink-0 place-items-center rounded-full border border-border bg-neuro-tint text-xs font-bold text-heading">
           {initial}
@@ -197,7 +197,7 @@ function AccountPopover({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         <span
           aria-hidden="true"
-          className={`size-2 shrink-0 border-r border-b border-muted transition-transform duration-[var(--duracion-micro)] ${
+          className={`size-2 shrink-0 border-r border-b border-muted transition-transform duration-[var(--duracion-micro)] motion-reduce:transition-none ${
             open ? "-translate-y-0.5 rotate-[225deg]" : "-translate-y-0.5 rotate-45"
           }`}
         />

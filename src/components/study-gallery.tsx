@@ -14,9 +14,11 @@ export type StudyGalleryItem = Pick<
 > & {
   max_responses?: number | null;
   metricCount?: number;
+  lastResponseAt?: string | null;
 };
 
 type StatusFilter = "all" | StudyRow["status"];
+type StudySort = "recent" | "activity" | "name";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "Todos" },
@@ -61,10 +63,45 @@ function studyMetricSummary(study: StudyGalleryItem): { label: string; progress?
   };
 }
 
+function isStatusFilter(value: string | null): value is StatusFilter {
+  return value === "all" || value === "published" || value === "draft" || value === "closed";
+}
+
+function isStudySort(value: string | null): value is StudySort {
+  return value === "recent" || value === "activity" || value === "name";
+}
+
 export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
+  const [sort, setSort] = useState<StudySort>("recent");
+  const hydrated = useRef(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialQuery = params.get("q") ?? "";
+    const initialStatus = params.get("status");
+    const initialSort = params.get("sort");
+    if (initialQuery) setQuery(initialQuery);
+    if (isStatusFilter(initialStatus)) setStatus(initialStatus);
+    if (isStudySort(initialSort)) setSort(initialSort);
+    hydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (query.trim()) params.set("q", query.trim());
+    else params.delete("q");
+    if (status !== "all") params.set("status", status);
+    else params.delete("status");
+    if (sort !== "recent") params.set("sort", sort);
+    else params.delete("sort");
+    const next = params.toString();
+    const url = next ? `${window.location.pathname}?${next}` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+  }, [query, status, sort]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -79,15 +116,25 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
 
   const needle = query.trim().toLocaleLowerCase("es-MX");
   const hasActiveFilter = Boolean(needle) || status !== "all";
-  const shown = studies.filter((study) => {
-    if (status !== "all" && study.status !== status) return false;
-    const tool = getStudyTool(study);
-    if (needle) {
-      const haystack = `${study.name} ${tool?.shortName ?? ""} ${tool?.name ?? ""}`.toLocaleLowerCase("es-MX");
-      if (!haystack.includes(needle)) return false;
-    }
-    return true;
-  });
+  const shown = studies
+    .filter((study) => {
+      if (status !== "all" && study.status !== status) return false;
+      const tool = getStudyTool(study);
+      if (needle) {
+        const haystack = `${study.name} ${tool?.shortName ?? ""} ${tool?.name ?? ""}`.toLocaleLowerCase("es-MX");
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === "activity") {
+        const aTime = a.lastResponseAt ?? a.created_at;
+        const bTime = b.lastResponseAt ?? b.created_at;
+        return bTime.localeCompare(aTime);
+      }
+      if (sort === "name") return a.name.localeCompare(b.name, "es-MX");
+      return b.created_at.localeCompare(a.created_at);
+    });
 
   function clearFilters() {
     setQuery("");
@@ -112,16 +159,29 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
             }}
             placeholder="Buscar estudio..."
             aria-label="Buscar estudio por nombre o herramienta"
-            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-20 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
+            aria-keyshortcuts="Control+K Meta+K Escape"
+            className="min-h-11 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-20 pl-10 text-base text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25 sm:text-sm"
           />
-          {!query ? (
+          {query ? (
+            <button
+              type="button"
+              aria-label="Limpiar búsqueda"
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
+              className="absolute top-1/2 right-0.5 grid size-10 -translate-y-1/2 place-items-center rounded-full text-muted transition-colors hover:bg-surface-muted hover:text-heading motion-reduce:transition-none"
+            >
+              <Icon name="close" className="size-4" />
+            </button>
+          ) : (
             <kbd
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-border/80 bg-surface-muted/80 px-1.5 py-0.5 font-sans text-xs font-medium text-muted sm:inline-flex"
             >
               Ctrl/⌘ K
             </kbd>
-          ) : null}
+          )}
         </div>
 
         <div
@@ -149,11 +209,24 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
           })}
         </div>
 
-        <p className="text-xs font-semibold tabular-nums text-muted">
-          {hasActiveFilter
-            ? `${shown.length} de ${studies.length} estudios`
-            : `${studies.length} ${studies.length === 1 ? "estudio" : "estudios"}`}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            aria-label="Ordenar estudios"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as StudySort)}
+            className="min-h-11 rounded-full border border-border/80 bg-surface/90 px-3.5 text-xs font-semibold text-heading outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25 motion-reduce:transition-none"
+          >
+            <option value="recent">Más recientes</option>
+            <option value="activity">Última respuesta</option>
+            <option value="name">Nombre A–Z</option>
+          </select>
+
+          <p aria-live="polite" className="text-xs font-semibold tabular-nums text-muted">
+            {hasActiveFilter
+              ? `${shown.length} de ${studies.length} estudios`
+              : `${studies.length} ${studies.length === 1 ? "estudio" : "estudios"}`}
+          </p>
+        </div>
       </div>
 
       {shown.length ? (
@@ -162,11 +235,8 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
             const tool = getStudyTool(study);
             const metric = studyMetricSummary(study);
             return (
-              <li key={study.id}>
-                <Link
-                  href={`/studies/${study.id}`}
-                  className="group flex h-full min-w-0 flex-col justify-between gap-4 rounded-[18px] border border-border/80 bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
-                >
+              <li key={study.id} className="relative">
+                <article className="group relative flex h-full min-w-0 flex-col justify-between gap-4 rounded-[18px] border border-border/80 bg-surface p-5 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] focus-within:border-accent-ink focus-within:ring-2 focus-within:ring-accent-ink/25 hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100">
                   <div>
                     <div className="mb-3.5 flex items-center justify-between gap-3">
                       <span className="grid size-10 place-items-center rounded-xl border border-border/70 bg-surface-muted/60 text-accent-ink">
@@ -176,8 +246,13 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                         {STATUS_LABEL[study.status]}
                       </StatusBadge>
                     </div>
-                    <h3 className="break-words text-lg font-bold tracking-tight text-heading group-hover:underline">
-                      {study.name}
+                    <h3 className="break-words text-lg font-bold tracking-tight text-heading">
+                      <Link
+                        href={`/studies/${study.id}`}
+                        className="after:absolute after:inset-0 focus:outline-none group-hover:underline"
+                      >
+                        {study.name}
+                      </Link>
                     </h3>
                     <p className="mt-0.5 text-sm text-muted">
                       {tool?.shortName ?? study.tool_type}
@@ -195,23 +270,38 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                         className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted"
                       >
                         <div
-                          className="h-full rounded-full bg-primary transition-[width] duration-300"
+                          className="h-full rounded-full bg-primary transition-[width] duration-300 motion-reduce:transition-none"
                           style={{ width: `${metric.progress}%` }}
                         />
                       </div>
                     ) : null}
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs tabular-nums text-muted">
                       <span className="font-semibold text-foreground/80">{metric.label}</span>
-                      <span>
-                        <time dateTime={study.created_at}>
-                          {new Date(study.created_at).toLocaleDateString("es-MX", {
-                            timeZone: "America/Mexico_City",
-                          })}
-                        </time>
+                      <span className="inline-flex items-center gap-2">
+                        {study.lastResponseAt ? (
+                          <span>
+                            Última respuesta{" "}
+                            <time dateTime={study.lastResponseAt}>
+                              {new Date(study.lastResponseAt).toLocaleDateString("es-MX", {
+                                timeZone: "America/Mexico_City",
+                              })}
+                            </time>
+                          </span>
+                        ) : (
+                          <time dateTime={study.created_at}>
+                            {new Date(study.created_at).toLocaleDateString("es-MX", {
+                              timeZone: "America/Mexico_City",
+                            })}
+                          </time>
+                        )}
+                        <Icon
+                          name="arrow"
+                          className="size-4 shrink-0 text-muted transition-transform duration-[var(--duracion-micro)] group-hover:translate-x-0.5 group-hover:text-heading motion-reduce:transition-none"
+                        />
                       </span>
                     </div>
                   </div>
-                </Link>
+                </article>
               </li>
             );
           })}

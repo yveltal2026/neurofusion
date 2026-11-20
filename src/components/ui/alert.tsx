@@ -6,6 +6,7 @@ const tones = {
   info: { box: "border-primary/50 bg-primary/10", dot: "bg-primary" },
   success: { box: "border-success/40 bg-success/10", dot: "bg-success" },
   warning: { box: "border-warning/40 bg-warning/10", dot: "bg-warning" },
+  success: { box: "border-success/40 bg-success/10", dot: "bg-success" },
 } as const;
 
 export function Alert({

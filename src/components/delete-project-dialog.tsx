@@ -45,6 +45,7 @@ export function DeleteProjectDialog({
       <dialog
         ref={dialog}
         aria-labelledby={heading}
+        onClose={() => setConfirmation("")}
         onClick={(event) => {
           if (event.target === dialog.current) handleClose();
         }}
@@ -54,8 +55,8 @@ export function DeleteProjectDialog({
           <h2 id={heading} className="text-xl font-bold text-heading">
             Eliminar proyecto
           </h2>
-          <Button type="button" variant="ghost" onClick={handleClose}>
-            Cerrar
+          <Button type="button" variant="ghost" className="px-3" aria-label="Cerrar" onClick={handleClose}>
+            <Icon name="close" className="size-4" />
           </Button>
         </div>
 
@@ -78,7 +79,7 @@ export function DeleteProjectDialog({
               type="text"
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
-              placeholder={projectName}
+              placeholder="Escribe el nombre exacto"
               autoComplete="off"
             />
           </div>

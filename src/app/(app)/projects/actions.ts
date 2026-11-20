@@ -13,6 +13,7 @@ const projectSchema = z.object({
 
 export interface ProjectFormState {
   error?: string;
+  ok?: boolean;
 }
 
 export async function createProject(
@@ -34,7 +35,31 @@ export async function createProject(
   if (error || !data) return { error: "No se pudo crear el proyecto" };
 
   revalidatePath("/projects");
-  redirect(`/projects/${data.id}`);
+  redirect(`/projects/${data.id}?created=1`);
+}
+
+export async function updateProject(
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) return { error: "Identificador de proyecto inválido." };
+  const parsed = projectSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase
+    .from("projects")
+    .update({ name: parsed.data.name, description: parsed.data.description ?? null })
+    .eq("id", id.data);
+  if (error) return { error: "No se pudieron guardar los cambios." };
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${id.data}`);
+  return { ok: true };
 }
 
 export async function deleteProject(
@@ -51,5 +76,5 @@ export async function deleteProject(
   const { error } = await supabase.from("projects").delete().eq("id", id.data);
   if (error) return { error: "No se pudo eliminar el proyecto. Intenta de nuevo." };
   revalidatePath("/projects");
-  redirect("/projects");
+  redirect("/projects?deleted=1");
 }

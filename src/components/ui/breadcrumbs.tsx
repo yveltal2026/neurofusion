@@ -19,7 +19,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
               </span>
             ) : null}
             {c.href ? (
-              <Link href={c.href} className="inline-block max-w-[16rem] truncate py-1 hover:text-heading hover:underline">
+              <Link href={c.href} className="inline-flex min-h-11 max-w-[16rem] items-center truncate hover:text-heading hover:underline">
                 {c.label}
               </Link>
             ) : (
