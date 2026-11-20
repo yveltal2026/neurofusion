@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/brand/icon";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StudyRow } from "@/lib/db/types";
 import { getStudyTool } from "@/tools/registry";
@@ -77,6 +78,7 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
   }, []);
 
   const needle = query.trim().toLocaleLowerCase("es-MX");
+  const hasActiveFilter = Boolean(needle) || status !== "all";
   const shown = studies.filter((study) => {
     if (status !== "all" && study.status !== status) return false;
     const tool = getStudyTool(study);
@@ -86,6 +88,11 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
     }
     return true;
   });
+
+  function clearFilters() {
+    setQuery("");
+    setStatus("all");
+  }
 
   return (
     <div className="space-y-6">
@@ -105,14 +112,22 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
             }}
             placeholder="Buscar estudio..."
             aria-label="Buscar estudio por nombre o herramienta"
-            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
+            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-20 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
           />
+          {!query ? (
+            <kbd
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-border/80 bg-surface-muted/80 px-1.5 py-0.5 font-sans text-xs font-medium text-muted sm:inline-flex"
+            >
+              Ctrl/⌘ K
+            </kbd>
+          ) : null}
         </div>
 
         <div
           role="group"
           aria-label="Filtrar estudios por estado"
-          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/70 bg-surface-muted/75 p-1 backdrop-blur-md"
+          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/70 bg-surface-muted/85 p-1"
         >
           {STATUS_OPTIONS.map((option) => {
             const active = status === option.value;
@@ -122,7 +137,7 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setStatus(option.value)}
-                className={`min-h-8 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                className={`min-h-10 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
                   active
                     ? "bg-surface text-heading shadow-xs"
                     : "text-muted hover:text-heading"
@@ -133,6 +148,12 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
             );
           })}
         </div>
+
+        <p className="text-xs font-semibold tabular-nums text-muted">
+          {hasActiveFilter
+            ? `${shown.length} de ${studies.length} estudios`
+            : `${studies.length} ${studies.length === 1 ? "estudio" : "estudios"}`}
+        </p>
       </div>
 
       {shown.length ? (
@@ -148,7 +169,7 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                 >
                   <div>
                     <div className="mb-3.5 flex items-center justify-between gap-3">
-                      <span className="grid size-10 place-items-center rounded-xl border border-border/70 bg-neuro-wash text-accent-ink">
+                      <span className="grid size-10 place-items-center rounded-xl border border-border/70 bg-surface-muted/60 text-accent-ink">
                         <Icon name={tool?.icon ?? "layers"} className="size-5" />
                       </span>
                       <StatusBadge tone={STATUS_TONE[study.status]}>
@@ -165,7 +186,14 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
 
                   <div className="space-y-2 border-t border-border/60 pt-3">
                     {typeof metric.progress === "number" ? (
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+                      <div
+                        role="progressbar"
+                        aria-valuenow={metric.progress}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={metric.label}
+                        className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted"
+                      >
                         <div
                           className="h-full rounded-full bg-primary transition-[width] duration-300"
                           style={{ width: `${metric.progress}%` }}
@@ -189,9 +217,16 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
           })}
         </ul>
       ) : (
-        <p className="rounded-[18px] border border-border/80 bg-surface p-5 text-sm text-muted" role="status">
-          Ningún estudio coincide con los filtros actuales.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-border/80 bg-surface p-5 text-sm text-muted" role="status">
+          <p>
+            {needle
+              ? `Ningún estudio coincide con «${query.trim()}».`
+              : "Ningún estudio coincide con el filtro seleccionado."}
+          </p>
+          <Button type="button" variant="secondary" onClick={clearFilters}>
+            Limpiar filtros
+          </Button>
+        </div>
       )}
     </div>
   );

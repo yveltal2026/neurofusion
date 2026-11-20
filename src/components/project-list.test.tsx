@@ -12,6 +12,8 @@ const PROJECTS = [
     description: "Pruebas de empaque y anuncios",
     created_at: "2026-11-10T12:00:00Z",
     studyCount: 3,
+    publishedCount: 2,
+    tools: ["IAT", "Visual"],
   },
   {
     id: "p2",
@@ -19,13 +21,17 @@ const PROJECTS = [
     description: "Auditoría SEO y recorrido",
     created_at: "2026-11-12T12:00:00Z",
     studyCount: 1,
+    publishedCount: 0,
+    tools: ["SEO"],
   },
 ];
 
-it("muestra conteos de estudios y filtra proyectos desde el buscador", () => {
+it("muestra conteos de estudios, publicados y herramientas y filtra proyectos", () => {
   render(<ProjectList projects={PROJECTS} />);
 
   expect(screen.getByText("3 estudios")).toBeTruthy();
+  expect(screen.getByText("2 publicados")).toBeTruthy();
+  expect(screen.getByText("IAT")).toBeTruthy();
   expect(screen.getByText("1 estudio")).toBeTruthy();
   expect(screen.getByText("2 proyectos")).toBeTruthy();
 
@@ -37,4 +43,12 @@ it("muestra conteos de estudios y filtra proyectos desde el buscador", () => {
   expect(screen.queryByText("Campaña Verano")).toBeNull();
   expect(screen.getByText("Sitio Admisiones")).toBeTruthy();
   expect(screen.getByText("1 de 2 proyectos")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Sin estudios" }));
+  expect(screen.getByText(/Ningún proyecto coincide con «admisiones»/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+  expect(screen.getByText("Campaña Verano")).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Sin estudios" }));
+  expect(screen.getByText("No hay proyectos en este filtro.")).toBeTruthy();
 });

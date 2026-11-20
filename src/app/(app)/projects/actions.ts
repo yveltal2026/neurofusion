@@ -37,15 +37,19 @@ export async function createProject(
   redirect(`/projects/${data.id}`);
 }
 
-export async function deleteProject(formData: FormData) {
+export async function deleteProject(
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
   const id = z.string().uuid().safeParse(formData.get("id"));
-  if (!id.success) return;
+  if (!id.success) return { error: "Identificador de proyecto inválido." };
   const { supabase } = await requireUser();
   // Los archivos del Storage no se borran en cascada con las filas.
   const { data: visual } = await supabase.from("studies").select("id").eq("project_id", id.data).eq("tool_type", "visual");
   for (const s of visual ?? []) await removeStudyFiles(supabase, s.id);
   // RLS garantiza que sólo se borran proyectos de la propia organización.
-  await supabase.from("projects").delete().eq("id", id.data);
+  const { error } = await supabase.from("projects").delete().eq("id", id.data);
+  if (error) return { error: "No se pudo eliminar el proyecto. Intenta de nuevo." };
   revalidatePath("/projects");
   redirect("/projects");
 }

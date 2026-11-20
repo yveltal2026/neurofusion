@@ -18,7 +18,10 @@ export function NewProjectDialog() {
       <dialog
         ref={dialog}
         aria-labelledby={heading}
-        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border border-border bg-surface p-5 text-foreground shadow-xl backdrop:bg-deep/65 sm:p-6"
+        onClick={(event) => {
+          if (event.target === dialog.current) dialog.current?.close();
+        }}
+        className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-[18px] border border-border bg-surface p-5 text-foreground shadow-xl backdrop:bg-deep/65 sm:p-6"
       >
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 id={heading} className="text-xl font-bold">Nuevo proyecto</h2>
@@ -26,7 +29,7 @@ export function NewProjectDialog() {
             Cerrar
           </Button>
         </div>
-        <NewProjectForm />
+        <NewProjectForm onCancel={() => dialog.current?.close()} />
       </dialog>
     </>
   );

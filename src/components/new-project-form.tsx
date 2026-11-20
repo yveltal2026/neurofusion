@@ -8,20 +8,27 @@ import { Field, Input, Textarea } from "@/components/ui/field";
 
 const initial: ProjectFormState = {};
 
-export function NewProjectForm() {
+export function NewProjectForm({ onCancel }: { onCancel?: () => void }) {
   const [state, action, pending] = useActionState(createProject, initial);
   return (
     <form action={action} className="space-y-4">
       {state.error ? <Alert tone="error">{state.error}</Alert> : null}
       <Field label="Nombre del proyecto">
-        <Input name="name" required maxLength={120} placeholder="Ej. Percepción de marcas de café" />
+        <Input name="name" autoFocus required maxLength={120} placeholder="Ej. Percepción de marcas de café" />
       </Field>
       <Field label="Descripción (opcional)">
         <Textarea name="description" maxLength={1000} />
       </Field>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Creando…" : "Crear proyecto"}
-      </Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        {onCancel ? (
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            Cancelar
+          </Button>
+        ) : null}
+        <Button type="submit" disabled={pending}>
+          {pending ? "Creando…" : "Crear proyecto"}
+        </Button>
+      </div>
     </form>
   );
 }

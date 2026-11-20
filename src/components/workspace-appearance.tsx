@@ -322,7 +322,7 @@ export function WorkspaceFrame({ studyNav, children }: {
                     type="button"
                     aria-pressed={active}
                     onClick={() => selectTheme(option.value)}
-                    className={`min-h-7 rounded-full px-2 text-[11px] font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none ${
+                    className={`min-h-10 rounded-full px-2 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
                       active
                         ? "bg-surface text-heading shadow-xs"
                         : "text-muted hover:text-heading"

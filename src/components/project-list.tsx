@@ -5,12 +5,16 @@ import { useEffect, useRef, useState } from "react";
 import { BrandIllustration } from "@/components/brand/illustration";
 import { Icon } from "@/components/brand/icon";
 
+import { Button } from "@/components/ui/button";
+
 export interface ProjectItem {
   id: string;
   name: string;
   description: string | null;
   created_at: string;
   studyCount?: number;
+  publishedCount?: number;
+  tools?: string[];
 }
 
 type ProjectScope = "all" | "with-studies" | "empty";
@@ -38,14 +42,20 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
   }, []);
 
   const needle = query.trim().toLocaleLowerCase("es-MX");
-  const shown = projects.filter(({ name, description, studyCount = 0 }) => {
+  const hasActiveFilter = Boolean(needle) || scope !== "all";
+  const shown = projects.filter(({ name, description, studyCount = 0, tools = [] }) => {
     if (scope === "with-studies" && studyCount === 0) return false;
     if (scope === "empty" && studyCount > 0) return false;
     if (needle) {
-      return `${name} ${description ?? ""}`.toLocaleLowerCase("es-MX").includes(needle);
+      return `${name} ${description ?? ""} ${tools.join(" ")}`.toLocaleLowerCase("es-MX").includes(needle);
     }
     return true;
   });
+
+  function clearFilters() {
+    setQuery("");
+    setScope("all");
+  }
 
   return (
     <div className="space-y-6">
@@ -65,14 +75,22 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
             }}
             placeholder="Buscar proyecto..."
             aria-label="Buscar proyecto por nombre o descripción"
-            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
+            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-20 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
           />
+          {!query ? (
+            <kbd
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 rounded border border-border/80 bg-surface-muted/80 px-1.5 py-0.5 font-sans text-xs font-medium text-muted sm:inline-flex"
+            >
+              Ctrl/⌘ K
+            </kbd>
+          ) : null}
         </div>
 
         <div
           role="group"
           aria-label="Filtrar proyectos"
-          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/70 bg-surface-muted/75 p-1 backdrop-blur-md"
+          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/70 bg-surface-muted/85 p-1"
         >
           {SCOPE_OPTIONS.map((option) => {
             const active = scope === option.value;
@@ -82,7 +100,7 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setScope(option.value)}
-                className={`min-h-8 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                className={`min-h-10 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
                   active
                     ? "bg-surface text-heading shadow-xs"
                     : "text-muted hover:text-heading"
@@ -95,7 +113,7 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
         </div>
 
         <p className="text-xs font-semibold tabular-nums text-muted">
-          {needle || scope !== "all"
+          {hasActiveFilter
             ? `${shown.length} de ${projects.length} proyectos`
             : `${projects.length} ${projects.length === 1 ? "proyecto" : "proyectos"}`}
         </p>
@@ -103,7 +121,7 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
 
       {shown.length ? (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Proyectos">
-          {shown.map(({ id, name, description, created_at, studyCount }) => (
+          {shown.map(({ id, name, description, created_at, studyCount, publishedCount = 0, tools = [] }) => (
             <li key={id}>
               <Link
                 href={`/projects/${id}`}
@@ -111,14 +129,21 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
               >
                 <div>
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <span className="grid size-11 place-items-center rounded-2xl border border-border/70 bg-neuro-wash">
+                    <span className="grid size-11 place-items-center rounded-2xl border border-border/70 bg-surface-muted/60">
                       <BrandIllustration name="mod-proyectos" className="block w-10" />
                     </span>
-                    {typeof studyCount === "number" ? (
-                      <span className="rounded-full border border-border/80 bg-surface-muted/60 px-3 py-1 text-xs font-semibold tabular-nums text-muted">
-                        {studyCount} {studyCount === 1 ? "estudio" : "estudios"}
-                      </span>
-                    ) : null}
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {typeof studyCount === "number" ? (
+                        <span className="rounded-full border border-border/80 bg-surface-muted/60 px-3 py-1 text-xs font-semibold tabular-nums text-muted">
+                          {studyCount} {studyCount === 1 ? "estudio" : "estudios"}
+                        </span>
+                      ) : null}
+                      {publishedCount > 0 ? (
+                        <span className="rounded-full border border-success/35 bg-success/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-success">
+                          {publishedCount} {publishedCount === 1 ? "publicado" : "publicados"}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <h2 className="break-words text-xl font-bold tracking-tight text-heading group-hover:underline">
                     {name}
@@ -126,24 +151,54 @@ export function ProjectList({ projects }: { projects: ProjectItem[] }) {
                   {description ? (
                     <p className="mt-1.5 line-clamp-2 text-sm text-muted">{description}</p>
                   ) : null}
+                  {tools.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {tools.slice(0, 2).map((tool) => (
+                        <span
+                          key={tool}
+                          className="rounded-md border border-border/70 bg-surface-muted/50 px-2 py-0.5 text-xs font-medium text-muted"
+                        >
+                          {tool}
+                        </span>
+                      ))}
+                      {tools.length > 2 ? (
+                        <span className="px-1 py-0.5 text-xs font-medium text-muted">
+                          +{tools.length - 2}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
-                <p className="text-xs text-muted">
-                  Creado el{" "}
-                  <time dateTime={created_at}>
-                    {new Date(created_at).toLocaleDateString("es-MX", {
-                      timeZone: "America/Mexico_City",
-                    })}
-                  </time>
-                </p>
+                <div className="flex items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs tabular-nums text-muted">
+                  <p>
+                    Creado el{" "}
+                    <time dateTime={created_at}>
+                      {new Date(created_at).toLocaleDateString("es-MX", {
+                        timeZone: "America/Mexico_City",
+                      })}
+                    </time>
+                  </p>
+                  <Icon
+                    name="arrow"
+                    className="size-4 shrink-0 text-muted transition-transform duration-[var(--duracion-micro)] group-hover:translate-x-0.5 group-hover:text-heading motion-reduce:transition-none"
+                  />
+                </div>
               </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-muted" role="status">
-          Ningún proyecto coincide con «{query}».
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-border/80 bg-surface p-5 text-sm text-muted" role="status">
+          <p>
+            {needle
+              ? `Ningún proyecto coincide con «${query.trim()}».`
+              : "No hay proyectos en este filtro."}
+          </p>
+          <Button type="button" variant="secondary" onClick={clearFilters}>
+            Limpiar filtros
+          </Button>
+        </div>
       )}
     </div>
   );

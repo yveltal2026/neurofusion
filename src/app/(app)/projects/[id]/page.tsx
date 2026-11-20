@@ -1,18 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DeleteProjectDialog } from "@/components/delete-project-dialog";
 import { StudyGallery } from "@/components/study-gallery";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { Button, buttonClass } from "@/components/ui/button";
+import { buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RowLink, RowList } from "@/components/ui/rows";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth/session";
 import type { BatteryRow, ProjectRow, StudyRow } from "@/lib/db/types";
-import { deleteProject } from "../actions";
 
-const STATUS_LABEL = { draft: "borrador", published: "publicado", closed: "cerrado" } as const;
+const STATUS_LABEL = { draft: "Borrador", published: "Publicado", closed: "Cerrado" } as const;
 const STATUS_TONE = { draft: "neutral", published: "success", closed: "warning" } as const;
 
 export default async function ProjectPage({ params }: PageProps<"/projects/[id]">) {
@@ -88,7 +87,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
             {project.description ? ` — ${project.description}` : ""}
           </p>
         </div>
-        <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("inverse")}>
+        <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
           <Icon name="plus" className="size-5" />
           Nuevo estudio
         </Link>
@@ -100,6 +99,12 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           <EmptyState
             icon="layers"
             title="Este proyecto aún no tiene estudios"
+            action={
+              <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("primary")}>
+                <Icon name="plus" className="size-5" />
+                Crear primer estudio
+              </Link>
+            }
           >
             Elige una herramienta (IAT, encuesta, SEO o análisis visual) y arma tu primer estudio.
           </EmptyState>
@@ -116,7 +121,18 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           </Link>
         </div>
         {(batteries ?? []).length === 0 ? (
-          <Card className="text-sm text-muted">Una batería une varios estudios (IAT, variantes, encuestas e imágenes con IA) en una sola liga. Aún no hay ninguna.</Card>
+          <EmptyState
+            icon="layers"
+            title="Este proyecto aún no tiene baterías"
+            action={
+              <Link href={`/projects/${project.id}/batteries/new`} className={buttonClass("secondary")}>
+                <Icon name="plus" className="size-4" />
+                Nueva batería
+              </Link>
+            }
+          >
+            Una batería une varios estudios (IAT, variantes, encuestas e imágenes con IA) en una sola liga.
+          </EmptyState>
         ) : (
           <RowList>
             {(batteries ?? []).map((b) => (
@@ -136,13 +152,15 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
           </RowList>
         )}
       </section>
-      <form action={deleteProject} className="border-t border-border pt-4">
-        <input type="hidden" name="id" value={project.id} />
-        <Button type="submit" variant="ghost" className="text-danger">
-          <Icon name="trash" className="size-5" />
-          Eliminar proyecto
-        </Button>
-      </form>
+
+      <section aria-labelledby="danger-zone" className="border-t border-border pt-6">
+        <h2 id="danger-zone" className="sr-only">Zona de peligro</h2>
+        <DeleteProjectDialog
+          projectId={project.id}
+          projectName={project.name}
+          studyCount={studyList.length}
+        />
+      </section>
     </div>
   );
 }

@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T07:50:00Z",
+  "title": "Design System: Aesteros",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Ámbar Editorial",
+        "canonical": "#ffb000",
+        "tonalRamp": ["#332200", "#5c3f00", "#8c6100", "#bd8300", "#ffb000", "#ffc542", "#ffdc8a", "#fff3d6"]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Café Tostado",
+        "canonical": "#7a3e12",
+        "tonalRamp": ["#241104", "#3d1e08", "#5c2e0d", "#7a3e12", "#9c5623", "#be7742", "#dba57b", "#f5dfd0"]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Papel Neutro",
+        "canonical": "#f7f7f5",
+        "tonalRamp": ["#1c1c1a", "#3d3d39", "#63635d", "#8c8c85", "#b8b8b0", "#dcdcd6", "#ededeb", "#f7f7f5"]
+      },
+      "sidebar-bg": {
+        "role": "neutral",
+        "displayName": "Arena Cálida",
+        "canonical": "#f5efe2",
+        "tonalRamp": ["#262016", "#473c29", "#6e5e41", "#96825c", "#bca780", "#d9cbb0", "#ebe2d0", "#f5efe2"]
+      },
+      "deep": {
+        "role": "neutral",
+        "displayName": "Noche Profunda",
+        "canonical": "#0b0907",
+        "tonalRamp": ["#0b0907", "#17130d", "#201b13", "#302718", "#4e4231", "#786852", "#b3a38c", "#fff7e6"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (.page-title)", "purpose": "Encabezados principales de página con font-stretch al 110%." },
+      "headline": { "displayName": "Headline", "purpose": "Títulos de tarjeta de proyecto y modales." },
+      "title": { "displayName": "Title", "purpose": "Encabezados de sección y tarjetas de estudio." },
+      "body": { "displayName": "Body", "purpose": "Texto base de lectura y descripciones." },
+      "label": { "displayName": "Label", "purpose": "Etiquetas de control, badges, filtros y encabezados de tabla." }
+    },
+    "shadows": [
+      { "name": "card-ambient", "value": "0 14px 34px -22px rgba(122, 62, 18, 0.22)", "purpose": "Sombra cálida difusa en reposo para tarjetas interactivas." },
+      { "name": "card-hover", "value": "0 18px 40px -22px rgba(122, 62, 18, 0.30)", "purpose": "Elevación sutil al pasar el cursor sobre tarjetas de proyecto y estudio." },
+      { "name": "glass-panel", "value": "0 22px 46px -28px rgba(20, 17, 12, 0.14)", "purpose": "Sombra de paneles translúcidos fuera del marco de trabajo sólido." }
+    ],
+    "motion": [
+      { "name": "ease-enfocar", "value": "cubic-bezier(0.16, 0.84, 0.24, 1)", "purpose": "Curva de desaceleración estándar para microinteracciones y entrada de foco." },
+      { "name": "duracion-micro", "value": "160ms", "purpose": "Transiciones de hover, foco y compresión en botones y tarjetas." },
+      { "name": "duracion-corta", "value": "360ms", "purpose": "Transiciones de paneles y apertura." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de pantalla (Nuevo proyecto, Nuevo estudio).",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Nuevo proyecto</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border: 2px solid transparent; border-radius: 9999px; background: var(--primary, #ffb000); color: var(--primary-foreground, #14110c); font-family: var(--font-sans, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: filter 160ms cubic-bezier(.16,.84,.24,1), transform 160ms cubic-bezier(.16,.84,.24,1); } .ds-btn-primary:hover { filter: brightness(0.95); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus, #7a3e12); outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Acción complementaria o de cancelación sin competir con el CTA ámbar.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Limpiar filtros</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border: 2px solid var(--heading, #14110c); border-radius: 9999px; background: transparent; color: var(--heading, #14110c); font-family: var(--font-sans, sans-serif); font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 160ms cubic-bezier(.16,.84,.24,1); } .ds-btn-secondary:hover { background: rgba(20, 17, 12, 0.08); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--focus, #7a3e12); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Campo de entrada estándar de formularios y diálogos de confirmación.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Nombre del proyecto\" />",
+      "css": ".ds-input { width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--control, #a19e96); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1c1917); font-family: var(--font-sans, sans-serif); font-size: 16px; outline: none; transition: border-color 160ms ease, box-shadow 160ms ease; } .ds-input:focus { border-color: var(--accent-ink, #7a3e12); box-shadow: 0 0 0 3px rgba(122, 62, 18, 0.22); }"
+    },
+    {
+      "name": "Filter Pill Group",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Barra segmentada de filtros en galerías de proyectos y estudios.",
+      "html": "<div class=\"ds-pill-group\" role=\"group\"><button class=\"ds-pill ds-pill-active\" type=\"button\">Todos</button><button class=\"ds-pill\" type=\"button\">Publicados</button><button class=\"ds-pill\" type=\"button\">Borradores</button></div>",
+      "css": ".ds-pill-group { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border, #e2e0da); border-radius: 9999px; background: var(--surface-muted, #eeede9); } .ds-pill { min-height: 40px; padding: 0 14px; border: 0; border-radius: 9999px; background: transparent; color: var(--muted, #66635c); font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; } .ds-pill:hover { color: var(--heading, #14110c); } .ds-pill-active { background: var(--surface, #ffffff); color: var(--heading, #14110c); box-shadow: 0 1px 2px rgba(20, 17, 12, 0.08); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Indicador de estado que combina punto de color, borde y etiqueta legible.",
+      "html": "<span class=\"ds-badge\"><span class=\"ds-badge-dot\"></span>Publicado</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border: 1px solid rgba(47, 107, 63, 0.4); border-radius: 9999px; background: rgba(47, 107, 63, 0.1); color: var(--foreground, #1c1917); font-size: 13px; font-weight: 600; } .ds-badge-dot { width: 6px; height: 6px; border-radius: 9999px; background: var(--success, #2f6b3f); }"
+    },
+    {
+      "name": "Project Card",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "Tarjeta interactiva de proyecto con resumen de estudios y herramientas.",
+      "html": "<a class=\"ds-card\" href=\"#\"><div class=\"ds-card-top\"><span class=\"ds-card-count\">3 estudios</span></div><h3 class=\"ds-card-title\">Campaña Verano</h3><p class=\"ds-card-desc\">Pruebas de empaque y anuncios</p></a>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--border, #e2e0da); border-radius: 18px; background: var(--surface, #ffffff); color: var(--foreground, #1c1917); text-decoration: none; box-shadow: 0 14px 34px -22px rgba(122, 62, 18, 0.22); transition: border-color 160ms cubic-bezier(.16,.84,.24,1), box-shadow 160ms cubic-bezier(.16,.84,.24,1); } .ds-card:hover { border-color: rgba(122, 62, 18, 0.6); box-shadow: 0 18px 40px -22px rgba(122, 62, 18, 0.30); } .ds-card-count { display: inline-block; padding: 4px 10px; border: 1px solid var(--border, #e2e0da); border-radius: 9999px; background: var(--surface-muted, #eeede9); color: var(--muted, #66635c); font-size: 12px; font-weight: 600; } .ds-card-title { margin: 0; color: var(--heading, #14110c); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; } .ds-card-desc { margin: 0; color: var(--muted, #66635c); font-size: 14px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El Estudio de Campo",
+    "overview": "Aesteros es una herramienta táctica, calmada y estructurada para diseñar, proyectar y analizar estudios de neuromarketing. Su lenguaje visual equilibra el rigor analítico con una calidez editorial discreta: superficies limpias en papel neutro para el trabajo diario, una barra lateral en arena cálida con translucidez sutil para orientar al investigador, y un acento en ámbar editorial reservado exclusivamente para acciones clave y señales de inteligencia artificial.\n\nEl sistema distingue dos escenas de uso con necesidades opuestas. En el espacio del investigador predomina la claridad operativa, la legibilidad a distancia (al proyectar en aula) y la jerarquía nítida mediante bordes finos y elevación mínima al interactuar. En las pantallas de participante desaparece cualquier adorno o efecto translúcido para proteger la concentración y la validez de las mediciones.",
+    "keyCharacteristics": [
+      "Paleta dual (modo-claro y modo-profundo) persistida por cookie en servidor sin parpadeo inicial.",
+      "Tipografía variable única (Archivo) con cifras tabulares en tablas, fechas y métricas.",
+      "Capas translúcidas reservadas a la navegación lateral y paneles fuera del marco operativo; tarjetas sólidas limpias en el lienzo principal.",
+      "Estados y evidencias siempre accesibles mediante texto, punto/forma y color combinados."
+    ],
+    "rules": [
+      { "name": "The Accent Scarcity Rule", "body": "El ámbar editorial (primary) se reserva para el CTA principal de cada vista, la barra de progreso activa y los indicadores de IA; nunca se usa como fondo de secciones completas ni como adorno repetido.", "section": "colors" },
+      { "name": "The Calm Participant Rule", "body": "Las vistas de participante y los modos de impresión anulan efectos translúcidos y resplandores, manteniendo superficies opacas y de alto contraste.", "section": "colors" },
+      { "name": "The Tabular Data Rule", "body": "Todas las tablas, listas de definición (dl) y fechas (time) aplican font-variant-numeric: tabular-nums para que los conteos de participantes y métricas se alineen verticalmente.", "section": "typography" },
+      { "name": "The Solid Canvas Rule", "body": "Dentro de .workspace-frame, .glass-panel desactiva el backdrop-filter para evitar desenfoques superpuestos sobre tablas y formularios densos; la translucidez permanece exclusivamente en la barra lateral.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do mantener una altura mínima de 40px–44px en botones, inputs y píldoras de filtro para garantizar accesibilidad táctil y proyección en aula.",
+      "Do combinar siempre color + texto + punto o icono en estados (StatusBadge) y métricas de estudio.",
+      "Do exigir confirmación explícita por nombre en un diálogo modal antes de ejecutar borrados irreversibles (DeleteProjectDialog).",
+      "Do incluir una acción primaria directa dentro de cada EmptyState para guiar el siguiente paso sin reescanear la página."
+    ],
+    "donts": [
+      "Don't usar backdrop-filter ni efectos de resplandor en pantallas de participante o vistas de impresión.",
+      "Don't usar el color ámbar (primary) como fondo decorativo de tarjetas o secciones enteras; resérvalo para acciones primarias y señales de IA.",
+      "Don't ocultar metadatos de estado (StatusBadge) en pantallas pequeñas (< sm) dentro de listas de filas.",
+      "Don't introducir tipografías externas ni omitir motion-reduce:transition-none en transiciones interactivas."
+    ]
+  }
+}

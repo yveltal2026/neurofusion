@@ -46,7 +46,9 @@ it("muestra métricas reales y filtra estudios por estado y búsqueda", () => {
   const link = screen.getByRole("link", { name: /Empaque de jugo A frente a B/i });
   expect(link.getAttribute("href")).toBe("/studies/s1");
 
+  expect(screen.getByText("3 estudios")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Publicados" }));
+  expect(screen.getByText("1 de 3 estudios")).toBeTruthy();
   expect(screen.getByText("Empaque de jugo A frente a B")).toBeTruthy();
   expect(screen.queryByText("Creatividades de temporada")).toBeNull();
 
@@ -57,4 +59,9 @@ it("muestra métricas reales y filtra estudios por estado y búsqueda", () => {
   fireEvent.change(search, { target: { value: "temporada" } });
   expect(screen.getByText("Creatividades de temporada")).toBeTruthy();
   expect(screen.queryByText("Sitio de admisiones")).toBeNull();
+
+  fireEvent.change(search, { target: { value: "inexistente" } });
+  expect(screen.getByText("Ningún estudio coincide con «inexistente».")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+  expect(screen.getByText("3 estudios")).toBeTruthy();
 });
