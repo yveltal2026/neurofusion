@@ -65,7 +65,7 @@ export default async function SettingsPage() {
             </div>
           </dl>
           <form action={signOut} className="pt-1">
-            <Button type="submit" variant="secondary" size="sm">
+            <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
               Cerrar sesión
             </Button>
           </form>

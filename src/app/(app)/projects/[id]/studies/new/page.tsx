@@ -27,6 +27,12 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
         <Breadcrumbs items={newStudyCrumbs(id, project.name)} />
         <h1 className="page-title">¿Qué quieres saber?</h1>
         <p className="text-muted">Elige la herramienta para tu nuevo estudio.</p>
+        <p className="pt-1 text-xs text-muted">
+          <strong className="font-semibold text-heading">Sellos de evidencia:</strong>{" "}
+          <span className="font-medium text-heading">Medido</span> = datos reales de participantes ·{" "}
+          <span className="font-medium text-heading">Estimado</span> = predicción con IA ·{" "}
+          <span className="font-medium text-heading">Modelado</span> = reglas técnicas sobre URL o HTML.
+        </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -69,14 +75,7 @@ export default async function NewStudyPage({ params }: PageProps<"/projects/[id]
         })}
       </div>
 
-      <p className="text-xs text-muted">
-        <strong className="font-semibold text-heading">Sellos de evidencia:</strong>{" "}
-        <span className="font-medium text-heading">Medido</span> = datos reales de participantes ·{" "}
-        <span className="font-medium text-heading">Estimado</span> = predicción con IA ·{" "}
-        <span className="font-medium text-heading">Modelado</span> = reglas técnicas sobre URL o HTML.
-      </p>
-
-      <div className="modo-profundo flex flex-wrap items-center justify-between gap-4 rounded-panel border border-border bg-deep-2 p-5 text-foreground sm:p-6">
+      <div className="modo-profundo flex flex-wrap items-center justify-between gap-4 rounded-panel border border-accent-ink/35 bg-deep p-5 text-foreground sm:p-6">
         <div className="flex min-w-0 items-center gap-3">
           <BrandIllustration name="mod-baterias" tone="deep" className="hidden w-20 shrink-0 sm:block" />
           <div>

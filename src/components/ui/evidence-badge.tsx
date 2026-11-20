@@ -25,7 +25,8 @@ export function EvidenceBadge({ kind }: { kind: EvidenceKind }) {
           maskImage: `url(/brand/aesteros/aesteros-sello-${LABEL[kind].toLowerCase()}.svg)`,
         }}
       />
-      {LABEL[kind]}
+      <span>{LABEL[kind]}</span>
+      <span className="sr-only"> — {DESCRIPTION[kind]}</span>
     </span>
   );
 }

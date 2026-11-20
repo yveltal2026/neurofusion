@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useContext,
@@ -58,14 +58,12 @@ export function WorkspaceAppearance({
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState(initialTheme);
-  const router = useRouter();
 
   function selectTheme(value: string) {
     const nextTheme = readWorkspaceTheme(value);
     setTheme(nextTheme);
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
     document.cookie = `${WORKSPACE_THEME_COOKIE}=${nextTheme}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
-    router.refresh();
   }
 
   return (

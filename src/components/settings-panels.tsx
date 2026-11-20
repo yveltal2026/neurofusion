@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -36,7 +36,7 @@ export function SettingsAppearancePanel() {
               <span className="flex w-full items-center justify-between gap-2 text-sm font-bold text-heading">
                 <span>{option.label}</span>
                 {active ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-accent-ink/30 bg-surface px-2 py-0.5 text-[11px] font-semibold text-accent-ink">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-accent-ink/30 bg-surface px-2 py-0.5 text-xs font-semibold text-accent-ink">
                     Activo
                   </span>
                 ) : null}
@@ -54,29 +54,59 @@ const initialState: AuthState = {};
 
 export function SettingsPasswordForm() {
   const [state, action, pending] = useActionState(changeAccountPassword, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const errorId = useId();
 
   useEffect(() => {
     if (state.ok) {
-      formRef.current?.reset();
+      setCurrentPassword("");
+      setPassword("");
+      setConfirm("");
+      setClientError(null);
     }
   }, [state]);
 
+  const inputType = showPasswords ? "text" : "password";
+  const displayedError = clientError ?? state.error;
+  const hasError = Boolean(displayedError);
+
   return (
-    <form ref={formRef} action={action} className="space-y-4">
-      <div className="space-y-1.5">
+    <form
+      action={action}
+      onSubmit={(event) => {
+        if (password !== confirm) {
+          event.preventDefault();
+          setClientError("La nueva contraseña y su confirmación no coinciden.");
+          return;
+        }
+        setClientError(null);
+      }}
+      className="space-y-4"
+    >
+      <div className="space-y-1">
         <Field label="Contraseña actual">
           <Input
-            type="password"
+            type={inputType}
             name="current_password"
             autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            aria-invalid={hasError && !clientError ? true : undefined}
+            aria-describedby={hasError && !clientError ? errorId : undefined}
             required
             className="sm:max-w-sm"
           />
         </Field>
         <p className="text-xs text-muted">
           ¿Olvidaste tu contraseña actual?{" "}
-          <Link href="/forgot-password" className="font-semibold text-accent-ink hover:underline">
+          <Link
+            href="/forgot-password"
+            className="inline-flex min-h-11 items-center font-semibold text-accent-ink hover:underline"
+          >
             Restablécela por correo
           </Link>
         </p>
@@ -84,30 +114,59 @@ export function SettingsPasswordForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nueva contraseña" hint="Mínimo 8 caracteres.">
           <Input
-            type="password"
+            type={inputType}
             name="password"
             autoComplete="new-password"
             minLength={8}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (clientError) setClientError(null);
+            }}
+            aria-invalid={hasError ? true : undefined}
+            aria-describedby={hasError ? errorId : undefined}
             required
           />
         </Field>
         <Field label="Confirmar contraseña">
           <Input
-            type="password"
+            type={inputType}
             name="confirm"
             autoComplete="new-password"
             minLength={8}
+            value={confirm}
+            onChange={(e) => {
+              setConfirm(e.target.value);
+              if (clientError) setClientError(null);
+            }}
+            aria-invalid={hasError ? true : undefined}
+            aria-describedby={hasError ? errorId : undefined}
             required
           />
         </Field>
       </div>
 
-      {state.error ? <Alert tone="error">{state.error}</Alert> : null}
-      {state.message ? <Alert tone="success">{state.message}</Alert> : null}
+      {displayedError ? (
+        <div id={errorId}>
+          <Alert tone="error">{displayedError}</Alert>
+        </div>
+      ) : null}
+      {!displayedError && state.message ? <Alert tone="success">{state.message}</Alert> : null}
 
-      <Button type="submit" variant="inverse" disabled={pending}>
-        {pending ? "Actualizando..." : "Actualizar contraseña"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "Actualizando..." : "Actualizar contraseña"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-pressed={showPasswords}
+          onClick={() => setShowPasswords((prev) => !prev)}
+        >
+          {showPasswords ? "Ocultar contraseñas" : "Mostrar contraseñas"}
+        </Button>
+      </div>
     </form>
   );
 }
