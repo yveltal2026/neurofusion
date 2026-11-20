@@ -1,8 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { useRouter } from "next/navigation";
-import { signIn, signInWithGoogle, signUp, type AuthState } from "@/lib/auth/actions";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { signIn, signUp, type AuthState } from "@/lib/auth/actions";
 
 const initialState: AuthState = {};
 
@@ -15,16 +14,64 @@ export function EntrarScreen({
   next?: string;
   urlError?: string;
 }) {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
-  const [groupCode, setGroupCode] = useState("");
-  const [groupError, setGroupError] = useState<string | null>(null);
 
   const [loginState, loginAction, loginPending] = useActionState(signIn, initialState);
   const [signupState, signupAction, signupPending] = useActionState(signUp, initialState);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const primaryGlowRef = useRef<HTMLDivElement>(null);
+  const trailGlowRef = useRef<HTMLDivElement>(null);
+  const targetPos = useRef({ x: 0.5, y: 0.5 });
+  const primaryPos = useRef({ x: 0.5, y: 0.5 });
+  const trailPos = useRef({ x: 0.5, y: 0.5 });
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+    let rafId = 0;
+
+    const applyTransform = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const { width, height } = container.getBoundingClientRect();
+
+      if (reducedMotion) {
+        primaryPos.current = { ...targetPos.current };
+        trailPos.current = { ...targetPos.current };
+      } else {
+        primaryPos.current.x += (targetPos.current.x - primaryPos.current.x) * 0.14;
+        primaryPos.current.y += (targetPos.current.y - primaryPos.current.y) * 0.14;
+        trailPos.current.x += (targetPos.current.x - trailPos.current.x) * 0.055;
+        trailPos.current.y += (targetPos.current.y - trailPos.current.y) * 0.055;
+      }
+
+      if (primaryGlowRef.current) {
+        primaryGlowRef.current.style.transform = `translate3d(${primaryPos.current.x * width}px, ${primaryPos.current.y * height}px, 0) translate(-50%, -50%)`;
+      }
+      if (trailGlowRef.current) {
+        trailGlowRef.current.style.transform = `translate3d(${trailPos.current.x * width}px, ${trailPos.current.y * height}px, 0) translate(-50%, -50%)`;
+      }
+
+      if (!reducedMotion) {
+        rafId = window.requestAnimationFrame(applyTransform);
+      }
+    };
+
+    rafId = window.requestAnimationFrame(applyTransform);
+    return () => window.cancelAnimationFrame(rafId);
+  }, []);
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    targetPos.current = {
+      x: (e.clientX - rect.left) / rect.width,
+      y: (e.clientY - rect.top) / rect.height,
+    };
+  }
 
   const isLogin = mode === "login";
   const activeState = isLogin ? loginState : signupState;
@@ -40,19 +87,6 @@ export function EntrarScreen({
     setEmailError(null);
     setEmail(trimmed);
     setStep("password");
-  }
-
-  function handleJoinGroup(e: React.FormEvent) {
-    e.preventDefault();
-    const raw = groupCode.trim();
-    if (!raw) {
-      setGroupError("Ingresa el código de grupo o liga.");
-      return;
-    }
-    setGroupError(null);
-    const match = raw.match(/\/s\/([A-Za-z0-9_-]+)/);
-    const token = match ? match[1] : raw;
-    router.push(`/s/${encodeURIComponent(token)}`);
   }
 
   function switchMode(target: "login" | "signup") {
@@ -71,19 +105,37 @@ export function EntrarScreen({
         : null);
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#070604] px-4 py-12 text-white">
-      {/* Resplandores ambientales ámbar */}
+    <div
+      ref={containerRef}
+      onPointerMove={handlePointerMove}
+      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#070604] px-4 py-12 text-white"
+    >
+      {/* Resplandores ambientales base */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[540px] w-[540px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.22)_0%,rgba(180,100,0,0.08)_42%,transparent_72%)] blur-2xl"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[540px] w-[540px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.18)_0%,rgba(180,100,0,0.06)_42%,transparent_72%)] blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.16)_0%,transparent_68%)] blur-2xl"
+        className="pointer-events-none absolute -right-24 -top-24 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.14)_0%,transparent_68%)] blur-2xl"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -left-32 top-1/3 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.08)_0%,transparent_68%)] blur-2xl"
+        className="pointer-events-none absolute -left-32 top-1/3 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle,rgba(245,166,0,0.07)_0%,transparent_68%)] blur-2xl"
+      />
+
+      {/* Mapa de calor interactivo siguiendo el puntero detrás de la tarjeta */}
+      <div
+        ref={trailGlowRef}
+        data-testid="heatmap-trail"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 z-0 h-[560px] w-[560px] rounded-full bg-[radial-gradient(circle,rgba(255,140,0,0.22)_0%,rgba(220,38,80,0.14)_36%,rgba(124,58,237,0.06)_58%,transparent_74%)] blur-3xl will-change-transform"
+      />
+      <div
+        ref={primaryGlowRef}
+        data-testid="heatmap-hotspot"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-0 top-0 z-0 h-[380px] w-[380px] rounded-full bg-[radial-gradient(circle,rgba(255,210,60,0.34)_0%,rgba(255,105,15,0.24)_32%,rgba(225,29,72,0.12)_56%,transparent_75%)] blur-2xl will-change-transform"
       />
 
       <div className="relative z-10 w-full max-w-[400px]">
@@ -267,8 +319,8 @@ export function EntrarScreen({
             </form>
           )}
 
-          {/* Botones para generar nuevo usuario / OAuth */}
-          <div className="mt-3 space-y-2.5">
+          {/* Botón para generar nuevo usuario */}
+          <div className="mt-3">
             {isLogin ? (
               <button
                 type="button"
@@ -286,52 +338,7 @@ export function EntrarScreen({
                 Ya tengo cuenta · Entrar
               </button>
             )}
-
-            <form action={signInWithGoogle}>
-              {next ? <input type="hidden" name="next" value={next} /> : null}
-              <button
-                type="submit"
-                className="h-10 w-full cursor-pointer rounded-full border border-white/15 bg-white/[0.03] text-sm font-medium text-white/90 transition hover:border-white/35 hover:bg-white/[0.08]"
-              >
-                Continuar con Google
-              </button>
-            </form>
           </div>
-
-          <div className="my-6 h-px w-full bg-white/10" />
-
-          {/* Sección de código de grupo */}
-          <form onSubmit={handleJoinGroup}>
-            <label
-              htmlFor="group-code"
-              className="block text-xs font-medium text-white/85"
-            >
-              Soy alumno y tengo un código de grupo
-            </label>
-            <div className="mt-2.5 flex items-center gap-2.5">
-              <input
-                id="group-code"
-                type="text"
-                value={groupCode}
-                onChange={(e) => setGroupCode(e.target.value)}
-                placeholder="Código"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/[0.04] px-3.5 text-sm text-white placeholder:text-white/35 focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
-              />
-              <button
-                type="submit"
-                className="h-10 shrink-0 cursor-pointer rounded-full border border-white/30 px-5 text-sm font-medium text-white transition hover:border-white/60 hover:bg-white/[0.08]"
-              >
-                Unirme
-              </button>
-            </div>
-            {groupError ? (
-              <p className="mt-1.5 text-xs text-red-300">{groupError}</p>
-            ) : null}
-          </form>
-
-          <p className="mt-3 text-xs leading-relaxed text-white/55">
-            ¿Vas a participar en un estudio? No necesitas cuenta: abre la liga que te enviaron.
-          </p>
         </div>
       </div>
     </div>

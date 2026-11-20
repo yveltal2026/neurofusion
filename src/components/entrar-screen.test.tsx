@@ -4,25 +4,17 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EntrarScreen } from "./entrar-screen";
 
-const pushMock = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
-}));
-
 vi.mock("@/lib/auth/actions", () => ({
   signIn: vi.fn(async () => ({})),
   signUp: vi.fn(async () => ({})),
-  signInWithGoogle: vi.fn(async () => {}),
 }));
 
 describe("EntrarScreen", () => {
   afterEach(() => {
     cleanup();
-    pushMock.mockReset();
   });
 
-  it("muestra la pantalla principal de acceso sin menú inferior", () => {
+  it("muestra la pantalla principal de acceso sin menú inferior, sin sección de alumno y sin Google", () => {
     render(<EntrarScreen />);
 
     expect(screen.getByText("aesteros")).toBeTruthy();
@@ -30,10 +22,13 @@ describe("EntrarScreen", () => {
     expect(screen.getByLabelText("Correo institucional o de trabajo")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Continuar" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Crear nuevo usuario" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Continuar con Google" })).toBeTruthy();
-    expect(screen.getByLabelText("Soy alumno y tengo un código de grupo")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Unirme" })).toBeTruthy();
+
+    expect(screen.getByTestId("heatmap-hotspot")).toBeTruthy();
+    expect(screen.getByTestId("heatmap-trail")).toBeTruthy();
+
     expect(screen.queryByRole("navigation")).toBeNull();
+    expect(screen.queryByText(/código de grupo/i)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Google/i })).toBeNull();
   });
 
   it("permite alternar al formulario para generar un nuevo usuario", async () => {
@@ -62,15 +57,5 @@ describe("EntrarScreen", () => {
     expect(screen.getByText("ana@aesteros.com")).toBeTruthy();
     expect(screen.getByLabelText("Contraseña")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Entrar" })).toBeTruthy();
-  });
-
-  it("navega al estudio cuando un alumno ingresa su código de grupo", async () => {
-    const user = userEvent.setup();
-    render(<EntrarScreen />);
-
-    await user.type(screen.getByLabelText("Soy alumno y tengo un código de grupo"), "grupo-123");
-    await user.click(screen.getByRole("button", { name: "Unirme" }));
-
-    expect(pushMock).toHaveBeenCalledWith("/s/grupo-123");
   });
 });
