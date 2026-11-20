@@ -7,6 +7,7 @@
   --heading: #14110c;
   --surface: #ffffff;
   --surface-muted: #eeede9;
+  --sidebar-bg: #f5efe2;
   --muted: #66635c;
   --border: #e2e0da;
   --control: #a19e96;
@@ -50,6 +51,7 @@
   --heading: #fff7e6;
   --surface: #201b13;
   --surface-muted: #302718;
+  --sidebar-bg: #17130d;
   --muted: #c6bba6;
   --border: #4e4231;
   --control: #91816a;
@@ -359,7 +361,7 @@ progress.brand-progress {
   min-width: 0;
   flex-direction: column;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-muted) 58%, var(--surface));
+  background: color-mix(in srgb, var(--sidebar-bg) 92%, transparent);
   backdrop-filter: blur(20px) saturate(140%);
 }
 
