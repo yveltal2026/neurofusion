@@ -64,6 +64,8 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
 
     expect(screen.getByText("Encuesta")).toBeTruthy();
     expect(screen.getByText("Auditoría SEO")).toBeTruthy();
+    expect(screen.getByText("Análisis de Imagen Web")).toBeTruthy();
+    expect(screen.getByText("Eyetracking para Web")).toBeTruthy();
 
     // Card de combinación (batería)
     expect(screen.getByText("Armar batería")).toBeTruthy();
@@ -73,6 +75,8 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
     const hrefs = links.map((l) => l.getAttribute("href"));
     expect(hrefs).toContain("/projects/p-123/studies/new/eyetracking");
     expect(hrefs).toContain("/projects/p-123/studies/new/visual");
+    expect(hrefs).toContain("/projects/p-123/studies/new/web-visual");
+    expect(hrefs).toContain("/projects/p-123/studies/new/web-eyetracking");
     expect(hrefs).toContain("/projects/p-123/studies/new/iat");
     expect(hrefs).toContain("/projects/p-123/studies/new/variants");
     expect(hrefs).toContain("/projects/p-123/studies/new/survey");

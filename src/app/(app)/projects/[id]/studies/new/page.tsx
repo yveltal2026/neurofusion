@@ -11,7 +11,7 @@ import { TOOL_CATEGORIES, TOOLS, type ToolType } from "@/tools/registry";
 export const metadata = { title: "Nuevo estudio" };
 
 const ILLUSTRATIONS = {
-  eyetracking: "ocular", visual: "atencion", iat: "asociacion",
+  eyetracking: "ocular", visual: "atencion", web_visual: "atencion", web_eyetracking: "ocular", iat: "asociacion",
   iat_variant: "variantes", survey: "encuesta", seo: "seo",
 } as const satisfies Record<ToolType, string>;
 

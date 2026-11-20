@@ -23,6 +23,8 @@ import { estimateMinutes, trialsPerDimension } from "@/tools/iat/engine/protocol
 import { BATTERY_BLOCK_MESSAGE } from "@/tools/battery/messages";
 import { SeoOverview } from "@/tools/seo/ui/overview";
 import { SurveyOverview } from "@/tools/survey/ui/overview";
+import { WebEyetrackingOverview } from "@/tools/web-eyetracking/ui/overview";
+import { WebVisualOverview } from "@/tools/web-visual/ui/overview";
 import { VariantOverview } from "@/tools/variants/ui/overview";
 import { VisualOverview } from "@/tools/visual/ui/overview";
 import { EyeOverview } from "@/tools/eyetracking/ui/overview";
@@ -61,6 +63,21 @@ export default async function StudyPage({ params, searchParams }: PageProps<"/st
   if (getStudyTool(study)?.type === "eyetracking") return <EyeOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
   if (study.tool_type === "visual")
     return <VisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "web_visual")
+    return <WebVisualOverview study={study} projectName={project?.name ?? null} created={sp.created === "1"} />;
+  if (study.tool_type === "web_eyetracking") {
+    const origin = await requestOrigin();
+    const link = magicLinkUrl(origin, study.access_token ?? "");
+    return (
+      <WebEyetrackingOverview
+        study={study}
+        projectName={project?.name ?? null}
+        link={link}
+        origin={origin}
+        created={sp.created === "1"}
+      />
+    );
+  }
   if (study.tool_type === "iat_variant") {
     const link = magicLinkUrl(await requestOrigin(), study.access_token ?? "");
     return (

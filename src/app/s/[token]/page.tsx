@@ -3,6 +3,8 @@ import { StatusScreen } from "@/components/participant";
 import { apiMessage, availabilityError, loadParticipantStudyByToken } from "@/lib/participant-api";
 import { loadEyeStudyByToken } from "@/tools/visual/eye/participant.server";
 import { EyeStudyRunner } from "@/tools/visual/eye/EyeStudyRunner";
+import { loadWebEyeStudyByToken } from "@/tools/web-eyetracking/server";
+import { WebEyeParticipantRunner } from "@/tools/web-eyetracking/runner/WebEyeParticipantRunner";
 import { Runner } from "@/tools/iat/runner/Runner";
 import { SurveyRunner } from "@/tools/survey/runner/SurveyRunner";
 import { VariantRunner } from "@/tools/variants/runner/VariantRunner";
@@ -26,10 +28,25 @@ export default async function ParticipantPage({ params, searchParams }: PageProp
   const sp = await searchParams;
   // Vista previa (para el investigador): corre el test completo sin guardar nada.
   const preview = sp.preview === "1";
+  const done = sp.done === "1";
 
   const loaded = await loadParticipantStudyByToken(token);
   if (!loaded.ok) {
     if (loaded.code !== "invalid_link") return <Unavailable message={apiMessage(loaded.code)} />;
+    const webEye = await loadWebEyeStudyByToken(token);
+    if (webEye) {
+      const unavailable = availabilityError(webEye.study);
+      if (unavailable && !preview && !done) return <Unavailable message={apiMessage(unavailable)} />;
+      return (
+        <WebEyeParticipantRunner
+          token={token}
+          studyName={webEye.study.name}
+          config={webEye.config}
+          preview={preview}
+          done={done}
+        />
+      );
+    }
     const eye = await loadEyeStudyByToken(token, true);
     if (!eye.ok) return <Unavailable message={apiMessage(eye.code)} />;
     const unavailable = availabilityError(eye.study);

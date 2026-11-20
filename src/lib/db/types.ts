@@ -16,7 +16,7 @@ export type DuplicatePolicy = "device_cookie" | "device_cookie_and_ip" | "none";
 export interface StudyRow {
   id: string;
   project_id: string;
-  tool_type: "iat" | "seo" | "visual" | "survey" | "iat_variant";
+  tool_type: "iat" | "seo" | "visual" | "survey" | "iat_variant" | "web_visual" | "web_eyetracking";
   name: string;
   status: StudyStatus;
   config: unknown;
@@ -117,6 +117,17 @@ export interface EyeTrackingRunRow {
   study_id: string;
   validation: unknown;
   observations: unknown;
+  created_at: string;
+}
+
+export interface WebEyetrackingRunRow {
+  session_id: string;
+  study_id: string;
+  mode: "live_snippet" | "no_code_captures";
+  validation: unknown;
+  step_events: unknown;
+  samples: unknown;
+  summary: unknown;
   created_at: string;
 }
 

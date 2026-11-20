@@ -5,7 +5,7 @@
 import type { IconName } from "@/components/brand/icon";
 
 export type ToolType =
-  "iat" | "seo" | "visual" | "survey" | "iat_variant" | "eyetracking";
+  "iat" | "seo" | "visual" | "web_visual" | "web_eyetracking" | "survey" | "iat_variant" | "eyetracking";
 
 export const TOOL_CATEGORIES = [
   { id: "attention", name: "Atención visual", question: "¿Qué miran?" },
@@ -54,13 +54,33 @@ export const TOOLS: ToolDefinition[] = [
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/seo`,
   },
   {
+    type: "web_visual",
+    category: "digital",
+    name: "Análisis de Imagen Web",
+    shortName: "Imagen Web",
+    icon: "eye",
+    description:
+      "Evalúa capturas de pantalla de un sitio (desktop o móvil): atención visual estimada, jerarquía, visibilidad del CTA, zonas ciegas y fricción UX.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/web-visual`,
+  },
+  {
+    type: "web_eyetracking",
+    category: "digital",
+    name: "Eyetracking para Web",
+    shortName: "Eye Web",
+    icon: "eye",
+    description:
+      "Mide la mirada real de participantes en tu sitio web mediante snippet en el <head> (estilo RealEye) o con capturas web sin código, guiados por pasos e instrucciones.",
+    newStudyPath: (projectId) => `/projects/${projectId}/studies/new/web-eyetracking`,
+  },
+  {
     type: "visual",
     category: "attention",
     name: "Análisis visual con IA",
     shortName: "Visual",
     icon: "eye",
     description:
-      "Evalúa piezas gráficas, anuncios y capturas web: mapa de atención estimado, recorrido visual, zonas ciegas y métricas de imagen. Incluye el modo journey con el Índice de Fricción Digital (IFD).",
+      "Evalúa piezas gráficas, anuncios e impresos: mapa de atención estimado, recorrido visual, zonas ciegas y métricas de imagen.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/visual`,
   },
   {

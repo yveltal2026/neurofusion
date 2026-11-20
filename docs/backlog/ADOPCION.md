@@ -14,6 +14,10 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
+| COG-20261119-eyetracking-web | CognIA, origen | Implementado localmente en `main` (`web_eyetracking`, migración, API CORS, snippet y runner) | `typecheck`, `lint` y Vitest locales; Supabase real y sitio externo pendientes | Pendiente |
+| COG-20261119-eyetracking-web | Anáhuac Mayab | Sin aplicar | Sin verificar; conservar acreditación de maestros y reglas de acceso del destino | Sin verificar |
+| COG-20261119-imagen-web-separada | CognIA, origen | Implementado localmente en `main` (`web_visual`, migración y UI) | `typecheck`, `lint` y Vitest locales; Supabase real pendiente | Pendiente |
+| COG-20261119-imagen-web-separada | Anáhuac Mayab | Sin aplicar | Sin verificar; conservar acreditación de maestros y reglas de acceso del destino | Sin verificar |
 | COG-20261119-redisenio-aesteros | Aesteros, plataforma principal | [PR #27](https://github.com/yveltal2026/neurofusion/pull/27) en `feat/redisenio-visual` | Selector de apariencia probado en Chromium con autenticación simulada. Cámara física pendiente | Revisión del preview y producción pendientes |
 | COG-20261031-informes-herramientas | CognIA, origen | Implementación `5a7d468`; [PR #25](https://github.com/yveltal2026/neurofusion/pull/25) integrado en `main`, merge `054bd54` | 456 pruebas en 51 archivos correctas; tipos, ESLint y build con fuentes simuladas correctos. Chromium local 1360×900 y 390×844 en las tres vistas: navegación, gráficos, abiertas, CSV/PDF y reporte guardado/obsoleto, sin errores ni desbordamiento de página. Proveedor y base de datos simulados; producción pendiente | Check Vercel del head `762fd61` correcto: [preview](https://vercel.com/neurofusion1/neurofusion/GWXzcCs8s4QKbLdh1GMCxejYXTtp). Producción pendiente de verificar |
 | COG-20261031-informes-herramientas | Anáhuac Mayab | Sin aplicar | Sin verificar; conservar acreditación de maestros, acceso de alumnos y permisos institucionales | Sin verificar |
