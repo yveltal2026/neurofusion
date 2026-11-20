@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/brand/icon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StudyRow } from "@/lib/db/types";
@@ -33,26 +33,9 @@ const STATUS_TONE: Record<StudyRow["status"], "neutral" | "success" | "warning">
   closed: "warning",
 };
 
-function secondaryAction(study: StudyGalleryItem): { href: string; label: string } | null {
-  const tool = getStudyTool(study);
-  switch (tool?.type) {
-    case "survey":
-    case "visual":
-    case "eyetracking":
-      return { href: `/studies/${study.id}/report`, label: "Ver informe" };
-    case "iat":
-      return { href: `/studies/${study.id}/analysis`, label: "Análisis" };
-    case "iat_variant":
-      return { href: `/studies/${study.id}/responses`, label: "Resultados" };
-    default:
-      return null;
-  }
-}
-
 export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [toolFilter, setToolFilter] = useState<string>("all");
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -66,23 +49,10 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const availableTools = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const study of studies) {
-      const tool = getStudyTool(study);
-      const key = tool?.type ?? study.tool_type;
-      const label = tool?.shortName ?? study.tool_type;
-      if (!seen.has(key)) seen.set(key, label);
-    }
-    return Array.from(seen.entries()).map(([type, label]) => ({ type, label }));
-  }, [studies]);
-
   const needle = query.trim().toLocaleLowerCase("es-MX");
   const shown = studies.filter((study) => {
     if (status !== "all" && study.status !== status) return false;
     const tool = getStudyTool(study);
-    const toolKey = tool?.type ?? study.tool_type;
-    if (toolFilter !== "all" && toolKey !== toolFilter) return false;
     if (needle) {
       const haystack = `${study.name} ${tool?.shortName ?? ""} ${tool?.name ?? ""}`.toLocaleLowerCase("es-MX");
       if (!haystack.includes(needle)) return false;
@@ -91,9 +61,9 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative w-full max-w-xs sm:max-w-sm">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
+        <div className="relative w-full max-w-xs">
           <Icon
             name="search"
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
@@ -108,14 +78,14 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
             }}
             placeholder="Buscar estudio..."
             aria-label="Buscar estudio por nombre o herramienta"
-            className="min-h-11 w-full rounded-full border border-border bg-surface py-2 pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/30"
+            className="min-h-10 w-full rounded-full border border-border/80 bg-surface/90 py-1.5 pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-[var(--duracion-micro)] placeholder:text-muted focus:border-accent-ink focus:ring-2 focus:ring-accent-ink/25"
           />
         </div>
 
         <div
           role="group"
           aria-label="Filtrar estudios por estado"
-          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border bg-surface-muted/80 p-1"
+          className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/70 bg-surface-muted/75 p-1 backdrop-blur-md"
         >
           {STATUS_OPTIONS.map((option) => {
             const active = status === option.value;
@@ -125,7 +95,7 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setStatus(option.value)}
-                className={`min-h-9 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                className={`min-h-8 rounded-full px-3.5 text-xs font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${
                   active
                     ? "bg-surface text-heading shadow-xs"
                     : "text-muted hover:text-heading"
@@ -138,72 +108,35 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
         </div>
       </div>
 
-      {availableTools.length > 1 ? (
-        <div role="group" aria-label="Filtrar por herramienta" className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            aria-pressed={toolFilter === "all"}
-            onClick={() => setToolFilter("all")}
-            className={`min-h-8 rounded-full border px-3 text-xs font-semibold transition-colors duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none ${
-              toolFilter === "all"
-                ? "border-primary/60 bg-neuro-tint text-heading"
-                : "border-border bg-surface text-muted hover:text-heading"
-            }`}
-          >
-            Todas las herramientas
-          </button>
-          {availableTools.map(({ type, label }) => {
-            const active = toolFilter === type;
-            return (
-              <button
-                key={type}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setToolFilter(type)}
-                className={`min-h-8 rounded-full border px-3 text-xs font-semibold transition-colors duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none ${
-                  active
-                    ? "border-primary/60 bg-neuro-tint text-heading"
-                    : "border-border bg-surface text-muted hover:text-heading"
-                }`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
       {shown.length ? (
-        <ul className="grid gap-4 md:grid-cols-2" aria-label="Estudios del proyecto">
+        <ul className="grid gap-5 md:grid-cols-2" aria-label="Estudios del proyecto">
           {shown.map((study) => {
             const tool = getStudyTool(study);
-            const secondary = secondaryAction(study);
             return (
-              <li
-                key={study.id}
-                className="flex min-w-0 flex-col justify-between gap-4 rounded-lg border border-border bg-surface p-5 transition-colors duration-[var(--duracion-micro)] hover:border-accent-ink/60"
-              >
-                <div>
-                  <div className="mb-3 flex items-center justify-between gap-2">
-                    <span className="grid size-10 place-items-center rounded-xl border border-border bg-neuro-wash text-accent-ink">
-                      <Icon name={tool?.icon ?? "layers"} className="size-5" />
-                    </span>
-                    <StatusBadge tone={STATUS_TONE[study.status]}>
-                      {STATUS_LABEL[study.status]}
-                    </StatusBadge>
-                  </div>
-                  <h3 className="break-words text-base font-bold text-heading">
-                    <Link href={`/studies/${study.id}`} className="hover:underline">
+              <li key={study.id}>
+                <Link
+                  href={`/studies/${study.id}`}
+                  className="group flex h-full min-w-0 flex-col justify-between gap-5 rounded-[22px] border border-border/80 bg-surface p-6 shadow-[0_14px_34px_-22px_rgba(122,62,18,0.22)] transition-[border-color,box-shadow,transform] duration-[var(--duracion-micro)] ease-[var(--ease-enfocar)] hover:border-accent-ink/60 hover:shadow-[0_18px_40px_-22px_rgba(122,62,18,0.3)] active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100"
+                >
+                  <div>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <span className="grid size-11 place-items-center rounded-2xl border border-border/70 bg-neuro-wash text-accent-ink">
+                        <Icon name={tool?.icon ?? "layers"} className="size-5" />
+                      </span>
+                      <StatusBadge tone={STATUS_TONE[study.status]}>
+                        {STATUS_LABEL[study.status]}
+                      </StatusBadge>
+                    </div>
+                    <h3 className="break-words text-xl font-bold tracking-tight text-heading group-hover:underline">
                       {study.name}
-                    </Link>
-                  </h3>
-                  <p className="mt-0.5 text-sm text-muted">
-                    {tool?.shortName ?? study.tool_type}
-                  </p>
-                </div>
+                    </h3>
+                    <p className="mt-1 text-sm text-muted">
+                      {tool?.shortName ?? study.tool_type}
+                    </p>
+                  </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
                   <p className="text-xs text-muted">
+                    {study.status === "published" ? "Publicado · " : ""}
                     Creado el{" "}
                     <time dateTime={study.created_at}>
                       {new Date(study.created_at).toLocaleDateString("es-MX", {
@@ -211,29 +144,13 @@ export function StudyGallery({ studies }: { studies: StudyGalleryItem[] }) {
                       })}
                     </time>
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/studies/${study.id}`}
-                      className="inline-flex min-h-8 items-center rounded-full border border-border bg-surface-muted/70 px-3 py-1 text-xs font-semibold text-heading transition-[background-color,border-color,transform] duration-[var(--duracion-micro)] hover:border-accent-ink/50 hover:bg-neuro-tint active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
-                    >
-                      Abrir
-                    </Link>
-                    {secondary ? (
-                      <Link
-                        href={secondary.href}
-                        className="inline-flex min-h-8 items-center rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-heading transition-[background-color,border-color,transform] duration-[var(--duracion-micro)] hover:border-accent-ink/50 hover:bg-surface-muted active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100"
-                      >
-                        {secondary.label}
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
+                </Link>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="rounded-lg border border-border bg-surface p-5 text-sm text-muted" role="status">
+        <p className="rounded-[22px] border border-border/80 bg-surface p-6 text-sm text-muted" role="status">
           Ningún estudio coincide con los filtros actuales.
         </p>
       )}

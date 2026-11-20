@@ -32,22 +32,17 @@ const STUDIES: StudyGalleryItem[] = [
   },
 ];
 
-it("filtra estudios por estado, herramienta y búsqueda y expone acciones directas", () => {
+it("filtra estudios por estado y búsqueda en tarjetas de Opción 1", () => {
   render(<StudyGallery studies={STUDIES} />);
 
-  expect(screen.getByRole("link", { name: "Análisis" }).getAttribute("href")).toBe("/studies/s1/analysis");
-  expect(screen.getByRole("link", { name: "Ver informe" }).getAttribute("href")).toBe("/studies/s2/report");
+  const link = screen.getByRole("link", { name: /Empaque de jugo A frente a B/i });
+  expect(link.getAttribute("href")).toBe("/studies/s1");
 
   fireEvent.click(screen.getByRole("button", { name: "Publicados" }));
   expect(screen.getByText("Empaque de jugo A frente a B")).toBeTruthy();
   expect(screen.queryByText("Creatividades de temporada")).toBeNull();
 
   fireEvent.click(screen.getByRole("button", { name: "Todos" }));
-  fireEvent.click(screen.getByRole("button", { name: "SEO" }));
-  expect(screen.getByText("Sitio de admisiones")).toBeTruthy();
-  expect(screen.queryByText("Empaque de jugo A frente a B")).toBeNull();
-
-  fireEvent.click(screen.getByRole("button", { name: "Todas las herramientas" }));
   const search = screen.getByRole("searchbox", {
     name: "Buscar estudio por nombre o herramienta",
   });

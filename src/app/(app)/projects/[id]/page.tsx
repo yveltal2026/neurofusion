@@ -56,7 +56,7 @@ export default async function ProjectPage({ params }: PageProps<"/projects/[id]"
             {project.description ? ` — ${project.description}` : ""}
           </p>
         </div>
-        <Link href={`/projects/${project.id}/studies/new`} className={buttonClass()}>
+        <Link href={`/projects/${project.id}/studies/new`} className={buttonClass("inverse")}>
           <Icon name="plus" className="size-5" />
           Nuevo estudio
         </Link>

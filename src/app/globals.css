@@ -326,9 +326,9 @@ progress.brand-progress {
   }
 
   &[aria-current="page"] {
-    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-    background: var(--color-neuro-tint);
-    color: var(--heading);
+    border-color: transparent;
+    background: var(--heading);
+    color: var(--background);
     font-weight: 700;
   }
 
