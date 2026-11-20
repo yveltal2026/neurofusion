@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { signIn, signUp, type AuthState } from "@/lib/auth/actions";
+import { requestPasswordReset, signIn, signUp, type AuthState } from "@/lib/auth/actions";
 
 const initialState: AuthState = {};
 
@@ -9,18 +9,21 @@ export function EntrarScreen({
   initialMode = "login",
   next,
   urlError,
+  resetOk = false,
 }: {
-  initialMode?: "login" | "signup";
+  initialMode?: "login" | "signup" | "reset";
   next?: string;
   urlError?: string;
+  resetOk?: boolean;
 }) {
-  const [mode, setMode] = useState<"login" | "signup">(initialMode);
+  const [mode, setMode] = useState<"login" | "signup" | "reset">(initialMode);
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const [loginState, loginAction, loginPending] = useActionState(signIn, initialState);
   const [signupState, signupAction, signupPending] = useActionState(signUp, initialState);
+  const [resetState, resetAction, resetPending] = useActionState(requestPasswordReset, initialState);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const primaryGlowRef = useRef<HTMLDivElement>(null);
@@ -74,8 +77,10 @@ export function EntrarScreen({
   }
 
   const isLogin = mode === "login";
-  const activeState = isLogin ? loginState : signupState;
-  const pending = isLogin ? loginPending : signupPending;
+  const isSignup = mode === "signup";
+  const isReset = mode === "reset";
+  const activeState = isLogin ? loginState : isSignup ? signupState : resetState;
+  const pending = isLogin ? loginPending : isSignup ? signupPending : resetPending;
 
   function handleEmailContinue(e: React.FormEvent) {
     e.preventDefault();
@@ -89,7 +94,7 @@ export function EntrarScreen({
     setStep("password");
   }
 
-  function switchMode(target: "login" | "signup") {
+  function switchMode(target: "login" | "signup" | "reset") {
     setMode(target);
     setEmailError(null);
     if (target === "login") setStep("email");
@@ -103,6 +108,12 @@ export function EntrarScreen({
       : urlError
         ? "No se pudo completar el inicio de sesión. Inténtalo de nuevo."
         : null);
+
+  const statusMessage =
+    activeState.message ??
+    (resetOk && isLogin
+      ? "Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión."
+      : null);
 
   return (
     <div
@@ -156,7 +167,7 @@ export function EntrarScreen({
           </div>
 
           <h1 className="mt-5 text-[32px] font-bold leading-tight tracking-tight text-white">
-            {isLogin ? "Entrar" : "Crear cuenta"}
+            {isLogin ? "Entrar" : isSignup ? "Crear cuenta" : "Restablecer contraseña"}
           </h1>
 
           {errorMessage ? (
@@ -168,12 +179,12 @@ export function EntrarScreen({
             </div>
           ) : null}
 
-          {activeState.message ? (
+          {statusMessage ? (
             <div
               role="status"
               className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5 text-xs text-emerald-200"
             >
-              {activeState.message}
+              {statusMessage}
             </div>
           ) : null}
 
@@ -223,12 +234,21 @@ export function EntrarScreen({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label
-                    htmlFor="entrar-password"
-                    className="block text-xs font-medium text-white/85"
-                  >
-                    Contraseña
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="entrar-password"
+                      className="block text-xs font-medium text-white/85"
+                    >
+                      Contraseña
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => switchMode("reset")}
+                      className="cursor-pointer text-xs font-medium text-[#ffb000] hover:underline"
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
                   <input
                     id="entrar-password"
                     name="password"
@@ -251,7 +271,7 @@ export function EntrarScreen({
                 </button>
               </form>
             )
-          ) : (
+          ) : isSignup ? (
             <form key="signup-form" action={signupAction} className="mt-5 space-y-3.5">
               <div className="space-y-1.5">
                 <label
@@ -317,25 +337,69 @@ export function EntrarScreen({
                 {pending ? "Creando cuenta…" : "Crear cuenta"}
               </button>
             </form>
+          ) : (
+            <form key="reset-form" action={resetAction} className="mt-5 space-y-4">
+              <p className="text-xs leading-relaxed text-white/65">
+                Ingresa tu correo y te enviaremos un enlace para crear una contraseña nueva.
+              </p>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="reset-email"
+                  className="block text-xs font-medium text-white/85"
+                >
+                  Correo institucional o de trabajo
+                </label>
+                <input
+                  id="reset-email"
+                  name="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="nombre@institucion.com"
+                  className="h-11 w-full rounded-xl border border-white/15 bg-white/[0.04] px-3.5 text-sm text-white placeholder:text-white/30 focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={pending}
+                className="h-11 w-full cursor-pointer rounded-full bg-[#ffb000] text-sm font-semibold text-black transition hover:bg-[#ffbe2e] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pending ? "Enviando…" : "Enviar enlace de recuperación"}
+              </button>
+            </form>
           )}
 
-          {/* Botón para generar nuevo usuario */}
-          <div className="mt-3">
+          {/* Botones secundarios: generar nuevo usuario / restablecer contraseña */}
+          <div className="mt-3 space-y-2.5">
             {isLogin ? (
-              <button
-                type="button"
-                onClick={() => switchMode("signup")}
-                className="h-10 w-full cursor-pointer rounded-full border border-white/25 bg-transparent text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/[0.06]"
-              >
-                Crear nuevo usuario
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="h-10 w-full cursor-pointer rounded-full border border-white/25 bg-transparent text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/[0.06]"
+                >
+                  Crear nuevo usuario
+                </button>
+                {step === "email" ? (
+                  <button
+                    type="button"
+                    onClick={() => switchMode("reset")}
+                    className="block w-full cursor-pointer pt-1 text-center text-xs font-medium text-white/65 transition hover:text-[#ffb000]"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                ) : null}
+              </>
             ) : (
               <button
                 type="button"
                 onClick={() => switchMode("login")}
                 className="h-10 w-full cursor-pointer rounded-full border border-white/25 bg-transparent text-sm font-medium text-white transition hover:border-white/50 hover:bg-white/[0.06]"
               >
-                Ya tengo cuenta · Entrar
+                {isReset ? "Volver a entrar" : "Ya tengo cuenta · Entrar"}
               </button>
             )}
           </div>

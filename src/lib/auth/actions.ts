@@ -97,6 +97,9 @@ const RESET_WINDOW_MS = 15 * 60_000;
  * para no revelar qué correos están registrados.
  */
 export async function requestPasswordReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  if (!isSupabaseConfigured()) {
+    return { error: "Falta configurar Supabase (.env.local) para restablecer la contraseña." };
+  }
   const parsed = resetRequestSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const email = parsed.data.email.toLowerCase();
@@ -126,6 +129,9 @@ export async function requestPasswordReset(_prev: AuthState, formData: FormData)
 
 /** Guarda la contraseña nueva. Requiere la sesión de recuperación que abre el enlace del correo. */
 export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  if (!isSupabaseConfigured()) {
+    return { error: "Falta configurar Supabase (.env.local) para actualizar la contraseña." };
+  }
   const parsed = newPasswordSchema.safeParse({
     password: formData.get("password"),
     confirm: formData.get("confirm"),
@@ -144,7 +150,7 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
   }
   // Se cierra la sesión de recuperación: la persona entra con la contraseña nueva y confirma que funciona.
   await supabase.auth.signOut();
-  redirect("/login?reset=ok");
+  redirect("/entrar?reset=ok");
 }
 
 export async function signOut() {
