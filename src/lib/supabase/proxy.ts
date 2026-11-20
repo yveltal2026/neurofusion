@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth"];
+const PUBLIC_PATHS = ["/", "/entrar", "/login", "/signup", "/auth"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || (p !== "/" && pathname.startsWith(`${p}/`)));
@@ -32,11 +32,14 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!user && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/entrar";
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  if (
+    user &&
+    (pathname === "/" || pathname === "/entrar" || pathname === "/login" || pathname === "/signup")
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/projects";
     url.search = "";

@@ -16,8 +16,9 @@ const PASSWORD = process.env.E2E_PASSWORD;
 const LABELS = { A: "marca a", B: "marca b", P1: "confiable", P2: "poco confiable" } as const;
 
 async function createStudy(page: Page): Promise<{ studyUrl: string; link: string }> {
-  await page.goto("/login");
-  await page.getByLabel("Correo").fill(EMAIL!);
+  await page.goto("/entrar");
+  await page.getByLabel("Correo institucional o de trabajo").fill(EMAIL!);
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await page.getByLabel("Contraseña").fill(PASSWORD!);
   await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForURL("**/projects");
