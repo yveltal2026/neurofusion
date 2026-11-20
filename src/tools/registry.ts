@@ -8,6 +8,9 @@ export interface ToolDefinition {
   type: ToolType;
   name: string;
   description: string;
+  duration: string;
+  requirement: string;
+  metric: string;
   newStudyPath: (projectId: string) => string;
 }
 
@@ -17,6 +20,9 @@ export const TOOLS: ToolDefinition[] = [
     name: "Test de Asociación Implícita (IAT)",
     description:
       "Mide la fuerza de asociación implícita entre dos marcas u opciones y atributos (p. ej. confiable / poco confiable) a partir de tiempos de reacción.",
+    duration: "3–7 min por participante",
+    requirement: "Teclado recomendado (compatible con móvil)",
+    metric: "Puntaje D (Greenwald et al.)",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/iat`,
   },
 ];

@@ -46,7 +46,17 @@ export async function updateStudySettings(_prev: SettingsState, formData: FormDa
   if (error || !data?.length) return { error: "No se pudieron guardar los cambios" };
 
   revalidatePath(`/studies/${id}`);
+  revalidatePath(`/studies/${id}/settings`);
   return { saved: true };
+}
+
+export async function publishStudy(formData: FormData) {
+  const id = idSchema.safeParse(formData.get("id"));
+  if (!id.success) return;
+  const { supabase } = await requireUser();
+  await supabase.from("studies").update({ status: "published" }).eq("id", id.data);
+  revalidatePath(`/studies/${id.data}`);
+  revalidatePath(`/studies/${id.data}/settings`);
 }
 
 /** Genera un token nuevo: la liga anterior deja de funcionar de inmediato. */
@@ -56,6 +66,8 @@ export async function regenerateLink(formData: FormData) {
   const { supabase } = await requireUser();
   await supabase.from("studies").update({ access_token: generateMagicToken() }).eq("id", id.data);
   revalidatePath(`/studies/${id.data}`);
+  revalidatePath(`/studies/${id.data}/settings`);
+  redirect(`/studies/${id.data}/settings?regenerated=1`);
 }
 
 export async function deleteStudy(formData: FormData) {

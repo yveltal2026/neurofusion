@@ -4,7 +4,7 @@ import { useActionState, useSyncExternalStore } from "react";
 import { updateStudySettings, type SettingsState } from "@/app/(app)/studies/[id]/actions";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import type { DuplicatePolicy, StudyStatus } from "@/lib/db/types";
 
 const initial: SettingsState = {};
@@ -23,12 +23,14 @@ export function StudySettingsForm({
   maxResponses,
   closesAt,
   duplicatePolicy,
+  currentResponses,
 }: {
   id: string;
   status: StudyStatus;
   maxResponses: number | null;
   closesAt: string | null;
   duplicatePolicy: DuplicatePolicy;
+  currentResponses?: number;
 }) {
   const [state, action, pending] = useActionState(updateStudySettings, initial);
   // La zona horaria sólo se conoce en el navegador: en servidor el snapshot es "" y en cliente el valor
@@ -37,6 +39,11 @@ export function StudySettingsForm({
     () => () => {},
     () => toLocalInput(closesAt),
     () => "",
+  );
+  const timeZone = useSyncExternalStore(
+    () => () => {},
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    () => "hora local",
   );
 
   // La fecha local del navegador se convierte a ISO (UTC) antes de enviarla al servidor.
@@ -54,29 +61,51 @@ export function StudySettingsForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Estado de la liga" hint="Sólo los estudios «publicados» aceptan participantes.">
-          <select name="status" defaultValue={status} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+          <Select name="status" defaultValue={status}>
             <option value="published">Publicado (acepta respuestas)</option>
             <option value="closed">Cerrado</option>
             <option value="draft">Borrador (liga inactiva)</option>
-          </select>
+          </Select>
         </Field>
-        <Field label="Límite de respuestas (opcional)">
-          <Input name="max_responses" type="number" min={1} step={1} defaultValue={maxResponses ?? ""} placeholder="Sin límite" />
+        <Field
+          label="Límite de respuestas (opcional)"
+          hint={
+            currentResponses !== undefined
+              ? `Respuestas registradas hasta ahora: ${currentResponses}.`
+              : undefined
+          }
+        >
+          <Input
+            name="max_responses"
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={maxResponses ?? ""}
+            placeholder="Sin límite"
+          />
         </Field>
-        <Field label="Fecha y hora de cierre (opcional)" hint="Pasada esta fecha la liga deja de aceptar respuestas.">
+        <Field
+          label="Fecha y hora de cierre (opcional)"
+          hint={`Pasada esta fecha la liga deja de aceptar respuestas (${timeZone}).`}
+        >
           <Input key={localClose} name="closes_local" type="datetime-local" defaultValue={localClose} />
         </Field>
         <Field label="Candado contra participación repetida">
-          <select name="duplicate_policy" defaultValue={duplicatePolicy} className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm">
+          <Select name="duplicate_policy" defaultValue={duplicatePolicy}>
             <option value="device_cookie">Cookie de dispositivo (recomendado)</option>
             <option value="device_cookie_and_ip">Cookie + marcar posibles duplicados por IP</option>
             <option value="none">Sin candado (pilotos y demos de clase)</option>
-          </select>
+          </Select>
         </Field>
       </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Guardando…" : "Guardar cambios"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Guardando…" : "Guardar cambios"}
+        </Button>
+        <Button type="reset" variant="secondary" disabled={pending}>
+          Restablecer
+        </Button>
+      </div>
     </form>
   );
 }
