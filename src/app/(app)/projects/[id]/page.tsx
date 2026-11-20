@@ -20,7 +20,7 @@ const STATUS_TONE = { draft: "neutral", published: "success", closed: "warning" 
 export default async function ProjectPage({
   params,
   searchParams,
-}: PageProps<"/projects/[id]"> & { searchParams: Promise<{ created?: string; updated?: string }> }) {
+}: PageProps<"/projects/[id]">) {
   const { id } = await params;
   const { created, updated } = await searchParams;
   const { supabase } = await requireUser();

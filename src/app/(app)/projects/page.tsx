@@ -13,9 +13,7 @@ type ProjectStudySummary = Pick<StudyRow, "id" | "project_id" | "status" | "tool
 
 export default async function ProjectsPage({
   searchParams,
-}: {
-  searchParams: Promise<{ deleted?: string }>;
-}) {
+}: PageProps<"/projects">) {
   const { deleted } = await searchParams;
   const { supabase } = await requireUser();
   const [projectResult, studyCountsResult, sessionsResult] = await Promise.all([
