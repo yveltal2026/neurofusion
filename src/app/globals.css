@@ -2,14 +2,14 @@
 
 @utility modo-claro {
   color-scheme: light;
-  --background: #fff7e6;
-  --foreground: #14110c;
+  --background: #f7f7f5;
+  --foreground: #1c1917;
   --heading: #14110c;
-  --surface: #fffbf1;
-  --surface-muted: #f5e9ce;
-  --muted: #5c564b;
-  --border: #d7c8ac;
-  --control: #92846c;
+  --surface: #ffffff;
+  --surface-muted: #eeede9;
+  --muted: #66635c;
+  --border: #e2e0da;
+  --control: #a19e96;
   --primary: #ffb000;
   --primary-foreground: #14110c;
   --accent-ink: #7a3e12;
@@ -21,16 +21,16 @@
   --success: #2f6b3f;
   --warning: #885200;
   --danger: #b3261e;
-  --danger-foreground: #fff7e6;
+  --danger-foreground: #ffffff;
   --chart-1: #b66f00;
   --chart-2: #7a3e12;
   --chart-3: #846d43;
   --chart-4: #5c564b;
   --chart-5: #a6502e;
   --chart-6: #40392d;
-  --glass: rgb(255 252 244 / 78%);
-  --glass-border: rgb(255 255 255 / 86%);
-  --glass-shadow: 0 26px 54px -30px rgb(150 96 0 / 35%);
+  --glass: rgb(255 255 255 / 84%);
+  --glass-border: rgb(255 255 255 / 92%);
+  --glass-shadow: 0 22px 46px -28px rgb(20 17 12 / 14%);
 }
 
 :root {

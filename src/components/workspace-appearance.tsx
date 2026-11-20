@@ -58,6 +58,19 @@ export function WorkspaceAppearance({
   );
 }
 
+export function useWorkspaceThemeControls() {
+  return {
+    theme: useContext(WorkspaceThemeContext),
+    selectTheme: useContext(WorkspaceControls).selectTheme,
+  };
+}
+
+const THEME_OPTIONS: { value: WorkspaceTheme; label: string }[] = [
+  { value: "light", label: "Claro" },
+  { value: "dark", label: "Oscuro" },
+  { value: "system", label: "Auto" },
+];
+
 export function WorkspaceFrame({ studyNav, children }: {
   studyNav?: ReactNode;
   children: ReactNode;
@@ -144,22 +157,40 @@ export function WorkspaceFrame({ studyNav, children }: {
               </ul>
             </section>
           ) : null)}
-          <div className="mt-auto space-y-2.5 rounded-lg border border-border bg-surface-muted/50 p-3">
-            <label className="flex min-h-10 items-center justify-between gap-2 text-xs font-semibold text-muted">
-              Tema
-              <select
-                aria-label="Tema de apariencia"
-                className="min-h-9 rounded-full border border-border bg-surface px-3 text-xs font-semibold text-heading hover:bg-surface-muted"
-                value={theme}
-                onChange={(event) => selectTheme(event.currentTarget.value)}
-              >
-                <option value="light">Claro</option>
-                <option value="dark">Profundo</option>
-                <option value="system">Sistema</option>
-              </select>
-            </label>
+          <div className="mt-auto space-y-2.5 rounded-xl border border-border bg-surface/80 p-2.5">
+            <div
+              role="group"
+              aria-label="Tema de apariencia"
+              className="grid grid-cols-3 gap-0.5 rounded-full border border-border/70 bg-surface-muted/80 p-0.5"
+            >
+              {THEME_OPTIONS.map((option) => {
+                const active = theme === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => selectTheme(option.value)}
+                    className={`min-h-7 rounded-full px-2 text-[11px] font-semibold transition-[background-color,color,transform] duration-[var(--duracion-micro)] active:scale-[0.97] motion-reduce:transition-none ${
+                      active
+                        ? "bg-surface text-heading shadow-xs"
+                        : "text-muted hover:text-heading"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="flex min-w-0 items-center gap-2 border-t border-border/70 pt-2 text-xs text-muted">
-              <Icon name="user" className="size-4 shrink-0" />
+              <Link
+                href="/settings"
+                aria-label="Abrir ajustes de usuario"
+                title="Ajustes de usuario"
+                className="grid size-7 shrink-0 place-items-center rounded-full border border-border bg-surface text-heading transition-colors hover:bg-surface-muted"
+              >
+                <Icon name="user" className="size-3.5" />
+              </Link>
               {account}
             </div>
           </div>

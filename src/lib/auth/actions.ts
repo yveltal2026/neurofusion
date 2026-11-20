@@ -140,6 +140,27 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
   redirect("/login?reset=ok");
 }
 
+/** Cambia la contraseña desde Ajustes de usuario manteniendo la sesión activa. */
+export async function changeAccountPassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = newPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Tu sesión expiró. Vuelve a iniciar sesión." };
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) {
+    return { error: authErrorMessage(error, "No pudimos actualizar tu contraseña. Inténtalo de nuevo.") };
+  }
+  return { message: "Contraseña actualizada correctamente." };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
