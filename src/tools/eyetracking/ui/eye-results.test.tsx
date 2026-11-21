@@ -111,10 +111,11 @@ it("distingue ausencia de registros de ceros medidos y ofrece definir AOI", () =
       .getAllByRole("cell")
       .every((cell) => cell.textContent === "sin dato"),
   ).toBe(true);
+  fireEvent.click(screen.getByText("Exportar CSV"));
   expect(
     (
       screen.getByRole("button", {
-        name: "Descargar KPIs agregados CSV",
+        name: "KPIs agregados CSV",
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
@@ -143,8 +144,9 @@ it("exporta todas las sesiones de la base agregada aunque se haya seleccionado u
   fireEvent.change(screen.getByLabelText("Participante"), {
     target: { value: "2" },
   });
+  fireEvent.click(screen.getByText("Exportar CSV"));
   fireEvent.click(
-    screen.getByRole("button", { name: "Descargar KPIs por participante CSV" }),
+    screen.getByRole("button", { name: "KPIs por participante CSV" }),
   );
   expect(exported?.size).toBeGreaterThan(100);
   const content = await new Promise<string>((resolve, reject) => {
