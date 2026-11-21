@@ -79,6 +79,7 @@ function buildCalibrationPoints(passes: number): Point[] {
 
 export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const [stage, setStage] = useState<Stage>("setup");
+  const [setupStep, setSetupStep] = useState<1 | 2>(1);
   const [error, setError] = useState<string | null>(null);
   const [engineAvailable, setEngineAvailable] = useState(false);
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("checking-model");
@@ -95,9 +96,15 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const referenceCardRef = useRef<HTMLDivElement | null>(null);
   const [referenceConfirmed, setReferenceConfirmed] = useState(false);
   const [referenceGeometry, setReferenceGeometry] = useState("");
+  const [maxCardWidth, setMaxCardWidth] = useState(() =>
+    Math.max(80, Math.min(520, document.documentElement.clientWidth - 8)),
+  );
   const screenGeometryKey = () => `${window.screen.width}:${window.screen.height}:${window.devicePixelRatio}:${window.innerWidth}`;
   useEffect(() => {
-    const invalidate = () => { if (referenceGeometry !== screenGeometryKey()) setReferenceConfirmed(false); };
+    const invalidate = () => {
+      if (referenceGeometry !== screenGeometryKey()) setReferenceConfirmed(false);
+      setMaxCardWidth(Math.max(80, Math.min(520, document.documentElement.clientWidth - 8)));
+    };
     window.addEventListener("resize", invalidate);
     return () => window.removeEventListener("resize", invalidate);
   }, [referenceGeometry]);
@@ -924,7 +931,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
     <>
             <Field label="Dispositivo">
               <select
-                className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
+                className="min-h-11 w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm"
                 value={device}
                 onChange={(e) => changeDevice(e.target.value as DeviceType)}
               >
@@ -937,7 +944,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </Field>
 
             <Field label="Cómo ajustar el tamaño de pantalla">
-              <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenMeasurement} onChange={(e) => setScreenMeasurement(e.target.value as "reference-card" | "diagonal")}>
+              <select className="min-h-11 w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenMeasurement} onChange={(e) => setScreenMeasurement(e.target.value as "reference-card" | "diagonal")}>
                 <option value="reference-card">Usar una tarjeta (sin saber pulgadas)</option>
                 <option value="diagonal">Conozco las pulgadas de mi pantalla</option>
               </select>
@@ -951,9 +958,9 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                   </div>
                 </div>
                 <Field label="Ajustar tarjeta" hint="Usa el control hasta que el dibujo tenga el mismo tamaño que la tarjeta real.">
-                  <input className="w-full" type="range" min="80" max={Math.max(80, Math.min(520, document.documentElement.clientWidth - 8))} step="1" value={referenceWidth} onChange={(e) => { setReferenceWidth(Number(e.target.value)); setReferenceConfirmed(false); }} />
+                  <input className="w-full" type="range" min="80" max={maxCardWidth} step="1" value={referenceWidth} onChange={(e) => { setReferenceWidth(Number(e.target.value)); setReferenceConfirmed(false); }} />
                 </Field>
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
                   <input type="checkbox" className="size-4" checked={referenceConfirmed} onChange={(e) => { setReferenceConfirmed(e.target.checked); setReferenceGeometry(screenGeometryKey()); setMeasuredReferenceWidth(referenceCardRef.current?.getBoundingClientRect().width ?? 0); }} />
                   El dibujo coincide con mi tarjeta
                 </label>
@@ -964,7 +971,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
                   <Input type="number" inputMode="decimal" step="0.1" min="3" max="100" placeholder={PRESETS[device].inches} value={inches} onChange={(e) => setInches(e.target.value)} />
                 </Field>
                 <Field label="Formato de pantalla" hint="El modo automático usa la proporción de la pantalla completa.">
-                  <select className="w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
+                  <select className="min-h-11 w-full rounded-md border border-control bg-background px-3.5 py-2.5 text-sm" value={screenFormat} onChange={(e) => setScreenFormat(e.target.value as ScreenFormat)}>
                     <option value="auto">Detectar formato de la pantalla</option>
                     <option value="16:9">Estándar 16:9</option>
                     <option value="16:10">Estándar 16:10</option>
@@ -983,7 +990,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
   const conditionFields = (
     <div className="space-y-3">
       <p className="text-sm leading-relaxed">Busca un lugar con buena luz de frente. La prueba incluye una calibración completa de 18 puntos y una comprobación de precisión.</p>
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm">
         <input type="checkbox" checked={glasses} onChange={(e) => setGlasses(e.target.checked)} className="size-4" /> Usa lentes
       </label>
     </div>
@@ -1001,62 +1008,143 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           <ParticipantScreen>
             <ScreenHeader
               icon="eye"
-              eyebrow="Estudio de eye tracking"
+              eyebrow={stage === "loading" ? "Preparando cámara" : `Paso ${setupStep} de 2`}
               title={study.title}
               lead={`Calibra la cámara y mira ${study.assets.length} ${study.assets.length === 1 ? "pieza" : "piezas"} durante ${study.durationSeconds} segundos cada una. No necesitas crear una cuenta.`}
             />
 
-            <Section title="Cómo funciona">
-              <FactList
-                items={[
-                  { icon: "user", text: "Te acomodas frente a la cámara, con buena luz." },
-                  { icon: "target", text: "Sigues unos puntos en la pantalla para calibrar." },
-                  { icon: "image", text: `Miras ${study.assets.length === 1 ? "la pieza" : "las piezas"} sin hacer nada más.` },
-                ]}
-              />
-            </Section>
+            {stage === "loading" ? (
+              <div className="space-y-4">
+                <div ref={videoPreviewRef} data-testid="camera-loading-preview" />
+                {(() => {
+                  const steps: LoadingStep[] = [
+                    "checking-model",
+                    "checking-downloads",
+                    "loading-code",
+                    "loading-detector",
+                    "loading-gaze",
+                    "starting-camera",
+                    "waiting-frame",
+                  ];
+                  const idx = Math.max(0, steps.indexOf(loadingStep));
+                  const pct = Math.round(((idx + 1) / steps.length) * 100);
+                  return (
+                    <div className="space-y-2 rounded-2xl border border-border bg-surface p-4">
+                      <div className="flex items-center justify-between text-xs font-semibold text-muted">
+                        <span>Preparación {idx + 1} de {steps.length}</span>
+                        <span className="tabular-nums">{pct} %</span>
+                      </div>
+                      <div
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={pct}
+                        aria-label="Progreso de preparación de cámara"
+                        className="h-2 w-full overflow-hidden rounded-full bg-surface-muted"
+                      >
+                        <div
+                          className="h-full rounded-full bg-primary transition-all duration-300 motion-reduce:transition-none"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-sm text-heading" role="status">
+                        {LOADING_LABELS[loadingStep]}
+                      </p>
+                      <p className="text-xs text-muted">
+                        La primera preparación puede tardar hasta 90 s.
+                      </p>
+                    </div>
+                  );
+                })()}
+                <Button size="lg" disabled className="w-full">
+                  Cargando cámara y modelos…
+                </Button>
+              </div>
+            ) : setupStep === 1 ? (
+              <>
+                <Section title="Cómo funciona">
+                  <FactList
+                    items={[
+                      { icon: "user", text: "Te acomodas frente a la cámara, con buena luz." },
+                      { icon: "target", text: "Sigues unos puntos en la pantalla para calibrar." },
+                      { icon: "image", text: `Miras ${study.assets.length === 1 ? "la pieza" : "las piezas"} sin hacer nada más.` },
+                    ]}
+                  />
+                </Section>
 
-            <Section icon="lock" title="Tu privacidad">
-              <ReadingPanel>
-                <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed">
-                  <li>El video se procesa en este dispositivo y no se envía a Aesteros.</li>
-                  <li>Con tu consentimiento se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración.</li>
-                  <li>El investigador consulta las lecturas y resultados agregados.</li>
-                </ul>
-                <details className="mt-3 text-sm text-muted">
-                  <summary className="cursor-pointer font-medium text-heading">Detalles técnicos</summary>
-                  <p className="mt-2">
-                    Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y <code>storage.googleapis.com</code>.
-                  </p>
-                </details>
-              </ReadingPanel>
-            </Section>
+                <Section icon="lock" title="Tu privacidad">
+                  <ReadingPanel>
+                    <ul className="list-disc space-y-2 pl-5 text-base leading-relaxed">
+                      <li>El video se procesa en este dispositivo y no se envía a Aesteros.</li>
+                      <li>Con tu consentimiento se guardan únicamente coordenadas de mirada, tiempos y calidad de calibración.</li>
+                      <li>El investigador consulta las lecturas y resultados agregados.</li>
+                    </ul>
+                    <details className="mt-3 text-sm text-muted">
+                      <summary className="cursor-pointer font-medium text-heading">Detalles técnicos</summary>
+                      <p className="mt-2">
+                        Los modelos de MediaPipe se bajan de <code>cdn.jsdelivr.net</code> y <code>storage.googleapis.com</code>.
+                      </p>
+                    </details>
+                  </ReadingPanel>
+                </Section>
 
-            <Section icon="device" title="Tu pantalla">
-              <ReadingPanel>
-                <div className="space-y-4">{screenFields}</div>
-              </ReadingPanel>
-            </Section>
-
-            {conditionFields}
-
-            <div className="space-y-4">
-              <ConsentCheck checked={consent} onChange={setConsent}>
-                Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
-              </ConsentCheck>
-              {error ? (
-                <div ref={errorRef} className="scroll-mt-6">
-                  <Alert tone="error">{error}</Alert>
+                <div className="space-y-4">
+                  <ConsentCheck checked={consent} onChange={setConsent}>
+                    Acepto usar la cámara durante la prueba y que se guarden mis coordenadas de mirada, tiempos y métricas de calidad. El video no se guarda.
+                  </ConsentCheck>
+                  {error ? (
+                    <div ref={errorRef} className="scroll-mt-6">
+                      <Alert tone="error">{error}</Alert>
+                    </div>
+                  ) : null}
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    onClick={() => {
+                      if (!consent) {
+                        setError("Debes aceptar el uso de la cámara y el almacenamiento de coordenadas de mirada para participar.");
+                        return;
+                      }
+                      setError(null);
+                      setSetupStep(2);
+                    }}
+                  >
+                    Continuar a ajuste de pantalla
+                  </Button>
                 </div>
-              ) : null}
-              {stage === "loading" ? <div ref={videoPreviewRef} data-testid="camera-loading-preview" /> : null}
-              <Button size="lg" onClick={start} disabled={stage === "loading"} className="w-full">
-                {stage === "loading" ? "Cargando cámara y modelos…" : "Iniciar cámara y cargar modelos"}
-              </Button>
-              {stage === "loading" ? (
-                <p className="text-sm text-muted" role="status">{LOADING_LABELS[loadingStep]} La primera preparación puede tardar hasta 90 s.</p>
-              ) : null}
-            </div>
+              </>
+            ) : (
+              <>
+                <Section icon="device" title="Tu pantalla y postura">
+                  <ReadingPanel>
+                    <div className="space-y-4">{screenFields}</div>
+                  </ReadingPanel>
+                </Section>
+
+                {conditionFields}
+
+                <div className="space-y-3">
+                  {error ? (
+                    <div ref={errorRef} className="scroll-mt-6">
+                      <Alert tone="error">{error}</Alert>
+                    </div>
+                  ) : null}
+                  <Button size="lg" onClick={start} className="w-full">
+                    Iniciar cámara y cargar modelos
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => {
+                      setError(null);
+                      setSetupStep(1);
+                    }}
+                  >
+                    Volver a privacidad
+                  </Button>
+                </div>
+              </>
+            )}
           </ParticipantScreen>
         ) : (
         <div className="mx-auto max-w-xl space-y-5 px-4 py-8">
@@ -1116,7 +1204,19 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
           </ul>
           <p role="status" className="flex flex-wrap items-center gap-2 text-base">
             <StatusBadge tone={live.faceOk ? "success" : "warning"}>Cara detectada: {live.faceOk ? "sí" : "no"}</StatusBadge>
-            <span className="text-sm text-muted">Análisis por segundo: {live.fps} · Lecturas de mirada válidas: {live.validFps}/s</span>
+            {study && !diagnosticsEnabled ? (
+              <span className="text-sm text-muted">
+                {!live.faceOk
+                  ? "Coloca tu rostro frente a la cámara."
+                  : live.slow
+                    ? "Señal lenta: cierra otras pestañas o busca más luz."
+                    : live.gazeOk
+                      ? "Señal estable."
+                      : "Buscando tu mirada…"}
+              </span>
+            ) : (
+              <span className="text-sm text-muted">Análisis por segundo: {live.fps} · Lecturas de mirada válidas: {live.validFps}/s</span>
+            )}
           </p>
           {lightingNotice}
           {device === "phone" ? <Callout icon="device" title="Usa un soporte fijo"><p>Te recomendamos colocar el celular en un soporte o stand fijo para asegurar la mejor calidad de medición. Mantenlo a la altura de tus ojos.</p></Callout> : null}
@@ -1140,6 +1240,15 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </Button>
             <Button variant="ghost" onClick={() => { teardown(); setLive({ fps: 0, validFps: 0, faceOk: false, gazeOk: false, slow: false }); setStage("setup"); }}>Volver a iniciar cámara</Button>
           </div>
+          {!live.gazeOk || lightingStatus !== "good" ? (
+            <p className="text-xs text-muted" role="status">
+              {lightingStatus !== "good"
+                ? "Ajusta la iluminación de frente para habilitar la calibración."
+                : !live.faceOk
+                  ? "Centra tu rostro frente a la cámara para habilitar la calibración."
+                  : "Mira de frente a la cámara para detectar tu mirada y habilitar la calibración."}
+            </p>
+          ) : null}
         </ParticipantScreen>
       ) : null}
 
@@ -1162,7 +1271,7 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             </p>
             {needsCalibration ? <p className="text-base leading-relaxed">Necesitamos recalibrar con el tamaño actual de la ventana. Las imágenes validadas se conservan.</p> : null}
           </Section>
-          {lastDriftCheck ? <p className="text-sm text-muted">
+          {diagnosticsEnabled && lastDriftCheck ? <p className="text-sm text-muted">
             Error mediano: {lastDriftCheck.medianErrorDeg !== null ? `${lastDriftCheck.medianErrorDeg.toFixed(1)}°` : "sin medición"} · Lecturas/s: {lastDriftCheck.fps.toFixed(0)} · Detección durante fijación: {Math.round(lastDriftCheck.validRatio * 100)} %
           </p> : null}
           {lightingNotice}
@@ -1197,17 +1306,25 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             data-calib-dot={dotActive ? "" : undefined}
             disabled={!dotActive}
             onClick={onCalibrationDot}
-            className={`absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 transition-colors ${
+            className={`absolute size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 transition-colors motion-reduce:transition-none ${
               dotActive || dotSampling ? "border-heading bg-primary" : "border-border bg-transparent"
             }`}
             style={{ left: calibPoints[calibIndex].x, top: calibPoints[calibIndex].y }}
           />
-          <button type="button" aria-label="Ajustar posición" title="Ajustar posición" className="absolute top-1 right-1 z-10 size-6 rounded border border-border text-muted" onClick={() => {
-            runIdRef.current++;
-            calibrationFitRef.current = null;
-            setNeedsCalibration(true);
-            setStage("position");
-          }}>×</button>
+          <button
+            type="button"
+            aria-label="Ajustar posición"
+            title="Ajustar posición"
+            className="absolute top-3 right-3 z-10 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface text-base text-heading transition hover:border-heading motion-reduce:transition-none"
+            onClick={() => {
+              runIdRef.current++;
+              calibrationFitRef.current = null;
+              setNeedsCalibration(true);
+              setStage("position");
+            }}
+          >
+            ×
+          </button>
         </div>
       ) : null}
 
@@ -1240,12 +1357,12 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
       {stage === "free" ? (
         <div className="fixed inset-0 z-50 bg-background select-none">
           <p className="absolute top-4 right-0 left-0 px-4 text-center text-sm text-muted">
-            El punto morado es la estimación de tu mirada. Si salta mucho o se desvía, recalibra.
+            El círculo resaltado muestra la estimación de tu mirada. Si salta mucho o se desvía, recalibra.
           </p>
           <div
             ref={dotRef}
             aria-hidden="true"
-            className="pointer-events-none fixed top-0 left-0 size-[30px] rounded-full bg-neuro opacity-0"
+            className="pointer-events-none fixed top-0 left-0 size-[30px] rounded-full border-2 border-heading bg-primary opacity-0"
           />
           <div className="absolute right-0 bottom-6 left-0 flex justify-center">
             <Button variant="secondary" onClick={() => setStage(session ? "results" : "position")}>
@@ -1271,11 +1388,17 @@ export function EyeTrackingLab({ study }: { study?: EyeStudyMode }) {
             />
           )}
           {error ? <Alert tone="error">{error}</Alert> : null}
-          {!session.verdict.pass ? <Button variant="ghost" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button> : null}
           {!session.verdict.pass ? <Callout icon="alert" title="Por qué no pudiste avanzar">
             <ul className="list-disc space-y-2 pl-5">{session.verdict.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-            {session.fps < THRESHOLDS.minFps ? <p className="mt-3">La velocidad de procesamiento es insuficiente. Descarga el diagnóstico de cámara para distinguir la frecuencia de captura del tiempo de análisis antes de repetir la calibración.</p> : <p className="mt-3">Revisa que la cámara esté a la altura de los ojos y que mires cada punto sin mover la cabeza. Antes de recalibrar volveremos a comprobar la iluminación.</p>}
+            {session.fps < THRESHOLDS.minFps ? <p className="mt-3">La velocidad de procesamiento es insuficiente. Revisa qué otras aplicaciones están abiertas o consulta el diagnóstico técnico antes de repetir la calibración.</p> : <p className="mt-3">Revisa que la cámara esté a la altura de los ojos y que mires cada punto sin mover la cabeza. Antes de recalibrar volveremos a comprobar la iluminación.</p>}
           </Callout> : null}
+          {!session.verdict.pass ? (
+            <details className="text-sm text-muted">
+              <summary className="cursor-pointer font-medium text-heading">Ayuda técnica</summary>
+              <p className="mt-2">Si necesitas soporte técnico, descarga el diagnóstico de cámara (no incluye imágenes ni video).</p>
+              <Button variant="ghost" className="mt-2" onClick={downloadCameraDiagnostic}>Descargar diagnóstico de cámara</Button>
+            </details>
+          ) : null}
           <div className="space-y-4">
             <div className="flex flex-wrap gap-3">
               <Button size="lg" onClick={() => void startStudy()} disabled={studyBusy || needsCalibration || !session.verdict.pass}>{studyBusy ? "Preparando piezas…" : resumeCount !== null ? `Continuar desde imagen ${resumeCount + 1}` : "Comenzar presentación"}</Button>

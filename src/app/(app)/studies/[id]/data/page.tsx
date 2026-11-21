@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { StudyTabs } from "@/components/study-tabs";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { buttonClass } from "@/components/ui/button";
 import { Icon } from "@/components/brand/icon";
@@ -111,7 +110,6 @@ export default async function DataPage({ params, searchParams }: PageProps<"/stu
         <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
         <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
-      <StudyTabs id={id} active="data" />
 
       <StatStrip
         items={[

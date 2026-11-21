@@ -2,36 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon } from "@/components/brand/icon";
+
+const LINKS = [
+  { href: "/projects", label: "Proyectos", icon: "folder", match: /^\/(projects|studies|batteries)(\/|$)/ },
+  { href: "/muestra", label: "Calculadora de muestra", icon: "target", match: /^\/muestra\/?$/ },
+] as const;
 
 export function WorkspaceNav() {
   const pathname = usePathname();
-  const links = [
-    {
-      href: "/projects",
-      label: "Proyectos",
-      active: /^\/(projects|studies|batteries)(\/|$)/.test(pathname),
-    },
-    {
-      href: "/muestra",
-      label: "Calculadora de muestra",
-      active: pathname === "/muestra",
-    },
-  ];
 
   return (
-    <nav
-      aria-label="Navegación principal"
-      className="order-last flex w-full gap-1 sm:order-none sm:w-auto"
-    >
-      {links.map(({ href, label, active }) => (
+    <nav aria-label="Navegación principal" className="space-y-1">
+      {LINKS.map(({ href, label, icon, match }) => (
         <Link
           key={href}
           href={href}
-          aria-current={
-            active ? (pathname === href ? "page" : "location") : undefined
-          }
-          className={`inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold sm:px-4 ${active ? "bg-heading text-background" : "text-muted hover:bg-surface-muted hover:text-heading"}`}
+          aria-current={pathname === href ? "page" : match.test(pathname) ? "location" : undefined}
+          className="workspace-nav-link"
         >
+          <Icon name={icon} className="size-5" />
           {label}
         </Link>
       ))}

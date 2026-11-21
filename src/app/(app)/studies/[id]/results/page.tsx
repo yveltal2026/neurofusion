@@ -62,7 +62,7 @@ export default async function ResultsPage({ params }: PageProps<"/studies/[id]/r
 
   return (
     <div className="space-y-8">
-      <StudyHeader study={study} projectName={projectName} active="results" variant="journey" subtitle="Índice de Fricción Digital" />
+      <StudyHeader study={study} projectName={projectName} subtitle="Índice de Fricción Digital" />
 
       <Block className="space-y-3">
         <div>

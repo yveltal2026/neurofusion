@@ -38,8 +38,6 @@ export function StudyReportView({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="report"
-        variant={survey ? "survey" : "eye"}
         subtitle={
           survey
             ? "Informe y resultados de la encuesta"

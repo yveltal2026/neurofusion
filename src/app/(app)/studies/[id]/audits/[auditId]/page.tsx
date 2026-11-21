@@ -72,8 +72,6 @@ export default async function AuditPage({
       <StudyHeader
         study={study}
         projectName={project?.name}
-        active="overview"
-        variant="seo"
         subtitle={`${audit.siteUrl} · ${when}`}
         actions={
           <>

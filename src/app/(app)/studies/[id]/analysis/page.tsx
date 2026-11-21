@@ -2,7 +2,6 @@ import Link from "next/link";
 import { AnalysisView } from "@/components/analysis-view";
 import { ConcordanceChart, DirectionChart, HistogramChart, MeanDChart } from "@/components/charts/iat-charts";
 import { RunAnalysisForm } from "@/components/run-analysis-form";
-import { StudyTabs } from "@/components/study-tabs";
 import { Alert } from "@/components/ui/alert";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { Glossary } from "@/components/ui/glossary";
@@ -164,7 +163,6 @@ export default async function AnalysisPage({ params, searchParams }: PageProps<"
         <Breadcrumbs items={projectCrumbs(study.project_id, projectName)} />
         <h1 className="mt-1 text-3xl font-bold tracking-tight">{study.name}</h1>
       </div>
-      <StudyTabs id={id} active="analysis" />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="text-muted">

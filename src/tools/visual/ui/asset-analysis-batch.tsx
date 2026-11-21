@@ -283,12 +283,19 @@ export function AssetAnalysisBatch({
             : (message ?? `${selection.length} imágenes seleccionadas.`)}
         </p>
         {batch.length ? (
-          <progress
-            className="h-2 w-full accent-primary"
-            value={completed}
-            max={batch.length}
+          <div
+            role="progressbar"
             aria-label="Imágenes procesadas"
-          />
+            aria-valuemin={0}
+            aria-valuemax={batch.length}
+            aria-valuenow={completed}
+            className="h-2 w-full overflow-hidden rounded-full bg-surface-muted"
+          >
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300 motion-reduce:transition-none"
+              style={{ width: `${Math.round((completed / batch.length) * 100)}%` }}
+            />
+          </div>
         ) : null}
       </Card>
       {groups.map((group) => {
@@ -314,7 +321,7 @@ export function AssetAnalysisBatch({
                       allIn ? previous.filter((id) => !groupIds.includes(id)) : [...new Set([...previous, ...groupIds])],
                     )
                   }
-                  className="py-1 text-sm font-medium text-heading underline underline-offset-4 disabled:opacity-50 print:hidden"
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-heading underline underline-offset-4 disabled:opacity-50 print:hidden"
                 >
                   {allIn ? "Quitar grupo del lote" : "Seleccionar grupo"}
                 </button>
@@ -364,7 +371,7 @@ export function AssetAnalysisBatch({
 
                           <div className="flex flex-col justify-between space-y-3">
                             <div className="space-y-2">
-                              <label className="flex items-center gap-2 text-sm font-medium print:hidden">
+                              <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-medium print:hidden">
                                 <input
                                   type="checkbox"
                                   checked={selection.includes(asset.id)}
@@ -444,7 +451,7 @@ export function AssetAnalysisBatch({
                         key={asset.id}
                         className={`h-full space-y-3 p-3 ${selection.includes(asset.id) ? "ring-2 ring-primary" : ""}`}
                       >
-                        <label className="flex items-center gap-2 text-sm print:hidden">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm print:hidden">
                           <input
                             type="checkbox"
                             checked={selection.includes(asset.id)}

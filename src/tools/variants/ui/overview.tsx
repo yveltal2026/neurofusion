@@ -35,7 +35,7 @@ export function VariantOverview({
 
   return (
     <div className="space-y-8">
-      <StudyHeader study={study} projectName={projectName} active="overview" variant="variant" subtitle={STATUS_LABEL[study.status]} />
+      <StudyHeader study={study} projectName={projectName} subtitle={STATUS_LABEL[study.status]} />
 
       {copied ? <Alert>Copia creada en borrador. Revisa la configuración y publícala en Ajustes.</Alert> : null}
       {created ? <Alert>¡Estudio generado! Comparte la liga con tus participantes.</Alert> : null}

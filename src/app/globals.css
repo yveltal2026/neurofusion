@@ -2,14 +2,15 @@
 
 @utility modo-claro {
   color-scheme: light;
-  --background: #fff7e6;
-  --foreground: #14110c;
+  --background: #f7f7f5;
+  --foreground: #1c1917;
   --heading: #14110c;
-  --surface: #fffbf1;
-  --surface-muted: #f5e9ce;
-  --muted: #5c564b;
-  --border: #d7c8ac;
-  --control: #92846c;
+  --surface: #ffffff;
+  --surface-muted: #eeede9;
+  --sidebar-bg: #f5efe2;
+  --muted: #66635c;
+  --border: #e2e0da;
+  --control: #a19e96;
   --primary: #ffb000;
   --primary-foreground: #14110c;
   --accent-ink: #7a3e12;
@@ -21,19 +22,16 @@
   --success: #2f6b3f;
   --warning: #885200;
   --danger: #b3261e;
-  --danger-foreground: #fff7e6;
+  --danger-foreground: #ffffff;
   --chart-1: #b66f00;
   --chart-2: #7a3e12;
   --chart-3: #846d43;
   --chart-4: #5c564b;
   --chart-5: #a6502e;
   --chart-6: #40392d;
-  --glass: rgb(255 252 244 / 78%);
-  --glass-border: rgb(255 255 255 / 86%);
-  --glass-shadow: 0 26px 54px -30px rgb(150 96 0 / 35%);
-  --workspace: radial-gradient(ellipse at 100% 0%, #ffd478 0%, transparent 49%),
-    radial-gradient(ellipse at 0% 100%, #ffe3a4 0%, transparent 55%),
-    linear-gradient(135deg, #fff7e6, #fff2d1);
+  --glass: rgb(255 255 255 / 84%);
+  --glass-border: rgb(255 255 255 / 92%);
+  --glass-shadow: 0 22px 46px -28px rgb(20 17 12 / 14%);
 }
 
 :root {
@@ -53,6 +51,7 @@
   --heading: #fff7e6;
   --surface: #201b13;
   --surface-muted: #302718;
+  --sidebar-bg: #17130d;
   --muted: #c6bba6;
   --border: #4e4231;
   --control: #91816a;
@@ -71,7 +70,6 @@
   --glass: rgb(39 30 18 / 78%);
   --glass-border: rgb(255 247 230 / 16%);
   --glass-shadow: 0 28px 50px -34px #000;
-  --workspace: var(--deep-glow);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -210,11 +208,6 @@
   background: var(--deep-glow);
 }
 
-@utility workspace-background {
-  background: var(--workspace);
-  color: var(--foreground);
-}
-
 @utility glass-panel {
   border: 1px solid var(--glass-border);
   background: var(--glass);
@@ -296,9 +289,105 @@ progress.brand-progress {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .workspace-background, .glass-panel, .estimated-panel {
+  .glass-panel, .estimated-panel {
     background: #fff;
     box-shadow: none;
     backdrop-filter: none;
+  }
+}
+
+@utility workspace-nav-link {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: .625rem;
+  border: 1px solid transparent;
+  border-radius: .75rem;
+  padding: .375rem .75rem;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  transition: background-color var(--duracion-micro) var(--ease-enfocar),
+    color var(--duracion-micro) var(--ease-enfocar),
+    border-color var(--duracion-micro) var(--ease-enfocar),
+    transform var(--duracion-micro) var(--ease-enfocar);
+
+  &:hover {
+    background: var(--surface-muted);
+    color: var(--heading);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &[aria-current] {
+    background: var(--surface-muted);
+    color: var(--heading);
+  }
+
+  &[aria-current="page"] {
+    border-color: transparent;
+    background: var(--heading);
+    color: var(--background);
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active {
+      transform: none;
+    }
+  }
+}
+
+.workspace-frame {
+  flex: 1;
+  min-height: 100dvh;
+  color: var(--foreground);
+  background: var(--background);
+  --glass: var(--surface);
+  --glass-border: var(--border);
+  --glass-shadow: none;
+}
+
+.workspace-frame .glass-panel {
+  backdrop-filter: none;
+}
+
+.workspace-sidebar {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--sidebar-bg) 92%, transparent);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+@media screen and (min-width: 64rem) {
+  .workspace-frame {
+    display: grid;
+    grid-template-columns: 14.5rem minmax(0, 1fr);
+  }
+
+  .workspace-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+}
+
+@media print {
+  .workspace-frame {
+    min-height: 0;
+    background: #fff;
+  }
+
+  .workspace-sidebar {
+    display: none;
   }
 }

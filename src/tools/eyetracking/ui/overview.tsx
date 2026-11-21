@@ -55,15 +55,20 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
   const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
   const link = study.access_token ? magicLinkUrl(host ? `${proto}://${host}` : publicEnv().appUrl, study.access_token) : null;
   const hasVideoSource = Boolean(videoConfig?.r2Key || videoConfig?.playbackUrl);
+  const canShare = link && study.status === "published" && (isVideo ? hasVideoSource : assets.length > 0);
 
   return (
     <div className="space-y-8">
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="eye"
         subtitle={isVideo ? "Eye tracking en video + Facial Coding" : "Medición de mirada con participantes"}
+        actions={canShare ? (
+          <a href="#study-invitation" className={buttonClass()}>
+            <Icon name="link" className="size-5" />
+            Compartir liga
+          </a>
+        ) : null}
       />
       {created ? (
         <Alert>
@@ -73,25 +78,12 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
         </Alert>
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-[1.25fr_1fr]">
-        <section className="glass-panel min-w-0 space-y-4 rounded-panel p-5 sm:p-6" aria-labelledby="study-facts">
-          <h2 id="study-facts" className="text-lg font-bold">Ficha del estudio</h2>
-          <dl className="grid gap-2 sm:grid-cols-2">
-            <Fact icon="clock" label="Exposición" value={isVideo ? `Hasta ${videoConfig?.maxDurationSeconds ?? 120} s` : `${config.eyeTracking.durationSeconds} s por imagen`} />
-            <Fact icon="eye" label="Medición" value={facialCoding ? "Mirada y señales faciales" : "Mirada con cámara web"} />
-            <Fact icon="lock" label="Privacidad" value="Video de cámara sin guardar" />
-            <Fact icon="device" label="Validación" value="Calibración de la mirada" />
-          </dl>
-          <dl className="space-y-2 text-sm">
-            <div><dt className="inline text-muted">Objetivo · </dt><dd className="inline">{config.objective}</dd></div>
-            {config.brand ? <div><dt className="inline text-muted">Marca · </dt><dd className="inline">{config.brand}</dd></div> : null}
-            {config.audience ? <div><dt className="inline text-muted">Público · </dt><dd className="inline">{config.audience}</dd></div> : null}
-          </dl>
-        </section>
-
-        <section className="glass-panel min-w-0 space-y-4 rounded-panel p-5 sm:p-6" aria-labelledby="study-invitation">
-          <h2 id="study-invitation" className="text-lg font-bold">Invita a participar</h2>
+        <section id="study-invitation" className="glass-panel min-w-0 scroll-mt-4 space-y-4 rounded-lg p-5 sm:p-6" tabIndex={-1} aria-labelledby="study-invitation-title">
+          <h2 id="study-invitation-title" className="text-lg font-bold">Participación</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold tabular-nums">{runs ?? "—"} {runs === 1 ? "respuesta guardada" : "respuestas guardadas"}</span>
+            <span className="font-semibold tabular-nums">
+              {runs ?? "—"}{runs !== null && study.max_responses ? ` de ${study.max_responses}` : ""} {runs === 1 && !study.max_responses ? "respuesta guardada" : "respuestas guardadas"}
+            </span>
             {active ? <StatusBadge tone="warning">{active} en curso</StatusBadge> : null}
           </div>
           {study.max_responses && runs !== null ? (
@@ -120,10 +112,24 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
             </div>
           </details>
         </section>
+        <section className="glass-panel min-w-0 space-y-4 rounded-lg p-5 sm:p-6" aria-labelledby="study-facts">
+          <h2 id="study-facts" className="text-lg font-bold">Ficha del estudio</h2>
+          <dl className="grid gap-2 sm:grid-cols-2">
+            <Fact icon="clock" label="Exposición" value={isVideo ? `Hasta ${videoConfig?.maxDurationSeconds ?? 120} s` : `${config.eyeTracking.durationSeconds} s por imagen`} />
+            <Fact icon="eye" label="Medición" value={facialCoding ? "Mirada y señales faciales" : "Mirada con cámara web"} />
+            <Fact icon="lock" label="Privacidad" value="Video de cámara sin guardar" />
+            <Fact icon="device" label="Validación" value="Calibración de la mirada" />
+          </dl>
+          <dl className="space-y-2 text-sm">
+            <div><dt className="inline text-muted">Objetivo · </dt><dd className="inline">{config.objective}</dd></div>
+            {config.brand ? <div><dt className="inline text-muted">Marca · </dt><dd className="inline">{config.brand}</dd></div> : null}
+            {config.audience ? <div><dt className="inline text-muted">Público · </dt><dd className="inline">{config.audience}</dd></div> : null}
+          </dl>
+        </section>
       </div>
 
       {isVideo ? (
-        <section className="glass-panel space-y-4 rounded-panel p-5 sm:p-6">
+        <section className="glass-panel space-y-4 rounded-lg p-5 sm:p-6">
           <h2 className="text-xl font-semibold">Video del estudio</h2>
           <VideoSetupCard
             studyId={study.id}
@@ -151,7 +157,7 @@ export async function EyeOverview({ study, projectName, created }: { study: Stud
           ) : null}
         </section>
       ) : (
-        <section className="glass-panel space-y-4 rounded-panel p-5 sm:p-6" aria-labelledby="study-stimuli">
+        <section className="glass-panel space-y-4 rounded-lg p-5 sm:p-6" aria-labelledby="study-stimuli">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="study-stimuli" className="text-lg font-bold">Estímulos</h2>
             <span className="text-sm text-muted tabular-nums">{assets.length} de 5 imágenes</span>

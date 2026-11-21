@@ -68,8 +68,6 @@ export async function WebEyetrackingOverview({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="eye"
         subtitle={
           config.mode === "live_snippet"
             ? "Sitio en vivo (snippet en <head>)"

@@ -5,6 +5,7 @@ import { StudyHeader } from "@/components/study-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmActionDialog } from "@/components/ui/confirm-action";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, type TabItem } from "@/components/ui/tabs";
 import { requireUser } from "@/lib/auth/session";
@@ -48,7 +49,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
   if (config.mode === "pieces" && config.eyeTracking) {
     return (
       <div className="space-y-6">
-        <StudyHeader study={study} projectName={projectName} active="overview" variant="eye" subtitle={row.title} />
+        <StudyHeader study={study} projectName={projectName} subtitle={row.title} />
         <Link href={`/studies/${id}`} className="inline-block py-1 text-sm text-muted hover:underline">
           ← Volver a las imágenes del estudio
         </Link>
@@ -66,19 +67,24 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
           <p className="text-xs text-muted">
             {row.file_name} · {row.width}×{row.height} · {(row.bytes / 1024).toFixed(0)} KB
           </p>
-          <form action={deleteAsset}>
+          <ConfirmActionDialog
+            triggerLabel="Eliminar imagen"
+            triggerVariant="ghost"
+            triggerClassName="text-danger hover:bg-danger/10"
+            title="Eliminar imagen"
+            description={`Se eliminará "${row.title}" junto con sus áreas de interés y lecturas asociadas. Esta acción no se puede deshacer.`}
+            confirmLabel="Eliminar definitivamente"
+            confirmVariant="danger"
+            action={deleteAsset}
+          >
             <input type="hidden" name="studyId" value={id} />
             <input type="hidden" name="assetId" value={assetId} />
-            <Button type="submit" variant="ghost" className="text-danger">
-              Eliminar imagen
-            </Button>
-          </form>
+          </ConfirmActionDialog>
         </Card>
       </div>
     );
   }
 
-  const variant = config.mode === "journey" ? "journey" : "pieces";
   const placementSpec = getPlacement(row.placement);
   const imgData = { width: row.width, height: row.height, bytes: row.bytes, placement: row.placement };
   const fmtStatus = formatStatus(imgData);
@@ -184,7 +190,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
               </div>
               <div className="pt-1">
                 <dt>SHA-256</dt>
-                <dd className="break-all font-mono text-[11px] text-foreground">{row.sha256}</dd>
+                <dd className="break-all font-mono text-xs text-foreground">{row.sha256}</dd>
               </div>
             </dl>
           </Card>
@@ -193,13 +199,20 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
             <p className="text-xs text-muted">
               Esta acción elimina la pieza, su análisis con IA y las áreas de interés asociadas. No se puede deshacer.
             </p>
-            <form action={deleteAsset}>
+            <ConfirmActionDialog
+              triggerLabel="Eliminar imagen definitivamente"
+              triggerVariant="ghost"
+              triggerSize="sm"
+              triggerClassName="text-danger hover:bg-danger/10"
+              title="Eliminar imagen definitivamente"
+              description={`Se eliminará "${row.title}", su análisis con IA y todas las áreas de interés asociadas. No se puede deshacer.`}
+              confirmLabel="Eliminar definitivamente"
+              confirmVariant="danger"
+              action={deleteAsset}
+            >
               <input type="hidden" name="studyId" value={id} />
               <input type="hidden" name="assetId" value={assetId} />
-              <Button type="submit" variant="ghost" size="sm" className="text-danger hover:bg-danger/10">
-                Eliminar imagen definitivamente
-              </Button>
-            </form>
+            </ConfirmActionDialog>
           </Card>
         </div>
       ),
@@ -211,8 +224,6 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant={variant}
         subtitle={site && task ? `${site.name} · ${task.id} ${task.name}` : row.title}
       />
 
@@ -220,7 +231,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
         <Link href={`/studies/${id}`} className="inline-block text-sm text-muted hover:text-heading hover:underline">
           {backLabel}
         </Link>
-        <AnalyzeAssetForm studyId={id} assetId={assetId} hasAnalysis={Boolean(asset.ai)} />
+        {asset.ai ? <AnalyzeAssetForm studyId={id} assetId={assetId} hasAnalysis /> : null}
       </div>
 
       <header className="space-y-2">
@@ -281,7 +292,7 @@ export default async function AssetPage({ params }: PageProps<"/studies/[id]/ass
               <form action={restoreAiAois}>
                 <input type="hidden" name="studyId" value={id} />
                 <input type="hidden" name="assetId" value={assetId} />
-                <button type="submit" className="py-1 text-heading underline underline-offset-4">
+                <button type="submit" className="inline-flex min-h-11 items-center text-heading underline underline-offset-4">
                   Restaurar la propuesta de la IA
                 </button>
               </form>

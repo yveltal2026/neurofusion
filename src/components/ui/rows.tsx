@@ -28,14 +28,15 @@ export function RowLink({
 }) {
   return (
     <li>
-      <Link href={href} className="group flex items-center gap-4 px-2 py-4 transition-colors duration-150 hover:bg-neuro-wash motion-reduce:transition-none sm:px-3">
+      <Link href={href} className="group flex items-center gap-4 px-2 py-4 transition-colors duration-150 hover:bg-surface-muted/60 motion-reduce:transition-none sm:px-3">
         {icon ? <IconTile name={icon} size="md" /> : null}
         <span className="min-w-0 flex-1">
           <span className="block truncate font-display font-semibold text-heading">{title}</span>
           {description ? <span className="mt-0.5 block text-sm text-muted">{description}</span> : null}
+          {meta ? <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted sm:hidden">{meta}</span> : null}
         </span>
         {meta ? <span className="hidden shrink-0 items-center gap-2 text-sm text-muted sm:flex">{meta}</span> : null}
-        <Icon name="arrow" className="size-5 shrink-0 text-muted transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-neuro-ink motion-reduce:transition-none" />
+        <Icon name="arrow" className="size-5 shrink-0 text-muted transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-accent-ink motion-reduce:transition-none" />
       </Link>
     </li>
   );
