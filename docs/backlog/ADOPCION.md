@@ -14,7 +14,7 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
-| COG-20261120-demo-onboarding-membresia | CognIA, origen | Implementado localmente (`specs/003-demo-onboarding-credits`, migración, cuotas/créditos, onboarding+tour y `/membresia`) | `typecheck`, `lint` y 13 suites Vitest (57 pruebas) correctas; Supabase real y navegador pendientes | Pendiente |
+| COG-20261120-demo-onboarding-membresia | CognIA, origen | Rama `feat/003-demo-onboarding-credits` (`f39cbe5`), [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) abierto | `typecheck`, `lint` y 13 suites Vitest (57 pruebas) correctas; Supabase real y navegador pendientes | Pendiente |
 | COG-20261120-demo-onboarding-membresia | Anáhuac Mayab | Sin aplicar; requiere adaptación para preservar bloqueo de autorregistro de alumnos | Sin verificar; no copiar flujo de registro público abierto | Sin verificar |
 | COG-20261119-eyetracking-web | CognIA, origen | Implementado localmente en `main` (`web_eyetracking`, migración, API CORS, snippet y runner) | `typecheck`, `lint` y Vitest locales; Supabase real y sitio externo pendientes | Pendiente |
 | COG-20261119-eyetracking-web | Anáhuac Mayab | Sin aplicar | Sin verificar; conservar acreditación de maestros y reglas de acceso del destino | Sin verificar |

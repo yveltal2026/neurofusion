@@ -1,11 +1,11 @@
 # COG-20261120-demo-onboarding-membresia — Registro público DEMO, límites/créditos, membresía por perfil y onboarding gamificado
 
 - Fecha y responsable: 2026-11-20 · Aesteros / NeuroFusion
-- Estado del trabajo: implementado localmente (integración en rama/PR, migración en Supabase real y despliegue pendientes)
+- Estado del trabajo: en curso (rama `feat/003-demo-onboarding-credits`, [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) abierto; migración en Supabase real y merge pendientes)
 - Tipo: mejora / datos / configuración
 - Alcance: Plataforma principal (Aesteros); ediciones universitarias requieren adaptación y conservar su política de acceso
-- Origen: `yveltal2026/neurofusion`, rama `main`, base `6244632`
-- Referencias de implementación: pendiente (cambios locales sin commit/PR todavía)
+- Origen: `yveltal2026/neurofusion`, rama `feat/003-demo-onboarding-credits`, base `6244632`
+- Referencias de implementación: `f39cbe5`, [PR #29](https://github.com/yveltal2026/neurofusion/pull/29)
 - Dependencias de otros cambios (IDs): `COG-20261028-compatibilidad-universitaria`
 
 ## Problema y comportamiento esperado
