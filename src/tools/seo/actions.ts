@@ -7,6 +7,11 @@ import { z } from "zod";
 import { AiError, generateStructured, getAnalysisProvider } from "@/lib/ai";
 import { requireUser } from "@/lib/auth/session";
 import type { SeoAuditRow } from "@/lib/db/types";
+import {
+  assertCanCreateStudy,
+  refundReservedCredits,
+  reserveCreditsForAction,
+} from "@/lib/plans/server";
 import { buildSeoUserPrompt, SEO_SYSTEM_PROMPT } from "./analysis/prompt";
 import { seoAiResultSchema } from "./analysis/schema";
 import { pageTargetsFromForm, seoConfigSchema } from "./config";
@@ -49,16 +54,16 @@ function configFromForm(fd: FormData): unknown {
 }
 
 async function loadSeoStudy(id: string) {
-  const { supabase } = await requireUser();
+  const { supabase, user, orgId } = await requireUser();
   const { data } = await supabase
     .from("studies")
     .select("id, project_id, config")
     .eq("id", id)
     .eq("tool_type", "seo")
     .maybeSingle();
-  if (!data) return { supabase, study: null, config: null };
+  if (!data) return { supabase, user, orgId, study: null, config: null };
   const config = seoConfigSchema.safeParse(data.config);
-  return { supabase, study: data, config: config.success ? config.data : null };
+  return { supabase, user, orgId, study: data, config: config.success ? config.data : null };
 }
 
 export async function createSeoStudy(
@@ -80,7 +85,10 @@ export async function createSeoStudy(
       error: config.error.issues[0]?.message ?? "Configuración inválida",
     };
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("studies")
     .insert({
@@ -169,7 +177,7 @@ export async function runSeoLiveAudit(
 ): Promise<SeoFormState> {
   const id = z.string().uuid().safeParse(fd.get("studyId"));
   if (!id.success) return { error: "Solicitud inválida" };
-  const { supabase, study, config } = await loadSeoStudy(id.data);
+  const { supabase, user, orgId, study, config } = await loadSeoStudy(id.data);
   if (!study || !config)
     return { error: "Estudio no encontrado o con configuración inválida" };
   if (!(await underHourlyLimit(supabase, id.data, MAX_AUDITS_PER_HOUR))) {
@@ -178,6 +186,14 @@ export async function runSeoLiveAudit(
         "Alcanzaste el límite de auditorías por hora para este estudio. Inténtalo más tarde.",
     };
   }
+
+  const credit = await reserveCreditsForAction({
+    orgId,
+    userId: user?.id,
+    action: "seo_audit",
+    referenceId: id.data,
+  });
+  if (!credit.ok) return { error: credit.error };
 
   let out: AuditOutcome;
   try {
@@ -189,6 +205,7 @@ export async function runSeoLiveAudit(
       psiKey: process.env.PAGESPEED_API_KEY || undefined,
     });
   } catch (e) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "seo_audit", referenceId: id.data });
     if (e instanceof BlockedUrlError)
       return { error: `No se puede auditar esa URL: ${e.message}.` };
     return {
@@ -197,11 +214,13 @@ export async function runSeoLiveAudit(
     };
   }
   const auditId = await saveAudit(supabase, id.data, out);
-  if (!auditId)
+  if (!auditId) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "seo_audit", referenceId: id.data });
     return {
       error:
         "La auditoría terminó pero no se pudo guardar. Inténtalo de nuevo.",
     };
+  }
   redirect(`/studies/${id.data}/audits/${auditId}`);
 }
 
@@ -259,7 +278,7 @@ export async function generateSeoPlan(
   const auditId = z.string().uuid().safeParse(fd.get("auditId"));
   if (!studyId.success || !auditId.success)
     return { error: "Solicitud inválida" };
-  const { supabase, config } = await loadSeoStudy(studyId.data);
+  const { supabase, user, orgId, config } = await loadSeoStudy(studyId.data);
   if (!config) return { error: "Estudio no encontrado" };
   if (
     !(await underHourlyLimit(
@@ -283,6 +302,14 @@ export async function generateSeoPlan(
   if (!row) return { error: "Auditoría no encontrada" };
   const audit = toSeoAudit(row);
 
+  const credit = await reserveCreditsForAction({
+    orgId,
+    userId: user?.id,
+    action: "ai_analysis",
+    referenceId: studyId.data,
+  });
+  if (!credit.ok) return { error: credit.error };
+
   try {
     const provider = getAnalysisProvider();
     const { data, model } = await generateStructured({
@@ -303,8 +330,12 @@ export async function generateSeoPlan(
         ai_generated_at: new Date().toISOString(),
       })
       .eq("id", auditId.data);
-    if (error) return { error: "El plan se generó pero no se pudo guardar." };
+    if (error) {
+      await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "ai_analysis", referenceId: studyId.data });
+      return { error: "El plan se generó pero no se pudo guardar." };
+    }
   } catch (e) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "ai_analysis", referenceId: studyId.data });
     if (e instanceof AiError) return { error: e.message };
     return { error: "No se pudo generar el plan. Inténtalo de nuevo." };
   }

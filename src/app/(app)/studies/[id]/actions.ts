@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
+import { assertCanCreateStudy } from "@/lib/plans/server";
 import { removeStudyFiles } from "@/lib/study-files";
 import { listItems, surveyConfigSchema } from "@/tools/survey/engine";
 
@@ -111,7 +112,10 @@ export async function duplicateStudy(formData: FormData) {
   if (!parsed.success) return;
   const { id, projectId, name } = parsed.data;
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) redirect(`/membresia?limit=studies`);
+
   const { data: source } = await supabase
     .from("studies")
     .select("name, tool_type, config, duplicate_policy")

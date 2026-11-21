@@ -6,6 +6,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
+| [COG-20261120-demo-onboarding-membresia](cambios/COG-20261120-demo-onboarding-membresia.md) | Registro público DEMO con audiencia, límites/créditos, membresía por perfil y onboarding gamificado | Implementado localmente; integración, migración en Supabase real y despliegue pendientes | Plataforma principal (requiere adaptación en universidades) |
 | [COG-20261119-eyetracking-web](cambios/COG-20261119-eyetracking-web.md) | Eyetracking para Web (`web_eyetracking`) con snippet `<head>` y modo sin código | Implementado localmente; integración y despliegue pendientes | Compartido |
 | [COG-20261119-imagen-web-separada](cambios/COG-20261119-imagen-web-separada.md) | Separar Análisis de Imagen Web (`web_visual`) en Diagnóstico digital | Implementado localmente; integración y despliegue pendientes | Compartido |
 | [COG-20261119-redisenio-aesteros](cambios/COG-20261119-redisenio-aesteros.md) | Marca Aesteros, rediseño modular y selector Claro / Profundo / Sistema | Implementado en [PR #27](https://github.com/yveltal2026/neurofusion/pull/27). Revisión del preview y cámara física pendientes | Plataforma principal |

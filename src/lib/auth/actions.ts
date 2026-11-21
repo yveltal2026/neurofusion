@@ -48,22 +48,63 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(safeNext(formData.get("next")));
 }
 
+const signupSchema = credentials.extend({
+  full_name: z.string().trim().max(120, "Nombre demasiado largo").optional(),
+  audience_segment: z.enum(
+    ["researcher", "agency_company", "teacher", "student", "other"],
+    { message: "Selecciona qué perfil te describe mejor." },
+  ),
+  declared_organization: z
+    .string()
+    .trim()
+    .max(120, "El nombre de la organización debe tener máximo 120 caracteres")
+    .optional(),
+  audience_other_detail: z
+    .string()
+    .trim()
+    .max(120, "El detalle del perfil debe tener máximo 120 caracteres")
+    .optional(),
+});
+
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   if (!isSupabaseConfigured()) {
     return { error: "Falta configurar Supabase (.env.local) para crear cuentas." };
   }
-  const parsed = credentials.safeParse({
+  const parsed = signupSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
+    full_name: String(formData.get("full_name") ?? "").trim() || undefined,
+    audience_segment: formData.get("audience_segment"),
+    declared_organization:
+      String(formData.get("declared_organization") ?? "").trim() || undefined,
+    audience_other_detail:
+      String(formData.get("audience_other_detail") ?? "").trim() || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const fullName = String(formData.get("full_name") ?? "").trim() || undefined;
+
+  const {
+    email,
+    password,
+    full_name,
+    audience_segment,
+    declared_organization,
+    audience_other_detail,
+  } = parsed.data;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
-    ...parsed.data,
+    email,
+    password,
     options: {
-      data: fullName ? { full_name: fullName } : undefined,
+      // Nunca se aceptan plan_tier o créditos desde el cliente; handle_new_user() fija DEMO y +30 créditos.
+      data: {
+        ...(full_name ? { full_name } : {}),
+        audience_segment,
+        ...(declared_organization ? { declared_organization } : {}),
+        ...(audience_segment === "other" && audience_other_detail
+          ? { audience_other_detail }
+          : {}),
+      },
       emailRedirectTo: `${await origin()}/auth/callback`,
     },
   });

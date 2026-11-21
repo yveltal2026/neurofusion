@@ -16,6 +16,11 @@ export function WorkspaceNav() {
       label: "Calculadora de muestra",
       active: pathname === "/muestra",
     },
+    {
+      href: "/membresia",
+      label: "Membresía",
+      active: pathname === "/membresia",
+    },
   ];
 
   return (

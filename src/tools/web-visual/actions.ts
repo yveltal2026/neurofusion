@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import type { StudyRow } from "@/lib/db/types";
+import { assertCanCreateStudy } from "@/lib/plans/server";
 import { webVisualConfigSchema, type WebVisualConfig } from "./config";
 
 export interface WebVisualFormState {
@@ -33,7 +34,10 @@ export async function createWebVisualStudy(
     };
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("studies")
     .insert({

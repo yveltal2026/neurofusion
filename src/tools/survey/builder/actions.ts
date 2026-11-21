@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
+import { assertCanCreateStudy } from "@/lib/plans/server";
 import { listItems, surveyConfigSchema } from "../engine";
 
 const inputSchema = z.object({
@@ -35,7 +36,10 @@ export async function createSurveyStudy(
   if (listItems(config).some((item) => item.image))
     return { error: "Las imágenes deben subirse y verificarse antes de publicar la encuesta." };
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("studies")
     .insert({

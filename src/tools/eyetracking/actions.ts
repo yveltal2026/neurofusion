@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
+import { assertCanCreateStudy } from "@/lib/plans/server";
 import {
   ALLOWED_VIDEO_MIME_TYPES,
   createR2VideoUploadSession,
@@ -19,7 +20,10 @@ import { createEyeStudySchema, eyeStudyConfigSchema, resolveEyeMediaType } from 
 export async function createEyeTrackingStudy(raw: unknown): Promise<{ error?: string }> {
   const parsed = createEyeStudySchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   // Reutiliza el almacenamiento de imágenes y conserva compatibilidad con estudios previos.
   const { data, error } = await supabase.from("studies").insert({
     project_id: parsed.data.projectId,

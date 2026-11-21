@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getStudyResponseLimitForPlan } from "@/lib/plans/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildCorsHeaders,
@@ -74,6 +75,22 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+  const maxResponses = await getStudyResponseLimitForPlan(admin, loaded.study.id);
+  if (maxResponses !== null) {
+    const since = new Date(Date.now() - 2 * 60 * 60_000).toISOString();
+    const { count } = await admin
+      .from("sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("study_id", loaded.study.id)
+      .or(`status.eq.completed,and(status.eq.started,started_at.gt.${since})`);
+    if ((count ?? 0) >= maxResponses) {
+      return NextResponse.json(
+        { error: "El estudio alcanzó el máximo de respuestas permitidas en su plan." },
+        { status: 403, headers },
+      );
+    }
+  }
+
   const participantRef =
     parsed.data.participantRef ?? `we_${crypto.randomUUID().replace(/-/g, "")}`;
 
