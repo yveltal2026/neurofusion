@@ -62,7 +62,9 @@ Comandos ejecutados localmente tras la última edición:
 - `npm run lint`: correcto (0 errores).
 - `npx vitest run` sobre las 13 suites afectadas y nuevas (`entrar-screen.test.tsx`, `membership-hub.test.tsx`, `onboarding.test.tsx`, `quotas.test.ts`, `server.test.ts`, `rls-audit.test.ts`, `missions.test.ts`, `seo/actions.test.ts`, `visual/actions.analysis.test.ts`, `eyetracking/video-actions.test.ts`, `reports/actions.test.ts`, `survey/builder/actions.test.ts`, `actions.duplicate.test.ts`): **13 archivos / 57 pruebas correctas**.
 - Nota en suite completa previa (`npm test`): 143 de 148 archivos (1,320 pruebas) correctos; los 4 fallos ligados a `plans/server.ts` quedaron corregidos y verificados en la corrida posterior; persiste el fallo preexistente en `src/app/s/[token]/page.test.tsx` (originado en `c4f95c4` por importar `web-eyetracking/server` con `server-only` sin mockear).
-- Limitaciones pendientes: ejecución de la migración SQL contra una instancia real de Supabase, pruebas E2E en navegador real y conexión futura con pasarela de pagos (Stripe) si se habilita cobro automático.
+- Check de preview en Vercel para [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) aprobado (`https://vercel.com/neurofusion1/neurofusion/DamLxuXWEXnavdc7nGg9DXG5j289`).
+- El propietario confirmó el 2026-11-20 que ya aplicó la migración `20261120000000_demo_onboarding_credits.sql` en Supabase (entorno real sin acceso directo desde este agente para consulta independiente).
+- Limitaciones pendientes: verificación funcional en navegador real de los escenarios de `specs/003-demo-onboarding-credits/quickstart.md`, merge de [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) y conexión futura con pasarela de pagos (Stripe) si se habilita cobro automático.
 
 ## Recuperación
 
@@ -71,3 +73,4 @@ Para revertir la funcionalidad en aplicación basta revertir los componentes/gua
 ## Historial de la ficha
 
 - 2026-11-20: Creación de ficha, especificación/plan en `specs/003-demo-onboarding-credits/`, implementación completa local y validación de tipos, lint y pruebas unitarias/componentes.
+- 2026-11-20: Rama `feat/003-demo-onboarding-credits` (`f39cbe5`), [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) abierto con check de Vercel aprobado; propietario confirma aplicación de migración en Supabase.
