@@ -54,7 +54,7 @@ function toHttpError(status: number, body: GeminiErrorBody | null, label: string
   return new AiError(`Error del proveedor de IA (${label}, ${status}).`, "provider", detail);
 }
 
-export type GeminiThinkingLevel = "minimal" | "low" | "medium" | "high";
+export type GeminiThinkingLevel = "minimal" | "low" | "medium" | "high" | "xhigh";
 
 /**
  * Gemini por REST (sin SDK). "free" y "paid" sólo distinguen la etiqueta: lo que determina el

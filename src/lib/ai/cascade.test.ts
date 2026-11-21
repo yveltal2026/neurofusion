@@ -259,25 +259,27 @@ describe("configuración de la cascada", () => {
   const ids = (env: Record<string, string>, cascade?: string) => resolveTiers(env, cascade).map((t) => t.id);
   const ALL = { GEMINI_API_KEY_FREE: "f", GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" };
 
-  it("por defecto: gratuitos → Haiku → Gemini barato → Sonnet → Gemini caro → Claude (último)", () => {
+  it("por defecto: gratuitos → Haiku → Hydrogen paga → Sonnet → Neon → Carbon → Claude (último)", () => {
     expect(ids(ALL)).toEqual([
-      "gemini-free:gemini-3.8-flash",
+      "gemini-free:gemini-4-hydrogen",
       "gemini-free:gemini-3.5-flash-lite",
       "anthropic:claude-haiku-5-5",
-      "gemini-paid:gemini-3.8-flash",
+      "gemini-paid:gemini-4-hydrogen",
       "anthropic:claude-sonnet-5-5",
-      "gemini-paid:gemini-4-argon",
+      "gemini-paid:gemini-4-neon",
+      "gemini-paid:gemini-4-carbon",
       "anthropic:default",
     ]);
   });
 
   it("omite los niveles sin API key", () => {
-    expect(ids({ GEMINI_API_KEY_FREE: "f" })).toEqual(["gemini-free:gemini-3.8-flash", "gemini-free:gemini-3.5-flash-lite"]);
+    expect(ids({ GEMINI_API_KEY_FREE: "f" })).toEqual(["gemini-free:gemini-4-hydrogen", "gemini-free:gemini-3.5-flash-lite"]);
     expect(ids({ GEMINI_API_KEY_PAID: "p", ANTHROPIC_API_KEY: "a" })).toEqual([
       "anthropic:claude-haiku-5-5",
-      "gemini-paid:gemini-3.8-flash",
+      "gemini-paid:gemini-4-hydrogen",
       "anthropic:claude-sonnet-5-5",
-      "gemini-paid:gemini-4-argon",
+      "gemini-paid:gemini-4-neon",
+      "gemini-paid:gemini-4-carbon",
       "anthropic:default",
     ]);
   });
@@ -309,7 +311,7 @@ describe("configuración de la cascada", () => {
   });
 
   it("getAnalysisProvider: con claves de Gemini usa la cascada y refleja el primer nivel", () => {
-    expect(getAnalysisProvider(ALL)).toMatchObject({ name: "gemini", model: "gemini-3.8-flash" });
+    expect(getAnalysisProvider(ALL)).toMatchObject({ name: "gemini", model: "gemini-4-hydrogen" });
   });
 
   it("getAnalysisProvider: sin claves de Gemini ni AI_CASCADE conserva el comportamiento anterior", () => {
@@ -398,6 +400,7 @@ describe("Gemini · razonamiento acotado y tiempos de espera", () => {
   it("GEMINI_THINKING_LEVEL: por defecto «low», admite los demás niveles y «off»", () => {
     expect(geminiThinkingLevel({})).toBe("low");
     expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "HIGH" })).toBe("high");
+    expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "xhigh" })).toBe("xhigh");
     expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "off" })).toBeUndefined();
     expect(geminiThinkingLevel({ GEMINI_THINKING_LEVEL: "raro" })).toBe("low");
   });
