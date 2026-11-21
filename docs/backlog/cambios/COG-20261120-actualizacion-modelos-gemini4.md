@@ -1,11 +1,11 @@
 # COG-20261120-actualizacion-modelos-gemini4 — Actualización de cascada IA a Gemini 4 (Hydrogen, Neon, Carbon)
 
 - Fecha y responsable: 2026-11-20 · Aesteros / NeuroFusion
-- Estado del trabajo: implementado localmente (integración en rama/PR y despliegue pendientes)
+- Estado del trabajo: integrado en `main` mediante [PR #30](https://github.com/yveltal2026/neurofusion/pull/30) (pruebas en vivo con Google AI Studio y despliegue pendientes)
 - Tipo: mejora / configuración
 - Alcance: compartido (configuración independiente por edición; puede sobrescribirse con `AI_CASCADE`)
-- Origen: `yveltal2026/neurofusion`, rama `main`, base `abd543d`
-- Referencias de implementación: pendiente (en preparación en rama de trabajo)
+- Origen: `yveltal2026/neurofusion`, rama `feat/gemini-4-cascade`, base `abd543d`
+- Referencias de implementación: `5f577f5`, [PR #30](https://github.com/yveltal2026/neurofusion/pull/30)
 - Dependencias de otros cambios (IDs): ninguna (relacionado con `COG-20261028-diagnostico-cascada-gemini`)
 
 ## Problema y comportamiento esperado
