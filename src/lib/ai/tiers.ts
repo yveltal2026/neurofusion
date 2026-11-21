@@ -8,27 +8,31 @@ type Env = Record<string, string | undefined>;
 
 /**
  * Orden por defecto de la cascada (se reemplaza con AI_CASCADE), de menor a mayor costo:
- * gratuita potente → gratuita menos potente → Claude Haiku (el de paga más barato) → Gemini de
- * paga barato → Claude Sonnet → Gemini de paga más caro → Claude (último recurso; su modelo se
- * fija con ANTHROPIC_MODEL, por defecto Opus). Un fallo del proveedor pasa al siguiente nivel.
- * Modelos vigentes a oct-2026 (Gemini 2.5 ya no se entrega a proyectos nuevos y los Pro salieron
- * del nivel gratuito). Los nombres cambian: confírmalos con models.list y ajusta AI_CASCADE.
+ * gratuita potente (Gemini 4 Hydrogen) → gratuita ligera (3.5 Flash-Lite) → Claude Haiku →
+ * Gemini 4 Hydrogen de paga → Claude Sonnet → Gemini 4 Neon (intermedio) → Gemini 4 Carbon
+ * (frontera) → Claude (último recurso; su modelo se fija con ANTHROPIC_MODEL, por defecto Opus).
+ * Un fallo del proveedor pasa al siguiente nivel.
+ * Modelos vigentes a nov-2026: Gemini 4 Hydrogen (GA 12-nov, único Gemini 4 con nivel gratuito),
+ * Gemini 4 Neon (GA 18-nov, nivel intermedio de paga) y Gemini 4 Carbon (GA 10-nov, reemplazo
+ * de Gemini 4 Argon como modelo frontera). Los nombres cambian: confírmalos con models.list y
+ * ajusta AI_CASCADE.
  * "free" y "paid" son dos API keys distintas de Gemini: la gratuita es la de un proyecto de
  * Google sin facturación y la de paga la de un proyecto con facturación activa.
  */
 export const DEFAULT_CASCADE = [
-  "gemini-free:gemini-3.8-flash",
+  "gemini-free:gemini-4-hydrogen",
   "gemini-free:gemini-3.5-flash-lite",
   "anthropic:claude-haiku-5-5",
-  "gemini-paid:gemini-3.8-flash",
+  "gemini-paid:gemini-4-hydrogen",
   "anthropic:claude-sonnet-5-5",
-  "gemini-paid:gemini-4-argon",
+  "gemini-paid:gemini-4-neon",
+  "gemini-paid:gemini-4-carbon",
   "anthropic",
 ].join(",");
 
-const THINKING_LEVELS: readonly GeminiThinkingLevel[] = ["minimal", "low", "medium", "high"];
+const THINKING_LEVELS: readonly GeminiThinkingLevel[] = ["minimal", "low", "medium", "high", "xhigh"];
 
-/** GEMINI_THINKING_LEVEL: minimal | low | medium | high | off. Por defecto «low» (respuestas rápidas). */
+/** GEMINI_THINKING_LEVEL: minimal | low | medium | high | xhigh | off. Por defecto «low» (respuestas rápidas). */
 export function geminiThinkingLevel(env: Env): GeminiThinkingLevel | undefined {
   const v = (env.GEMINI_THINKING_LEVEL ?? "").trim().toLowerCase();
   if (v === "off") return undefined;
@@ -57,7 +61,7 @@ function parseSpec(spec: string, env: Env): Entry | null {
   switch (kind) {
     case "gemini-free":
     case "gemini-paid": {
-      if (!model) throw new AiError(`AI_CASCADE: «${spec}» necesita un modelo, p. ej. «${kind}:gemini-3.8-flash».`, "config");
+      if (!model) throw new AiError(`AI_CASCADE: «${spec}» necesita un modelo, p. ej. «${kind}:gemini-4-hydrogen».`, "config");
       const tier = kind === "gemini-free" ? "free" : "paid";
       const apiKey = keys[tier];
       if (!apiKey) return null;

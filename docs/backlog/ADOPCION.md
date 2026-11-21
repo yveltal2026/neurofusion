@@ -14,6 +14,8 @@ La integración de una mejora no certifica su compatibilidad de acceso universit
 
 | ID | Edición | Implementación / integración | Validación en destino | Despliegue |
 | --- | --- | --- | --- | --- |
+| COG-20261120-actualizacion-modelos-gemini4 | CognIA, origen | Integrado en `main` mediante [PR #30](https://github.com/yveltal2026/neurofusion/pull/30) (`5f577f5`) | `typecheck`, `eslint src/lib/ai/` y pruebas `cascade.test.ts` / `ai.test.ts` correctas; llamadas en vivo a Google pendientes de probar con keys reales | Despliegue de `main` pendiente de verificar |
+| COG-20261120-actualizacion-modelos-gemini4 | Anáhuac Mayab | Sin aplicar | Sin verificar; sin impacto esperado en autenticación, roles ni acceso | Sin verificar |
 | COG-20261120-demo-onboarding-membresia | CognIA, origen | Integrado en `main` mediante [PR #29](https://github.com/yveltal2026/neurofusion/pull/29) (`f39cbe5` + merge con `origin/main`) | `typecheck` y 9 suites Vitest tras merge con `origin/main` correctas; propietario confirma migración en Supabase; verificación en producción pendiente | Preview [Vercel](https://vercel.com/neurofusion1/neurofusion/DamLxuXWEXnavdc7nGg9DXG5j289) correcto; despliegue de `main` pendiente de verificar |
 | COG-20261120-demo-onboarding-membresia | Anáhuac Mayab | Sin aplicar; requiere adaptación para preservar bloqueo de autorregistro de alumnos | Sin verificar; no copiar flujo de registro público abierto | Sin verificar |
 | COG-20261120-critique-eyetracking-visual | Aesteros, plataforma principal | Integrado en `main` desde `feat/redisenio-visual` (`f43177c`) | 50 pruebas focales en 6 archivos (Vitest), `next typegen && tsc --noEmit` y `impeccable detect --changed` correctos en origen; navegador en vivo pendiente | Sin verificar |

@@ -6,6 +6,7 @@ Registro versionado de cambios y de su adopción entre ediciones universitarias.
 
 | ID | Cambio | Estado del trabajo en origen | Alcance |
 | --- | --- | --- | --- |
+| [COG-20261120-actualizacion-modelos-gemini4](cambios/COG-20261120-actualizacion-modelos-gemini4.md) | Actualización de cascada IA a Gemini 4 (`gemini-4-hydrogen`, `gemini-4-neon`, `gemini-4-carbon`) y `xhigh` | Integrado en `main` mediante [PR #30](https://github.com/yveltal2026/neurofusion/pull/30) (`5f577f5`); pruebas con API real y despliegue pendientes | Compartido |
 | [COG-20261120-demo-onboarding-membresia](cambios/COG-20261120-demo-onboarding-membresia.md) | Registro público DEMO con audiencia, límites/créditos, membresía por perfil y onboarding gamificado | Integrado en `main` mediante [PR #29](https://github.com/yveltal2026/neurofusion/pull/29); migración confirmada por propietario en Supabase; producción pendiente de verificar | Plataforma principal (requiere adaptación en universidades) |
 | [COG-20261120-critique-eyetracking-visual](cambios/COG-20261120-critique-eyetracking-visual.md) | Mejoras UX/UI en Eye tracking con webcam y Análisis visual con IA | Integrado en `main` desde `feat/redisenio-visual` (`f43177c`); despliegue pendiente | Compartido |
 | [COG-20261119-eyetracking-web](cambios/COG-20261119-eyetracking-web.md) | Eyetracking para Web (`web_eyetracking`) con snippet `<head>` y modo sin código | Integrado en `main`; despliegue pendiente | Compartido |
