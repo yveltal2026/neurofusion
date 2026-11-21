@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { requestPasswordReset, signIn, signUp, type AuthState } from "@/lib/auth/actions";
+import { AUDIENCE_OPTIONS } from "@/lib/plans/quotas";
 
 const initialState: AuthState = {};
 
@@ -19,6 +20,7 @@ export function EntrarScreen({
   const [mode, setMode] = useState<"login" | "signup" | "reset">(initialMode);
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
+  const [audienceSegment, setAudienceSegment] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const [loginState, loginAction, loginPending] = useActionState(signIn, initialState);
@@ -273,6 +275,10 @@ export function EntrarScreen({
             )
           ) : isSignup ? (
             <form key="signup-form" action={signupAction} className="mt-5 space-y-3.5">
+              <p className="rounded-xl border border-[#ffb000]/25 bg-[#ffb000]/10 px-3 py-2 text-xs text-[#ffd275]">
+                Cuenta DEMO gratuita: incluye 30 créditos iniciales (+30 al completar tu bienvenida).
+              </p>
+
               <div className="space-y-1.5">
                 <label
                   htmlFor="signup-name"
@@ -286,6 +292,74 @@ export function EntrarScreen({
                   type="text"
                   autoComplete="name"
                   placeholder="Tu nombre"
+                  className="h-11 w-full rounded-xl border border-white/15 bg-white/[0.04] px-3.5 text-sm text-white placeholder:text-white/30 focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="signup-audience"
+                  className="block text-xs font-medium text-white/85"
+                >
+                  ¿Qué perfil te describe mejor?
+                </label>
+                <select
+                  id="signup-audience"
+                  name="audience_segment"
+                  required
+                  value={audienceSegment}
+                  onChange={(e) => setAudienceSegment(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-white/15 bg-[#17140f] px-3.5 text-sm text-white focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
+                >
+                  <option value="" disabled>
+                    Selecciona una opción…
+                  </option>
+                  {AUDIENCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {audienceSegment ? (
+                  <p className="text-[11px] text-white/55">
+                    {AUDIENCE_OPTIONS.find((o) => o.value === audienceSegment)?.hint}
+                  </p>
+                ) : null}
+              </div>
+
+              {audienceSegment === "other" ? (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="signup-audience-other"
+                    className="block text-xs font-medium text-white/85"
+                  >
+                    Cuéntanos cuál es tu perfil (opcional)
+                  </label>
+                  <input
+                    id="signup-audience-other"
+                    name="audience_other_detail"
+                    type="text"
+                    maxLength={120}
+                    placeholder="Ej. UX Researcher freelance, startup..."
+                    className="h-11 w-full rounded-xl border border-white/15 bg-white/[0.04] px-3.5 text-sm text-white placeholder:text-white/30 focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
+                  />
+                </div>
+              ) : null}
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="signup-organization"
+                  className="block text-xs font-medium text-white/85"
+                >
+                  Empresa, agencia o institución (opcional)
+                </label>
+                <input
+                  id="signup-organization"
+                  name="declared_organization"
+                  type="text"
+                  maxLength={120}
+                  autoComplete="organization"
+                  placeholder="Ej. Universidad, marca o consultora"
                   className="h-11 w-full rounded-xl border border-white/15 bg-white/[0.04] px-3.5 text-sm text-white placeholder:text-white/30 focus:border-[#ffb000]/75 focus:outline-none focus:ring-2 focus:ring-[#ffb000]/20"
                 />
               </div>
@@ -334,7 +408,7 @@ export function EntrarScreen({
                 disabled={pending}
                 className="mt-1 h-11 w-full cursor-pointer rounded-full bg-[#ffb000] text-sm font-semibold text-black transition hover:bg-[#ffbe2e] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {pending ? "Creando cuenta…" : "Crear cuenta"}
+                {pending ? "Creando cuenta…" : "Crear cuenta DEMO"}
               </button>
             </form>
           ) : (

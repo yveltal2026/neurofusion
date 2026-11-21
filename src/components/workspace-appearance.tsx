@@ -13,7 +13,9 @@ import {
 } from "react";
 import { Icon, type IconName } from "@/components/brand/icon";
 import { Logo } from "@/components/brand/logo";
+import { PlanCreditBadge } from "@/components/plan-credit-badge";
 import { WorkspaceNav } from "@/components/workspace-nav";
+import type { PlanTier } from "@/lib/db/types";
 import { WorkspaceThemeContext } from "./workspace-theme-context";
 import {
   readWorkspaceTheme,
@@ -33,14 +35,22 @@ export interface AccountInfo {
   email: string | null;
 }
 
+export interface SidebarPlanBadge {
+  planBadge: string;
+  planTier: PlanTier;
+  credits: number;
+}
+
 const WorkspaceControls = createContext<{
   accountInfo: AccountInfo;
   recentStudies: RecentSidebarStudy[];
+  planBadge: SidebarPlanBadge | null;
   signOutAction?: () => Promise<void>;
   selectTheme: (value: string) => void;
 }>({
   accountInfo: { label: "Cuenta", email: null },
   recentStudies: [],
+  planBadge: null,
   selectTheme: () => {},
 });
 
@@ -48,12 +58,14 @@ export function WorkspaceAppearance({
   initialTheme,
   accountInfo = { label: "Cuenta", email: null },
   recentStudies = [],
+  planBadge = null,
   signOutAction,
   children,
 }: {
   initialTheme: WorkspaceTheme;
   accountInfo?: AccountInfo;
   recentStudies?: RecentSidebarStudy[];
+  planBadge?: SidebarPlanBadge | null;
   signOutAction?: () => Promise<void>;
   children: ReactNode;
 }) {
@@ -69,7 +81,7 @@ export function WorkspaceAppearance({
   return (
     <WorkspaceThemeContext.Provider value={theme}>
       <WorkspaceControls.Provider
-        value={{ accountInfo, recentStudies, signOutAction, selectTheme }}
+        value={{ accountInfo, recentStudies, planBadge, signOutAction, selectTheme }}
       >
         <div data-workspace-theme={theme} className="flex min-h-dvh flex-1 flex-col print:min-h-0">
           {children}
@@ -211,7 +223,7 @@ export function WorkspaceFrame({ studyNav, children }: {
   children: ReactNode;
 }) {
   const theme = useContext(WorkspaceThemeContext);
-  const { recentStudies, selectTheme } = useContext(WorkspaceControls);
+  const { recentStudies, planBadge, selectTheme } = useContext(WorkspaceControls);
   const pathname = usePathname();
   const panelId = useId();
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -303,6 +315,15 @@ export function WorkspaceFrame({ studyNav, children }: {
             );
           })()}
           <div className="mt-auto space-y-2 rounded-xl border border-border bg-surface/80 p-2">
+            {planBadge ? (
+              <div className="flex justify-center pb-0.5">
+                <PlanCreditBadge
+                  planBadge={planBadge.planBadge}
+                  planTier={planBadge.planTier}
+                  credits={planBadge.credits}
+                />
+              </div>
+            ) : null}
             <div
               role="group"
               aria-label="Tema de apariencia"

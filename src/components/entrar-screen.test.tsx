@@ -35,7 +35,7 @@ describe("EntrarScreen", () => {
     expect(screen.queryByRole("button", { name: /Google/i })).toBeNull();
   });
 
-  it("permite alternar al formulario para generar un nuevo usuario", async () => {
+  it("permite alternar al formulario para generar un nuevo usuario con perfil de audiencia y demo", async () => {
     const user = userEvent.setup();
     render(<EntrarScreen />);
 
@@ -43,9 +43,15 @@ describe("EntrarScreen", () => {
 
     expect(screen.getByRole("heading", { name: "Crear cuenta" })).toBeTruthy();
     expect(screen.getByLabelText("Nombre completo")).toBeTruthy();
+    const audienceSelect = screen.getByLabelText("¿Qué perfil te describe mejor?") as HTMLSelectElement;
+    expect(audienceSelect.required).toBe(true);
+    expect(screen.getByLabelText("Empresa, agencia o institución (opcional)")).toBeTruthy();
     expect(screen.getByLabelText("Correo institucional o de trabajo")).toBeTruthy();
     expect(screen.getByLabelText("Contraseña")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Crear cuenta" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Crear cuenta DEMO" })).toBeTruthy();
+
+    await user.selectOptions(audienceSelect, "other");
+    expect(screen.getByLabelText("Cuéntanos cuál es tu perfil (opcional)")).toBeTruthy();
   });
 
   it("avanza al paso de contraseña al ingresar un correo válido", async () => {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateMagicToken } from "@/lib/magic-link";
+import { assertCanCreateStudy } from "@/lib/plans/server";
 import { variantConfigSchema } from "../config";
 
 const inputSchema = z.object({
@@ -24,7 +25,10 @@ export async function createVariantStudy(raw: unknown): Promise<CreateVariantRes
   }
   const { projectId, name, config } = parsed.data;
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("studies")
     .insert({

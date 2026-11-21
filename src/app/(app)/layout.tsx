@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { SetupNotice } from "@/components/setup-notice";
 import { WorkspaceAppearance } from "@/components/workspace-appearance";
 import { signOut } from "@/lib/auth/actions";
-import { isSupabaseConfigured } from "@/lib/env";
 import type { StudyRow } from "@/lib/db/types";
+import { isSupabaseConfigured } from "@/lib/env";
+import { getOrgBillingSummary } from "@/lib/plans/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   readWorkspaceTheme,
@@ -40,17 +41,50 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   }));
 
   const fullName =
-    typeof user?.user_metadata?.full_name === "string" && user.user_metadata.full_name.trim()
+    typeof user?.user_metadata?.full_name === "string" &&
+    user.user_metadata.full_name.trim()
       ? user.user_metadata.full_name.trim()
       : null;
   const email = user?.email ?? null;
   const displayLabel = fullName ?? (email ? email.split("@")[0] : "Cuenta");
+
+  let badge: {
+    planBadge: string;
+    planTier: "demo" | "academic" | "pro" | "enterprise";
+    credits: number;
+  } | null = null;
+  if (user) {
+    try {
+      const { data: membership } = await supabase
+        .from("memberships")
+        .select("org_id")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (membership?.org_id) {
+        const billing = await getOrgBillingSummary(
+          supabase,
+          membership.org_id,
+          user.id,
+        );
+        badge = {
+          planBadge: billing.planBadge,
+          planTier: billing.planTier,
+          credits: billing.creditBalance,
+        };
+      }
+    } catch {
+      badge = null;
+    }
+  }
 
   return (
     <WorkspaceAppearance
       initialTheme={theme}
       recentStudies={recentStudies}
       accountInfo={{ label: displayLabel, email }}
+      planBadge={badge}
       signOutAction={signOut}
     >
       {children}

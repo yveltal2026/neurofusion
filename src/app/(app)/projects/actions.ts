@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
+import { assertCanCreateProject } from "@/lib/plans/server";
 import { removeStudyFiles } from "@/lib/study-files";
 
 const projectSchema = z.object({
@@ -27,6 +28,9 @@ export async function createProject(
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateProject(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("projects")
     .insert({ org_id: orgId, name: parsed.data.name, description: parsed.data.description ?? null })

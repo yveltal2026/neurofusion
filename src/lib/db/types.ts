@@ -1,5 +1,85 @@
 /** Filas tal como las devuelve Supabase (espejo de supabase/migrations). */
 
+export type AudienceSegment =
+  | "researcher"
+  | "agency_company"
+  | "teacher"
+  | "student"
+  | "other";
+
+export type PlanTier = "demo" | "academic" | "pro" | "enterprise";
+
+export type CreditEventType =
+  | "initial_demo_grant"
+  | "onboarding_mission"
+  | "onboarding_complete"
+  | "ai_analysis"
+  | "ai_suggest"
+  | "seo_audit"
+  | "visual_ai"
+  | "refund"
+  | "promo_code"
+  | "admin_adjustment";
+
+export type RequestedPlan =
+  | "academic_teacher"
+  | "academic_institution"
+  | "pro_researcher"
+  | "agency_team"
+  | "custom_credits";
+
+export interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  audience_segment: AudienceSegment;
+  declared_organization: string | null;
+  audience_other_detail: string | null;
+  created_at: string;
+}
+
+export interface OrganizationRow {
+  id: string;
+  name: string;
+  plan_tier: PlanTier;
+  plan_updated_at: string;
+  created_at: string;
+}
+
+export interface CreditLedgerRow {
+  id: string;
+  org_id: string;
+  user_id: string | null;
+  delta: number;
+  event_type: CreditEventType;
+  description: string;
+  reference_id: string | null;
+  idempotency_key: string | null;
+  created_at: string;
+}
+
+export interface OnboardingProgressRow {
+  org_id: string;
+  user_id: string;
+  completed_missions: string[];
+  tour_completed_at: string | null;
+  checklist_dismissed_at: string | null;
+  bonus_awarded_at: string | null;
+  updated_at: string;
+}
+
+export interface MembershipRequestRow {
+  id: string;
+  org_id: string;
+  user_id: string;
+  audience_segment: AudienceSegment;
+  requested_plan: RequestedPlan;
+  organization_name: string;
+  institutional_email: string | null;
+  notes: string | null;
+  status: "pending" | "contacted" | "approved" | "rejected";
+  created_at: string;
+}
+
 export interface ProjectRow {
   id: string;
   org_id: string;

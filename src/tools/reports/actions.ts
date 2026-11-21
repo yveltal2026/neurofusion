@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import type { StudyRow } from "@/lib/db/types";
 import { AiError, generateStructured, getAnalysisProvider } from "@/lib/ai";
+import { refundReservedCredits, reserveCreditsForAction } from "@/lib/plans/server";
 import { loadReportSource, reportHash } from "./load";
 import { reportEligibility } from "./model";
 import { REPORT_SYSTEM_PROMPT, reportUserPrompt } from "./prompt";
@@ -22,7 +23,7 @@ export async function generateStudyReport(
 ): Promise<ReportActionState> {
   const id = z.string().uuid().safeParse(formData.get("studyId"));
   if (!id.success) return { error: "Solicitud inválida." };
-  const { supabase } = await requireUser();
+  const { supabase, user, orgId } = await requireUser();
   const { data: study, error: studyError } = await supabase
     .from("studies")
     .select("*")
@@ -32,6 +33,7 @@ export async function generateStudyReport(
   if (studyError || !study)
     return { error: "No se encontró el estudio o no tienes acceso." };
 
+  let ledgerId: string | null = null;
   try {
     const source = await loadReportSource(supabase, study);
     const eligibility = reportEligibility(source.snapshot);
@@ -58,6 +60,16 @@ export async function generateStudyReport(
         error:
           "El estudio es demasiado extenso para un reporte breve con IA. Las visualizaciones y el CSV siguen disponibles.",
       };
+
+    const credit = await reserveCreditsForAction({
+      orgId,
+      userId: user?.id,
+      action: "ai_analysis",
+      referenceId: id.data,
+    });
+    if (!credit.ok) return { error: credit.error };
+    ledgerId = credit.ledgerId;
+
     const { data, model } = await generateStructured({
       provider,
       system: REPORT_SYSTEM_PROMPT,
@@ -82,12 +94,15 @@ export async function generateStudyReport(
       aggregates: source.snapshot,
       result,
     });
-    if (error)
+    if (error) {
+      await refundReservedCredits({ orgId, userId: user?.id, ledgerId, action: "ai_analysis", referenceId: id.data });
       return {
         error:
           "El reporte se generó, pero no pudo guardarse. Inténtalo de nuevo.",
       };
+    }
   } catch (error) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId, action: "ai_analysis", referenceId: id.data });
     return {
       error:
         error instanceof AiError

@@ -7,6 +7,11 @@ import { z } from "zod";
 import { AiError, generateStructured, getAnalysisProvider, type ContentPart } from "@/lib/ai";
 import { requireUser } from "@/lib/auth/session";
 import type { FrictionRatingRow, StudyRow, VisualAssetRow } from "@/lib/db/types";
+import {
+  assertCanCreateStudy,
+  refundReservedCredits,
+  reserveCreditsForAction,
+} from "@/lib/plans/server";
 import { ASSETS_BUCKET } from "@/lib/study-files";
 import { buildSuggestText, suggestionsSchema, SUGGEST_SYSTEM_PROMPT } from "./analysis/journey";
 import { PREDICTION_EXPOSURE_MS, PREDICTION_VERSION } from "./analysis/prediction";
@@ -94,7 +99,10 @@ export async function createVisualStudy(raw: unknown): Promise<VisualFormState> 
     return { error: "Crea este estudio desde la herramienta Eye tracking con webcam." };
   }
 
-  const { supabase } = await requireUser();
+  const { supabase, orgId } = await requireUser();
+  const quota = await assertCanCreateStudy(supabase, orgId);
+  if (!quota.ok) return { error: quota.error };
+
   const { data, error } = await supabase
     .from("studies")
     .insert({
@@ -304,7 +312,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   const studyId = uuid.safeParse(fd.get("studyId"));
   const assetId = uuid.safeParse(fd.get("assetId"));
   if (!studyId.success || !assetId.success) return { error: "Solicitud inválida" };
-  const { supabase } = await requireUser();
+  const { supabase, user, orgId } = await requireUser();
   const loaded = await loadVisualStudy(supabase, studyId.data);
   if (!loaded) return { error: "Estudio no encontrado" };
   if (loaded.config.mode === "pieces" && loaded.config.eyeTracking) {
@@ -319,6 +327,15 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
 
   const buf = await download(supabase, row.storage_path);
   if (!buf) return { error: "No se pudo leer la imagen" };
+
+  const credit = await reserveCreditsForAction({
+    orgId,
+    userId: user?.id,
+    action: "visual_ai",
+    referenceId: studyId.data,
+  });
+  if (!credit.ok) return { error: credit.error };
+
   const { plan, parts } = await imageForVision(buf);
   const cfg = loaded.config;
   const site = cfg.mode === "journey" ? cfg.sites.find((s) => s.key === row.site_key) : null;
@@ -334,7 +351,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
     tiles: parts.length,
     coverage: plan.coverage,
   });
-  const user: ContentPart[] = [
+  const userParts: ContentPart[] = [
     ...parts,
     {
       type: "text",
@@ -347,7 +364,7 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
   try {
     const startedAt = Date.now();
     const provider = getAnalysisProvider();
-    const first = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user, schema: pieceVisionSchema });
+    const first = await generateStructured({ provider, system: PIECE_SYSTEM_PROMPT, user: userParts, schema: pieceVisionSchema });
     // Proveedor y modelo de la lectura principal (la segunda pasada podría responderla otro nivel).
     const providerName = provider.name;
     const model = first.model;
@@ -390,13 +407,17 @@ export async function analyzeAsset(_prev: VisualFormState, fd: FormData): Promis
         ...(keepAnalyst ? {} : { aois, aois_source: "ai", aois_reviewed_at: null, aois_reviewed_by: null }),
       })
       .eq("id", row.id);
-    if (error) return { error: "El análisis se generó pero no se pudo guardar." };
+    if (error) {
+      await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "visual_ai", referenceId: studyId.data });
+      return { error: "El análisis se generó pero no se pudo guardar." };
+    }
     revalidatePath(`/studies/${studyId.data}/assets/${assetId.data}`);
     revalidatePath(`/studies/${studyId.data}`);
     revalidatePath(`/studies/${studyId.data}/report`);
     revalidatePath(`/studies/${studyId.data}/compare`);
     return { ok: true, message: keepAnalyst ? "Análisis actualizado. Se conservaron tus áreas de interés revisadas." : undefined };
   } catch (e) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "visual_ai", referenceId: studyId.data });
     if (e instanceof AiError) return { error: e.message, ...(e.kind === "rate_limit" ? { code: "rate_limit" as const } : {}) };
     return { error: "No se pudo completar el análisis. Inténtalo de nuevo." };
   }
@@ -494,7 +515,7 @@ export async function suggestRatings(_prev: VisualFormState, fd: FormData): Prom
   const studyId = uuid.safeParse(fd.get("studyId"));
   const site = String(fd.get("siteKey") ?? "");
   if (!studyId.success) return { error: "Solicitud inválida" };
-  const { supabase } = await requireUser();
+  const { supabase, user, orgId } = await requireUser();
   const loaded = await loadVisualStudy(supabase, studyId.data);
   if (!loaded || loaded.config.mode !== "journey") return { error: "Estudio no encontrado" };
   const cfg = loaded.config;
@@ -511,6 +532,14 @@ export async function suggestRatings(_prev: VisualFormState, fd: FormData): Prom
     .sort((a, b) => (taskOrder.get(a.task_id ?? "") ?? 99) - (taskOrder.get(b.task_id ?? "") ?? 99) || a.position - b.position)
     .slice(0, 8);
   if (!assets.length) return { error: "Sube primero capturas de este sitio." };
+
+  const credit = await reserveCreditsForAction({
+    orgId,
+    userId: user?.id,
+    action: "ai_suggest",
+    referenceId: studyId.data,
+  });
+  if (!credit.ok) return { error: credit.error };
 
   const parts: ContentPart[] = [];
   const described: { index: number; task: string; title: string; assetId: string }[] = [];
@@ -542,8 +571,12 @@ export async function suggestRatings(_prev: VisualFormState, fd: FormData): Prom
       provider: provider.name,
       model,
     });
-    if (error) return { error: "Las sugerencias se generaron pero no se pudieron guardar." };
+    if (error) {
+      await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "ai_suggest", referenceId: studyId.data });
+      return { error: "Las sugerencias se generaron pero no se pudieron guardar." };
+    }
   } catch (e) {
+    await refundReservedCredits({ orgId, userId: user?.id, ledgerId: credit.ledgerId, action: "ai_suggest", referenceId: studyId.data });
     if (e instanceof AiError) return { error: e.message };
     return { error: "No se pudieron generar sugerencias. Inténtalo de nuevo." };
   }

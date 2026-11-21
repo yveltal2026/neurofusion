@@ -1,34 +1,62 @@
+import Link from "next/link";
 import { DismissibleAlert } from "@/components/dismissible-alert";
 import { NewProjectDialog } from "@/components/new-project-dialog";
+import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
 import { ProjectList } from "@/components/project-list";
 import { Alert } from "@/components/ui/alert";
+import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import type { ProjectRow, StudyRow } from "@/lib/db/types";
+import { getOrSyncOnboardingState } from "@/lib/onboarding/actions";
+import { canCreateProjectUnderLimits } from "@/lib/plans/quotas";
+import { getOrgBillingSummary } from "@/lib/plans/server";
 import { getStudyTool } from "@/tools/registry";
 
 export const metadata = { title: "Proyectos" };
 
-type ProjectStudySummary = Pick<StudyRow, "id" | "project_id" | "status" | "tool_type" | "config">;
+type ProjectStudySummary = Pick<
+  StudyRow,
+  "id" | "project_id" | "status" | "tool_type" | "config"
+>;
 
 export default async function ProjectsPage({
   searchParams,
 }: PageProps<"/projects">) {
   const { deleted } = await searchParams;
-  const { supabase } = await requireUser();
-  const [projectResult, studyCountsResult, sessionsResult] = await Promise.all([
-    supabase.from("projects").select("id, name, description, created_at")
-      .order("created_at", { ascending: false })
-      .returns<Pick<ProjectRow, "id" | "name" | "description" | "created_at">[]>(),
-    supabase.from("studies").select("id, project_id, status, tool_type, config").returns<ProjectStudySummary[]>(),
-    supabase.from("sessions").select("study_id").eq("status", "completed").returns<{ study_id: string }[]>(),
-  ]);
+  const { supabase, user, orgId } = await requireUser();
+  const [projectResult, studyCountsResult, sessionsResult, billing] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, description, created_at")
+        .order("created_at", { ascending: false })
+        .returns<Pick<ProjectRow, "id" | "name" | "description" | "created_at">[]>(),
+      supabase
+        .from("studies")
+        .select("id, project_id, status, tool_type, config")
+        .returns<ProjectStudySummary[]>(),
+      supabase
+        .from("sessions")
+        .select("study_id")
+        .eq("status", "completed")
+        .returns<{ study_id: string }[]>(),
+      getOrgBillingSummary(supabase, orgId, user.id),
+    ]);
 
   const studyToProject = new Map<string, string>();
-  const summaryByProject = new Map<string, { total: number; published: number; responses: number; tools: Set<string> }>();
+  const summaryByProject = new Map<
+    string,
+    { total: number; published: number; responses: number; tools: Set<string> }
+  >();
   for (const row of studyCountsResult.data ?? []) {
     studyToProject.set(row.id, row.project_id);
-    const entry = summaryByProject.get(row.project_id) ?? { total: 0, published: 0, responses: 0, tools: new Set<string>() };
+    const entry = summaryByProject.get(row.project_id) ?? {
+      total: 0,
+      published: 0,
+      responses: 0,
+      tools: new Set<string>(),
+    };
     entry.total += 1;
     if (row.status === "published") entry.published += 1;
     const toolLabel = getStudyTool(row)?.shortName ?? row.tool_type;
@@ -53,6 +81,15 @@ export default async function ProjectsPage({
     };
   });
 
+  const onboarding = await getOrSyncOnboardingState(supabase, orgId, user.id, {
+    projectsCount: billing.usage.projectsCount,
+    studiesCount: billing.usage.studiesCount,
+  });
+  const canCreateMoreProjects = canCreateProjectUnderLimits(
+    billing.limits,
+    billing.usage.projectsCount,
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -64,7 +101,15 @@ export default async function ProjectsPage({
               : "Organiza tus estudios por cliente, curso o línea de investigación."}
           </p>
         </div>
-        {projects.length > 0 ? <NewProjectDialog /> : null}
+        {projects.length > 0 ? (
+          canCreateMoreProjects ? (
+            <NewProjectDialog />
+          ) : (
+            <Link href="/membresia" className={buttonClass("secondary")}>
+              Ampliar plan ({billing.usage.projectsCount}/{billing.limits.maxProjects} proyecto)
+            </Link>
+          )
+        ) : null}
       </div>
 
       {deleted === "1" ? (
@@ -73,15 +118,32 @@ export default async function ProjectsPage({
         </DismissibleAlert>
       ) : null}
 
+      <OnboardingChecklist
+        completedMissions={onboarding.completedMissions}
+        tourCompletedAt={onboarding.tourCompletedAt}
+        checklistDismissedAt={onboarding.checklistDismissedAt}
+        firstProjectId={projects[0]?.id ?? null}
+      />
+
       {projectResult.error ? (
-        <Alert tone="error">No pudimos cargar los proyectos. Vuelve a cargar la página.</Alert>
+        <Alert tone="error">
+          No pudimos cargar los proyectos. Vuelve a cargar la página.
+        </Alert>
       ) : projects.length ? (
         <ProjectList projects={projects} />
       ) : (
         <EmptyState
           icon="folder"
           title="Aún no tienes proyectos"
-          action={<NewProjectDialog />}
+          action={
+            canCreateMoreProjects ? (
+              <NewProjectDialog />
+            ) : (
+              <Link href="/membresia" className={buttonClass("secondary")}>
+                Ir a Membresía
+              </Link>
+            )
+          }
         >
           Crea el primero para agrupar los estudios de una investigación.
         </EmptyState>
