@@ -68,8 +68,6 @@ export async function WebVisualOverview({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="pieces"
         subtitle={`${WEB_PAGE_TYPE_LABEL[config.pageType]} · ${WEB_DEVICE_FOCUS_LABEL[config.deviceFocus]}`}
       />
 

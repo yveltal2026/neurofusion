@@ -82,9 +82,10 @@ async function calibrate() {
 async function setup(currentStudy = study) {
   activeAssets = currentStudy.assets;
   render(<EyeTrackingLab study={currentStudy} />);
+  fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+  click("Continuar a ajuste de pantalla");
   fireEvent.change(screen.getByLabelText("Cómo ajustar el tamaño de pantalla"), { target: { value: "diagonal" } });
   fireEvent.change(screen.getByLabelText("Tamaño de pantalla (pulgadas)"), { target: { value: "27" } });
-  fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
   click("Iniciar cámara y cargar modelos");
   await tick(0);
   await tick(500);
@@ -373,11 +374,16 @@ async function calibrateFromResults() {
 
 
 describe("preparación móvil y tamaño de pantalla", () => {
+  const goToScreenStep = () => {
+    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    click("Continuar a ajuste de pantalla");
+  };
+
   it("permite medir con tarjeta sin preguntar pulgadas y conserva el video al calibrar", async () => {
     render(<EyeTrackingLab study={study} />);
+    goToScreenStep();
     expect(screen.queryByLabelText("Tamaño de pantalla (pulgadas)")).toBeNull();
     const video = document.getElementById("webeyetrack-video");
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
     click("Iniciar cámara y cargar modelos");
     expect(screen.getByText(/Ajusta y confirma la tarjeta/)).toBeTruthy();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
@@ -393,6 +399,7 @@ describe("preparación móvil y tamaño de pantalla", () => {
 
   it("invalida la confirmación al ajustar de nuevo la referencia", () => {
     render(<EyeTrackingLab study={study} />);
+    goToScreenStep();
     const checkbox = screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }) as HTMLInputElement;
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
@@ -403,7 +410,7 @@ describe("preparación móvil y tamaño de pantalla", () => {
   it("no confunde rostro visible con mirada disponible ni permite calibrar sin mirada", async () => {
     control.eyesClosed = true;
     render(<EyeTrackingLab study={study} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    goToScreenStep();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     expect(screen.getByText("Cara detectada: sí")).toBeTruthy();
@@ -412,7 +419,7 @@ describe("preparación móvil y tamaño de pantalla", () => {
   });
   it("muestra una interrupción del análisis y permite reiniciar sin calibrar con lecturas antiguas", async () => {
     render(<EyeTrackingLab study={study} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    goToScreenStep();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     act(() => { control.runtimeError!(new EngineError("El análisis dejó de responder", "timeout")); });
@@ -428,9 +435,10 @@ describe("preparación móvil y tamaño de pantalla", () => {
     let finish!: () => void;
     vi.mocked(checkModelAssets).mockImplementationOnce(() => new Promise<void>((resolve) => { finish = resolve; }));
     render(<EyeTrackingLab study={study} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    goToScreenStep();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos");
+    expect(screen.getByRole("progressbar", { name: "Progreso de preparación de cámara" })).toBeTruthy();
     expect(screen.getByText(/Comprobando los archivos del modelo/)).toBeTruthy();
     await tick(90000);
     expect(screen.getByText(/No se pudo completar la preparación en 90 segundos/)).toBeTruthy();
@@ -442,7 +450,7 @@ describe("preparación móvil y tamaño de pantalla", () => {
   it("permite avanzar el punto con 10 lecturas/s sin relajar sus muestras ni estabilidad", async () => {
     control.frameIntervalMs = 100;
     render(<EyeTrackingLab study={study} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    goToScreenStep();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     click("Comenzar calibración"); await tick(1200);
@@ -454,9 +462,9 @@ describe("preparación móvil y tamaño de pantalla", () => {
   it("fija el protocolo completo y bloquea la calibración cuando la cámara detecta poca luz", async () => {
     control.light = "dark";
     render(<EyeTrackingLab study={study} />);
+    goToScreenStep();
     expect(screen.queryByLabelText("Iluminación")).toBeNull();
     expect(screen.queryByLabelText("Calibración")).toBeNull();
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     expect(screen.getByText(/Hay poca luz en tu rostro/)).toBeTruthy();
@@ -476,8 +484,8 @@ describe("preparación móvil y tamaño de pantalla", () => {
 
   it("recomienda un stand fijo durante la calibración del celular", async () => {
     render(<EyeTrackingLab study={study} />);
+    goToScreenStep();
     fireEvent.change(screen.getByLabelText("Dispositivo"), { target: { value: "phone" } });
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     expect(screen.getByText(/Te recomendamos colocar el celular/)).toBeTruthy();
@@ -485,19 +493,19 @@ describe("preparación móvil y tamaño de pantalla", () => {
     expect(screen.getByText(/Mantén el celular en un soporte o stand fijo durante toda la calibración/)).toBeTruthy();
   });
 
-  it("muestra el mensaje de error directamente junto al botón de inicio de cámara al fallar la validación", async () => {
+  it("muestra el mensaje de error directamente junto al botón de inicio al fallar el consentimiento", async () => {
     render(<EyeTrackingLab study={study} />);
     // Clic sin aceptar consentimiento
-    click("Iniciar cámara y cargar modelos");
+    click("Continuar a ajuste de pantalla");
     const errorAlert = screen.getByText(/Debes aceptar el uso de la cámara/);
     expect(errorAlert).toBeTruthy();
-    const button = screen.getByRole("button", { name: "Iniciar cámara y cargar modelos" });
+    const button = screen.getByRole("button", { name: "Continuar a ajuste de pantalla" });
     expect(button.parentElement?.contains(errorAlert)).toBe(true);
   });
 
   it("describe la activación del punto sin imponer colores institucionales", async () => {
     render(<EyeTrackingLab study={study} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: /Acepto usar la cámara/ }));
+    goToScreenStep();
     fireEvent.click(screen.getByRole("checkbox", { name: "El dibujo coincide con mi tarjeta" }));
     click("Iniciar cámara y cargar modelos"); await tick(0); await tick(500);
     click("Comenzar calibración");

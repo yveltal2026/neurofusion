@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 const tones = {
   error: { box: "border-danger/40 bg-danger/10", dot: "bg-danger" },
   info: { box: "border-primary/50 bg-primary/10", dot: "bg-primary" },
+  success: { box: "border-success/40 bg-success/10", dot: "bg-success" },
   warning: { box: "border-warning/40 bg-warning/10", dot: "bg-warning" },
 } as const;
 

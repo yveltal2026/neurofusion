@@ -57,7 +57,7 @@ describe("NewStudyPage · selección de herramientas con cards", () => {
     expect(screen.getByText("Eye tracking con webcam")).toBeTruthy();
 
     expect(screen.getByText("Análisis visual con IA")).toBeTruthy();
-    expect(screen.getByText("Estimado")).toBeTruthy();
+    expect(screen.getAllByText("Estimado").length).toBeGreaterThanOrEqual(1);
 
     expect(screen.getByText("Test de Asociación Implícita (IAT)")).toBeTruthy();
     expect(screen.getByText("Variantes del IAT (SC-IAT, Go/No-Go, priming)")).toBeTruthy();

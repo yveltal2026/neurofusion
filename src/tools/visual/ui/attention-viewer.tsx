@@ -220,6 +220,23 @@ export function AttentionViewer({
   const [dirty, setDirty] = useState(false);
   const [msg, setMsg] = useState<{ tone: "error" | "info"; text: string } | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [lastDeleted, setLastDeleted] = useState<Aoi | null>(null);
+  const [coordDrafts, setCoordDrafts] = useState<Partial<Record<number, string>>>({});
+  const [coordError, setCoordError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    setCoordDrafts({});
+    setCoordError(null);
+  }, [selected]);
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -253,6 +270,7 @@ export function AttentionViewer({
     setFullscreen(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    requestAnimationFrame(() => previousFocusRef.current?.focus());
   };
 
   useEffect(() => {
@@ -264,6 +282,8 @@ export function AttentionViewer({
 
   useEffect(() => {
     if (!fullscreen) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeFullscreen();
@@ -422,7 +442,7 @@ export function AttentionViewer({
               value={mode}
               onChange={(e) => setMode(e.target.value as ViewMode)}
               aria-label="Capa sobre la imagen"
-              className="min-h-11 rounded-md border border-control bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              className="min-h-11 rounded-md border border-control bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink cursor-pointer"
             >
               {MODES.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -432,25 +452,27 @@ export function AttentionViewer({
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <button
+          <div className="flex items-center gap-2">
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => setFullscreen(true)}
               title="Ver a pantalla completa"
-              aria-label="Fullscreen"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
+              aria-label="Pantalla completa"
             >
               <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
               </svg>
-              <span>Fullscreen</span>
-            </button>
-            <button
+              <span>Pantalla completa</span>
+            </Button>
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={exportPng}
               title="Descargar imagen en PNG"
               aria-label="Descargar PNG"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/30 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
             >
               <svg aria-hidden="true" className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -458,7 +480,7 @@ export function AttentionViewer({
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               <span>PNG</span>
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -492,7 +514,7 @@ export function AttentionViewer({
             <p className="text-xs text-muted">Arrastra sobre la imagen para agregar un área (o usa «Agregar área»); haz clic en una para editarla.</p>
             <button
               type="button"
-              className="text-sm font-medium text-heading underline underline-offset-4"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-heading underline underline-offset-4"
               onClick={() => {
                 if (aois.length >= 30) return setMsg({ tone: "error", text: "Máximo 30 áreas de interés." });
                 const id = nextId(aois);
@@ -509,22 +531,39 @@ export function AttentionViewer({
                   <button
                     type="button"
                     onClick={() => setSelected(a.id)}
-                    className={`w-full rounded px-2 py-1 text-left ${a.id === selected ? "bg-primary/10 font-medium" : "hover:bg-foreground/5"}`}
+                    className={`min-h-10 w-full rounded px-2.5 py-1.5 text-left ${a.id === selected ? "bg-primary/10 font-medium" : "hover:bg-foreground/5"}`}
                   >
                     {a.id} · {a.label}
                   </button>
                 </li>
               ))}
             </ul>
+            {lastDeleted ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface-muted/60 px-3 py-2 text-xs">
+                <span className="text-heading">Área «{lastDeleted.label}» eliminada.</span>
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold text-accent-ink underline underline-offset-4 hover:text-heading"
+                  onClick={() => {
+                    setAois((xs) => [...xs, lastDeleted]);
+                    setSelected(lastDeleted.id);
+                    setLastDeleted(null);
+                    setDirty(true);
+                  }}
+                >
+                  Deshacer
+                </button>
+              </div>
+            ) : null}
             {sel ? (
               <div className="space-y-2 rounded-lg border border-border p-3">
                 <label className="block space-y-1">
                   <span className="text-xs font-medium">Etiqueta</span>
-                  <input value={sel.label} maxLength={80} onChange={(e) => update(sel.id, { label: e.target.value })} className="w-full rounded border border-control bg-background px-2 py-1" />
+                  <input value={sel.label} maxLength={80} onChange={(e) => update(sel.id, { label: e.target.value })} className="min-h-11 w-full rounded border border-control bg-background px-2.5 py-1.5 text-sm" />
                 </label>
                 <label className="block space-y-1">
                   <span className="text-xs font-medium">Tipo</span>
-                  <select value={sel.kind} onChange={(e) => update(sel.id, { kind: e.target.value as AoiKind })} className="w-full rounded border border-control bg-background px-2 py-1">
+                  <select value={sel.kind} onChange={(e) => update(sel.id, { kind: e.target.value as AoiKind })} className="min-h-11 w-full rounded border border-control bg-background px-2.5 py-1.5 text-sm">
                     {AOI_KINDS.map((k) => (
                       <option key={k} value={k}>
                         {AOI_KIND_LABEL[k]}
@@ -539,7 +578,7 @@ export function AttentionViewer({
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1">
                     <span className="text-xs font-medium">Importancia</span>
-                    <select value={sel.importance} onChange={(e) => update(sel.id, { importance: Number(e.target.value) })} className="w-full rounded border border-control bg-background px-2 py-1">
+                    <select value={sel.importance} onChange={(e) => update(sel.id, { importance: Number(e.target.value) })} className="min-h-11 w-full rounded border border-control bg-background px-2.5 py-1.5 text-sm">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <option key={n}>{n}</option>
                       ))}
@@ -554,7 +593,7 @@ export function AttentionViewer({
                       value={sel.order ?? ""}
                       placeholder="sin dato"
                       onChange={(e) => update(sel.id, { order: e.target.value ? Math.max(1, Math.min(50, Number(e.target.value))) : null })}
-                      className="w-full rounded border border-control bg-background px-2 py-1"
+                      className="min-h-11 w-full rounded border border-control bg-background px-2.5 py-1.5 text-sm"
                     />
                   </label>
                 </div>
@@ -569,25 +608,52 @@ export function AttentionViewer({
                           min={0}
                           max={100}
                           step={1}
-                          value={Math.round(sel.box[i] * 100)}
+                          value={coordDrafts[i] ?? String(Math.round(sel.box[i] * 100))}
                           onChange={(e) => {
-                            const v = Math.min(100, Math.max(0, Number(e.target.value))) / 100;
+                            const raw = e.target.value;
+                            setCoordError(null);
+                            setCoordDrafts((prev) => ({ ...prev, [i]: raw }));
+                            if (raw === "") return;
+                            const parsed = Number(raw);
+                            if (!Number.isFinite(parsed)) return;
+                            const v = Math.min(100, Math.max(0, parsed)) / 100;
                             const box = [...sel.box] as Aoi["box"];
                             box[i] = v;
-                            // Mantiene la caja válida (izquierda < derecha, arriba < abajo).
-                            if (box[2] - box[0] < 0.01 || box[3] - box[1] < 0.01) return;
-                            update(sel.id, { box });
+                            if (box[2] - box[0] >= 0.01 && box[3] - box[1] >= 0.01) {
+                              update(sel.id, { box });
+                            }
                           }}
-                          className="w-full rounded border border-control bg-background px-2 py-1"
+                          onBlur={() => {
+                            const raw = coordDrafts[i];
+                            setCoordDrafts((prev) => {
+                              const next = { ...prev };
+                              delete next[i];
+                              return next;
+                            });
+                            if (raw === undefined || raw === "") return;
+                            const parsed = Number(raw);
+                            if (!Number.isFinite(parsed)) return;
+                            const v = Math.min(100, Math.max(0, parsed)) / 100;
+                            const box = [...sel.box] as Aoi["box"];
+                            box[i] = v;
+                            if (box[2] - box[0] >= 0.01 && box[3] - box[1] >= 0.01) {
+                              update(sel.id, { box });
+                            } else {
+                              setCoordError("El borde no puede cruzar el lado opuesto (mínimo 1 %).");
+                            }
+                          }}
+                          className="min-h-11 w-full rounded border border-control bg-background px-2.5 py-1.5 text-sm tabular-nums"
                         />
                       </label>
                     ))}
                   </div>
+                  {coordError ? <p className="text-xs text-danger" role="alert">{coordError}</p> : null}
                 </fieldset>
                 <button
                   type="button"
-                  className="text-xs text-danger hover:underline"
+                  className="min-h-11 text-xs font-medium text-danger hover:underline"
                   onClick={() => {
+                    setLastDeleted(sel);
                     setAois((xs) => xs.filter((x) => x.id !== sel.id));
                     setSelected(null);
                     setDirty(true);
@@ -596,6 +662,11 @@ export function AttentionViewer({
                   Eliminar área
                 </button>
               </div>
+            ) : null}
+            {dirty ? (
+              <p className="text-xs text-accent-ink" role="status">
+                Tienes cambios sin guardar en las áreas de interés.
+              </p>
             ) : null}
             <Button type="button" variant={dirty ? "primary" : "secondary"} onClick={save} disabled={saving || !dirty} className="w-full">
               {saving ? "Guardando…" : dirty ? "Guardar áreas revisadas" : reviewed ? "Revisadas por el analista" : "Sin cambios"}
@@ -606,7 +677,7 @@ export function AttentionViewer({
       {msg ? <Alert tone={msg.tone}>{msg.text}</Alert> : null}
       {mode === "blind" ? <ColdZoneNotes cold={cold} total={aois.length} /> : null}
       {mode === "gaze" ? <OutsidePathNote aois={unreached} /> : null}
-      {mode === "heatmap" || mode === "gaze" || mode === "blind" ? (
+      {showControls && (mode === "heatmap" || mode === "gaze" || mode === "blind") ? (
         <p className="text-xs text-muted">
           Estimación experta (IA + revisión del analista) a partir de principios de saliencia visual. No es eye tracking ni datos de personas reales.
         </p>
@@ -614,10 +685,27 @@ export function AttentionViewer({
 
       {fullscreen ? (
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label="Visor a pantalla completa"
-          className="fixed inset-0 z-50 flex flex-col bg-black/92 p-4 backdrop-blur-sm sm:p-6"
+          onKeyDown={(e) => {
+            if (e.key !== "Tab" || !dialogRef.current) return;
+            const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            );
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }}
+          className="fixed inset-0 z-50 flex flex-col bg-deep/95 p-4 sm:p-6"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 text-white">
             <div className="flex flex-wrap items-center gap-2">
@@ -627,7 +715,7 @@ export function AttentionViewer({
                   type="button"
                   aria-pressed={mode === m.id}
                   onClick={() => setMode(m.id)}
-                  className={`min-h-8 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  className={`min-h-11 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition motion-reduce:transition-none ${
                     mode === m.id
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-white/30 text-white/80 hover:bg-white/10"
@@ -641,7 +729,7 @@ export function AttentionViewer({
             <div className="flex items-center gap-3">
               {/* Controles de Zoom */}
               <div
-                className="flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm"
+                className="flex items-center gap-1 rounded-full border border-white/20 bg-deep-surface p-1"
                 role="group"
                 aria-label="Control de zoom"
               >
@@ -651,11 +739,11 @@ export function AttentionViewer({
                   disabled={zoom <= 1}
                   title="Alejar (-)"
                   aria-label="Alejar zoom"
-                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <svg
                     aria-hidden="true"
-                    className="size-3.5"
+                    className="size-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -672,7 +760,7 @@ export function AttentionViewer({
                   onClick={handleResetZoom}
                   title="Restablecer zoom al 100% (0)"
                   aria-label={`Nivel de zoom: ${Math.round(zoom * 100)}%`}
-                  className="min-w-12 px-1 text-center text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
+                  className="min-h-11 min-w-12 px-1 text-center text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
                 >
                   {Math.round(zoom * 100)}%
                 </button>
@@ -683,11 +771,11 @@ export function AttentionViewer({
                   disabled={zoom >= 4}
                   title="Acercar (+)"
                   aria-label="Acercar zoom"
-                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <svg
                     aria-hidden="true"
-                    className="size-3.5"
+                    className="size-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -704,14 +792,14 @@ export function AttentionViewer({
               <button
                 type="button"
                 onClick={exportPng}
-                className="text-xs text-white/80 underline underline-offset-4 hover:text-white"
+                className="inline-flex min-h-11 items-center px-2 text-xs text-white/80 underline underline-offset-4 hover:text-white"
               >
                 Descargar PNG
               </button>
               <button
                 type="button"
                 onClick={closeFullscreen}
-                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25"
+                className="inline-flex min-h-11 items-center rounded-full bg-white/15 px-4 text-xs font-semibold text-white hover:bg-white/25"
               >
                 Cerrar ✕
               </button>
@@ -724,9 +812,7 @@ export function AttentionViewer({
             <div
               className={`relative mx-auto overflow-hidden rounded-lg shadow-2xl transition-transform ${
                 zoom > 1
-                  ? isDragging
-                    ? "cursor-grabbing"
-                    : "cursor-grab"
+                  ? `touch-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`
                   : "cursor-default"
               }`}
               style={{
@@ -756,7 +842,7 @@ export function AttentionViewer({
             </div>
 
             {zoom > 1 ? (
-              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-2xs text-white/80 shadow-lg backdrop-blur-md">
+              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-deep/90 px-3 py-1.5 text-2xs text-white/90 shadow-lg">
                 Arrastra para explorar · Doble clic para restablecer (0)
               </div>
             ) : null}

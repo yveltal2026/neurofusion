@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { StudyTabs } from "@/components/study-tabs";
 import { Breadcrumbs, projectCrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Block } from "@/components/ui/card";
@@ -60,7 +59,6 @@ export default async function SessionDetailPage({ params }: PageProps<"/studies/
         />
         <h1 className="mt-1 font-display text-3xl font-bold tabular-nums">{view.participant_ref}</h1>
       </div>
-      <StudyTabs id={id} active="data" />
 
       <Block className="space-y-3">
         <h2 className="text-xl font-semibold">Participante</h2>

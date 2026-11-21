@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, buttonClass } from "@/components/ui/button";
 import { EvidenceBadge } from "@/components/ui/evidence-badge";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -33,6 +34,19 @@ const headers = [
   "Visitas",
   "Regresos",
 ];
+
+const HEADER_HINTS: Record<string, string> = {
+  AOI: "Área de interés evaluada",
+  "TTFF (ms)": "Tiempo hasta la primera fijación (milisegundos)",
+  FC: "Conteo total de fijaciones dentro del área",
+  "FD media (ms)": "Duración promedio de cada fijación (milisegundos)",
+  "TFD (ms)": "Tiempo total de fijación acumulado (milisegundos)",
+  "Dwell (ms)": "Tiempo de permanencia continua en el área (milisegundos)",
+  "Hit rate (%)": "Porcentaje de participantes que miraron el área",
+  "Primera fijación (%)": "Porcentaje cuya primera mirada cayó en esta área",
+  Visitas: "Número de entradas distintas al área",
+  Regresos: "Veces que la mirada volvió al área tras salir",
+};
 
 function cells(row: AoiMetrics | AggregateAoi, count: number): CsvCell[] {
   return [
@@ -137,14 +151,41 @@ export function EyeResults({
     setPan({ x: 0, y: 0 });
   };
 
+  const [activeHint, setActiveHint] = useState<string | null>(null);
+  const csvMenuRef = useRef<HTMLDetailsElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   const closeFullscreen = () => {
     setFullscreen(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
+    requestAnimationFrame(() => previousFocusRef.current?.focus());
   };
 
   useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      if (csvMenuRef.current?.open && !csvMenuRef.current.contains(e.target as Node)) {
+        csvMenuRef.current.open = false;
+      }
+    };
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && csvMenuRef.current?.open) {
+        csvMenuRef.current.open = false;
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!fullscreen) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeFullscreen();
@@ -315,8 +356,8 @@ export function EyeResults({
                   y={a.box[1] * height}
                   width={(a.box[2] - a.box[0]) * width}
                   height={(a.box[3] - a.box[1]) * height}
-                  fill="#06b6d422"
-                  stroke="#06b6d4"
+                  fill="#FFB00024"
+                  stroke="#FFB000"
                   strokeWidth={2}
                   vectorEffect="non-scaling-stroke"
                 />
@@ -359,7 +400,7 @@ export function EyeResults({
         </div>
         <Link
           href={`/studies/${studyId}/assets/${assetId}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 hover:border-primary/40"
+          className={buttonClass("secondary", "", "sm")}
         >
           <span>Definir áreas de interés ({aois.length})</span>
         </Link>
@@ -372,7 +413,7 @@ export function EyeResults({
             <span>Participante</span>
             <select
               aria-label="Participante"
-              className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+              className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink cursor-pointer"
               value={session}
               onChange={(e) => setSession(e.target.value)}
             >
@@ -386,7 +427,7 @@ export function EyeResults({
           </label>
 
           <div
-            className="inline-flex rounded-lg border border-border bg-surface-muted/30 p-0.5"
+            className="inline-flex rounded-full border border-border bg-surface-muted/30 p-0.5"
             role="group"
             aria-label="Visualización"
           >
@@ -402,7 +443,7 @@ export function EyeResults({
                 key={id}
                 aria-pressed={view === id}
                 onClick={() => setView(id)}
-                className={`min-h-11 rounded-full px-3 text-xs font-semibold transition ${
+                className={`min-h-11 rounded-full px-3 text-xs font-semibold transition motion-reduce:transition-none ${
                   view === id
                     ? "bg-primary text-primary-foreground shadow-2xs border border-border/80"
                     : "text-muted hover:text-heading"
@@ -422,7 +463,7 @@ export function EyeResults({
                 onChange={(e) =>
                   setHeatMetric(e.target.value as "count" | "duration")
                 }
-                className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus:outline-none cursor-pointer"
+                className="min-h-11 rounded-md border border-border bg-surface-muted/50 px-2.5 pr-7 text-xs font-semibold text-heading shadow-2xs transition hover:border-primary/50 focus:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink cursor-pointer"
               >
                 <option value="duration">Duración de fijaciones</option>
                 <option value="count">Número de fijaciones</option>
@@ -431,12 +472,13 @@ export function EyeResults({
           ) : null}
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => setFullscreen(true)}
           title="Ver a pantalla completa"
           aria-label="Pantalla completa"
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface-muted/40 px-2.5 text-xs font-medium text-heading transition hover:bg-foreground/5 hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-heading"
         >
           <svg
             aria-hidden="true"
@@ -451,7 +493,7 @@ export function EyeResults({
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
           </svg>
           <span>Pantalla completa</span>
-        </button>
+        </Button>
       </div>
 
       <div className="grid items-start gap-5 lg:grid-cols-[1.4fr_1fr]">
@@ -481,6 +523,20 @@ export function EyeResults({
               No se pudo abrir la imagen almacenada.
             </p>
           )}
+          {view === "gaze" && visible.length ? (
+            <ul className="flex flex-wrap gap-2" aria-label="Leyenda de participantes en recorrido">
+              {visible.map((p, idx) => (
+                <li key={p.sessionId} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-heading">
+                  <span
+                    aria-hidden="true"
+                    className="size-2.5 rounded-full"
+                    style={{ backgroundColor: `hsl(${(idx * 137.5) % 360}, 75%, 52%)` }}
+                  />
+                  <span>{p.participant}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           {/* Nota explicativa del modo activo */}
           <p className="text-xs text-muted">
@@ -563,27 +619,11 @@ export function EyeResults({
                 : `agregado de ${aggregate.count} sesiones`}
             </span>
           </h3>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
-              disabled={!aggregate.count || !aois.length}
-              onClick={() =>
-                download(
-                  `eye-kpis-${assetId}.csv`,
-                  ["asset_id", "base_sessions", "metrics_version", ...headers],
-                  aggregate.aois.map((r) => [
-                    assetId,
-                    aggregate.count,
-                    EYE_METRICS_VERSION,
-                    ...cells(r, aggregate.count),
-                  ]),
-                )
-              }
-            >
+          <details ref={csvMenuRef} className="relative">
+            <summary className={buttonClass("secondary", "cursor-pointer list-none", "sm")}>
               <svg
                 aria-hidden="true"
-                className="size-3.5 text-muted"
+                className="size-3.5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -595,119 +635,115 @@ export function EyeResults({
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              <span>Descargar KPIs agregados CSV</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
-              disabled={!aggregate.count || !aois.length}
-              onClick={() =>
-                download(
-                  `eye-participantes-${assetId}.csv`,
-                  [
-                    "asset_id",
-                    "session_id",
-                    "participant",
-                    "metrics_version",
-                    ...headers,
-                  ],
-                  aggregate.participants.flatMap((p) =>
-                    p.metrics.aois.map((r) => [
+              <span>Exportar CSV</span>
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 flex w-64 flex-col gap-1 rounded-2xl border border-border bg-surface p-2 shadow-lg">
+              <button
+                type="button"
+                className="min-h-10 rounded-xl px-3 py-2 text-left text-xs font-medium text-heading transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!aggregate.count || !aois.length}
+                onClick={() => {
+                  if (csvMenuRef.current) csvMenuRef.current.open = false;
+                  download(
+                    `eye-kpis-${assetId}.csv`,
+                    ["asset_id", "base_sessions", "metrics_version", ...headers],
+                    aggregate.aois.map((r) => [
                       assetId,
-                      p.sessionId,
-                      p.participant,
+                      aggregate.count,
                       EYE_METRICS_VERSION,
-                      ...cells(r, 1),
+                      ...cells(r, aggregate.count),
                     ]),
-                  ),
-                )
-              }
-            >
-              <svg
-                aria-hidden="true"
-                className="size-3.5 text-muted"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                  );
+                }}
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Descargar KPIs por participante CSV</span>
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-heading shadow-2xs transition hover:bg-foreground/5 disabled:opacity-40 disabled:cursor-not-allowed"
-              disabled={!fixationCount}
-              onClick={() =>
-                download(
-                  `eye-fijaciones-${assetId}.csv`,
-                  [
-                    "asset_id",
-                    "session_id",
-                    "participant",
-                    "fixation",
-                    "start_ms",
-                    "duration_ms",
-                    "x_norm",
-                    "y_norm",
-                    "aoi_ids",
-                    "transition_amplitude_diagonal_pct",
-                    "transition_duration_ms",
-                    "metrics_version",
-                  ],
-                  visible.flatMap((p) =>
-                    p.metrics.fixations.map((f, i) => {
-                      const t = p.metrics.transitions.find((t) => t.to === i);
-                      return [
+                KPIs agregados CSV
+              </button>
+              <button
+                type="button"
+                className="min-h-10 rounded-xl px-3 py-2 text-left text-xs font-medium text-heading transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!aggregate.count || !aois.length}
+                onClick={() => {
+                  if (csvMenuRef.current) csvMenuRef.current.open = false;
+                  download(
+                    `eye-participantes-${assetId}.csv`,
+                    [
+                      "asset_id",
+                      "session_id",
+                      "participant",
+                      "metrics_version",
+                      ...headers,
+                    ],
+                    aggregate.participants.flatMap((p) =>
+                      p.metrics.aois.map((r) => [
                         assetId,
                         p.sessionId,
                         p.participant,
-                        i + 1,
-                        f.startMs,
-                        f.durationMs,
-                        f.x,
-                        f.y,
-                        aois
-                          .filter(
-                            (a) =>
-                              f.x >= a.box[0] &&
-                              f.x <= a.box[2] &&
-                              f.y >= a.box[1] &&
-                              f.y <= a.box[3],
-                          )
-                          .map((a) => a.id)
-                          .join(" | "),
-                        t?.amplitudeDiagonalPct,
-                        t?.durationMs,
                         EYE_METRICS_VERSION,
-                      ];
-                    }),
-                  ),
-                )
-              }
-            >
-              <svg
-                aria-hidden="true"
-                className="size-3.5 text-muted"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                        ...cells(r, 1),
+                      ]),
+                    ),
+                  );
+                }}
               >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Descargar fijaciones y recorrido CSV</span>
-            </button>
-          </div>
+                KPIs por participante CSV
+              </button>
+              <button
+                type="button"
+                className="min-h-10 rounded-xl px-3 py-2 text-left text-xs font-medium text-heading transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!fixationCount}
+                onClick={() => {
+                  if (csvMenuRef.current) csvMenuRef.current.open = false;
+                  download(
+                    `eye-fijaciones-${assetId}.csv`,
+                    [
+                      "asset_id",
+                      "session_id",
+                      "participant",
+                      "fixation",
+                      "start_ms",
+                      "duration_ms",
+                      "x_norm",
+                      "y_norm",
+                      "aoi_ids",
+                      "transition_amplitude_diagonal_pct",
+                      "transition_duration_ms",
+                      "metrics_version",
+                    ],
+                    visible.flatMap((p) =>
+                      p.metrics.fixations.map((f, i) => {
+                        const t = p.metrics.transitions.find((t) => t.to === i);
+                        return [
+                          assetId,
+                          p.sessionId,
+                          p.participant,
+                          i + 1,
+                          f.startMs,
+                          f.durationMs,
+                          f.x,
+                          f.y,
+                          aois
+                            .filter(
+                              (a) =>
+                                f.x >= a.box[0] &&
+                                f.x <= a.box[2] &&
+                                f.y >= a.box[1] &&
+                                f.y <= a.box[3],
+                            )
+                            .map((a) => a.id)
+                            .join(" | "),
+                          t?.amplitudeDiagonalPct,
+                          t?.durationMs,
+                          EYE_METRICS_VERSION,
+                        ];
+                      }),
+                    ),
+                  );
+                }}
+              >
+                Fijaciones y recorrido CSV
+              </button>
+            </div>
+          </details>
         </div>
 
         {aois.length ? (
@@ -722,9 +758,26 @@ export function EyeResults({
                     <th
                       key={h}
                       scope="col"
+                      title={HEADER_HINTS[h]}
                       className="whitespace-nowrap px-3 py-2.5"
                     >
-                      {h}
+                      {h !== "AOI" && HEADER_HINTS[h] ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span>{h}</span>
+                          <button
+                            type="button"
+                            aria-expanded={activeHint === h}
+                            aria-label={`Definición de ${h}`}
+                            title={HEADER_HINTS[h]}
+                            onClick={() => setActiveHint((prev) => (prev === h ? null : h))}
+                            className="inline-flex size-5 items-center justify-center rounded-full border border-border text-xs font-bold text-muted hover:text-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink print:hidden"
+                          >
+                            ?
+                          </button>
+                        </span>
+                      ) : (
+                        h
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -763,7 +816,14 @@ export function EyeResults({
             </p>
           </div>
         )}
+        {activeHint && HEADER_HINTS[activeHint] ? (
+          <p role="status" className="rounded-lg border border-border bg-surface-muted/50 px-3 py-2 text-xs text-heading">
+            <strong className="font-semibold">{activeHint}:</strong> {HEADER_HINTS[activeHint]}
+          </p>
+        ) : null}
       </div>
+
+      <EyeKpiGuide />
 
       {/* Desplegable de scanpath / secuencia */}
       <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs">
@@ -814,8 +874,6 @@ export function EyeResults({
           ))}
         </div>
       </details>
-
-      <EyeKpiGuide />
 
       {/* Desplegable de definiciones y método */}
       <details className="group rounded-lg border border-border bg-surface/40 p-3.5 shadow-2xs text-xs text-muted">
@@ -869,10 +927,27 @@ export function EyeResults({
       {/* Modal a pantalla completa (lightbox) */}
       {fullscreen ? (
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-label="Visor de miradas a pantalla completa"
-          className="fixed inset-0 z-50 flex flex-col bg-black/92 p-4 backdrop-blur-sm sm:p-6"
+          onKeyDown={(e) => {
+            if (e.key !== "Tab" || !dialogRef.current) return;
+            const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            );
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+              e.preventDefault();
+              last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }}
+          className="fixed inset-0 z-50 flex flex-col bg-deep/95 p-4 sm:p-6"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 text-white">
             <div className="flex flex-wrap items-center gap-3">
@@ -880,7 +955,7 @@ export function EyeResults({
                 <span>Participante</span>
                 <select
                   aria-label="Participante en pantalla completa"
-                  className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white shadow-2xs backdrop-blur-sm cursor-pointer"
+                  className="min-h-11 rounded-md border border-white/20 bg-deep-surface px-2.5 text-xs font-medium text-white shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   value={session}
                   onChange={(e) => setSession(e.target.value)}
                 >
@@ -900,7 +975,7 @@ export function EyeResults({
               </label>
 
               <div
-                className="flex items-center gap-1"
+                className="flex flex-wrap items-center gap-2"
                 role="group"
                 aria-label="Visualización en pantalla completa"
               >
@@ -916,7 +991,7 @@ export function EyeResults({
                     key={id}
                     aria-pressed={view === id}
                     onClick={() => setView(id)}
-                    className={`min-h-8 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    className={`min-h-11 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition motion-reduce:transition-none ${
                       view === id
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-white/30 text-white/80 hover:bg-white/10"
@@ -936,7 +1011,7 @@ export function EyeResults({
                     onChange={(e) =>
                       setHeatMetric(e.target.value as "count" | "duration")
                     }
-                    className="rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-medium text-white shadow-2xs backdrop-blur-sm cursor-pointer"
+                    className="min-h-11 rounded-md border border-white/20 bg-deep-surface px-2.5 text-xs font-medium text-white shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   >
                     <option
                       value="duration"
@@ -955,7 +1030,7 @@ export function EyeResults({
             <div className="flex items-center gap-3">
               {/* Controles de Zoom */}
               <div
-                className="flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm"
+                className="flex items-center gap-1 rounded-full border border-white/20 bg-deep-surface p-1"
                 role="group"
                 aria-label="Control de zoom"
               >
@@ -965,11 +1040,11 @@ export function EyeResults({
                   disabled={zoom <= 1}
                   title="Alejar (-)"
                   aria-label="Alejar zoom"
-                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <svg
                     aria-hidden="true"
-                    className="size-3.5"
+                    className="size-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -986,7 +1061,7 @@ export function EyeResults({
                   onClick={handleResetZoom}
                   title="Restablecer zoom al 100% (0)"
                   aria-label={`Nivel de zoom: ${Math.round(zoom * 100)}%`}
-                  className="min-w-12 px-1 text-center font-mono text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
+                  className="min-h-11 min-w-12 px-1 text-center font-mono text-xs font-semibold tabular-nums text-white/90 transition hover:text-white"
                 >
                   {Math.round(zoom * 100)}%
                 </button>
@@ -997,11 +1072,11 @@ export function EyeResults({
                   disabled={zoom >= 4}
                   title="Acercar (+)"
                   aria-label="Acercar zoom"
-                  className="inline-flex size-7 items-center justify-center rounded text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
+                  className="inline-flex size-11 items-center justify-center rounded-full text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
                 >
                   <svg
                     aria-hidden="true"
-                    className="size-3.5"
+                    className="size-4"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1018,7 +1093,7 @@ export function EyeResults({
               <button
                 type="button"
                 onClick={closeFullscreen}
-                className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/25 transition"
+                className="inline-flex min-h-11 items-center rounded-full bg-white/15 px-4 text-xs font-semibold text-white hover:bg-white/25 transition"
               >
                 Cerrar ✕
               </button>
@@ -1032,9 +1107,7 @@ export function EyeResults({
             <div
               className={`relative mx-auto overflow-hidden rounded-lg shadow-2xl transition-transform ${
                 zoom > 1
-                  ? isDragging
-                    ? "cursor-grabbing"
-                    : "cursor-grab"
+                  ? `touch-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`
                   : "cursor-default"
               }`}
               style={{
@@ -1063,7 +1136,7 @@ export function EyeResults({
             </div>
 
             {zoom > 1 ? (
-              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-2xs text-white/80 shadow-lg backdrop-blur-md">
+              <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-deep/90 px-3 py-1.5 text-2xs text-white/90 shadow-lg">
                 Arrastra para explorar · Doble clic para restablecer (0)
               </div>
             ) : null}

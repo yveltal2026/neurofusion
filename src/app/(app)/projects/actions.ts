@@ -14,6 +14,7 @@ const projectSchema = z.object({
 
 export interface ProjectFormState {
   error?: string;
+  ok?: boolean;
 }
 
 export async function createProject(
@@ -38,18 +39,46 @@ export async function createProject(
   if (error || !data) return { error: "No se pudo crear el proyecto" };
 
   revalidatePath("/projects");
-  redirect(`/projects/${data.id}`);
+  redirect(`/projects/${data.id}?created=1`);
 }
 
-export async function deleteProject(formData: FormData) {
+export async function updateProject(
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
   const id = z.string().uuid().safeParse(formData.get("id"));
-  if (!id.success) return;
+  if (!id.success) return { error: "Identificador de proyecto inválido." };
+  const parsed = projectSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description") || undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const { supabase } = await requireUser();
+  const { error } = await supabase
+    .from("projects")
+    .update({ name: parsed.data.name, description: parsed.data.description ?? null })
+    .eq("id", id.data);
+  if (error) return { error: "No se pudieron guardar los cambios." };
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${id.data}`);
+  return { ok: true };
+}
+
+export async function deleteProject(
+  _prev: ProjectFormState,
+  formData: FormData,
+): Promise<ProjectFormState> {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) return { error: "Identificador de proyecto inválido." };
   const { supabase } = await requireUser();
   // Los archivos del Storage no se borran en cascada con las filas.
   const { data: visual } = await supabase.from("studies").select("id").eq("project_id", id.data).eq("tool_type", "visual");
   for (const s of visual ?? []) await removeStudyFiles(supabase, s.id);
   // RLS garantiza que sólo se borran proyectos de la propia organización.
-  await supabase.from("projects").delete().eq("id", id.data);
+  const { error } = await supabase.from("projects").delete().eq("id", id.data);
+  if (error) return { error: "No se pudo eliminar el proyecto. Intenta de nuevo." };
   revalidatePath("/projects");
-  redirect("/projects");
+  redirect("/projects?deleted=1");
 }

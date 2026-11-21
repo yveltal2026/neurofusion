@@ -24,11 +24,10 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
 
   const seo = study.tool_type === "seo" ? seoConfigSchema.safeParse(study.config) : null;
   const visual = study.tool_type === "visual" ? visualConfigSchema.safeParse(study.config) : null;
-  const variant = study.tool_type === "seo" ? "seo" : visual?.success && visual.data.mode === "journey" ? "journey" : visual?.success && visual.data.mode === "pieces" && visual.data.eyeTracking ? "eye" : "pieces";
 
   return (
     <div className="space-y-8">
-      <StudyHeader study={study} projectName={project?.name} active="settings" variant={variant} />
+      <StudyHeader study={study} projectName={project?.name} />
       <Block className="space-y-4">
         <h2 className="text-xl font-semibold">Nombre</h2>
         <RenameStudyForm id={study.id} name={study.name} />
@@ -41,7 +40,7 @@ export default async function SettingsPage({ params }: PageProps<"/studies/[id]/
       ) : null}
       {visual?.success ? (
         <Block className="space-y-4">
-          <h2 className="text-xl font-semibold">{variant === "eye" ? "Contexto del estudio" : "Contexto del análisis"}</h2>
+          <h2 className="text-xl font-semibold">{visual.data.mode === "pieces" && visual.data.eyeTracking ? "Contexto del estudio" : "Contexto del análisis"}</h2>
           <VisualContextForm studyId={study.id} config={visual.data} />
         </Block>
       ) : null}

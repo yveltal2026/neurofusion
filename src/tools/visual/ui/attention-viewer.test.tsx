@@ -220,7 +220,7 @@ describe("AttentionViewer · dibujo sobre el canvas", () => {
     render(<AttentionViewer imageUrl="https://x/y.png" width={1080} height={1920} aois={AOIS} />);
 
     expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Fullscreen" }));
+    await user.click(screen.getByRole("button", { name: "Pantalla completa" }));
 
     expect(screen.getByRole("dialog", { name: "Visor a pantalla completa" })).toBeTruthy();
 
@@ -236,7 +236,7 @@ describe("AttentionViewer · dibujo sobre el canvas", () => {
     expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();
 
     // Abre de nuevo y cierra con el botón
-    await user.click(screen.getByRole("button", { name: "Fullscreen" }));
+    await user.click(screen.getByRole("button", { name: "Pantalla completa" }));
     expect(screen.getByRole("dialog", { name: "Visor a pantalla completa" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Cerrar ✕" }));
     expect(screen.queryByRole("dialog", { name: "Visor a pantalla completa" })).toBeNull();

@@ -59,7 +59,7 @@ export default async function RatingsPage({ params, searchParams }: PageProps<"/
 
   return (
     <div className="space-y-6">
-      <StudyHeader study={study} projectName={projectName} active="ratings" variant="journey" subtitle={`Rúbrica ${RUBRIC_VERSION}`} />
+      <StudyHeader study={study} projectName={projectName} subtitle={`Rúbrica ${RUBRIC_VERSION}`} />
 
       <Alert tone="warning">
         Rúbrica provisional: las anclas son genéricas y se reemplazarán con la rúbrica oficial de fricciones. Regla de oro: toda calificación cita

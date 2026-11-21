@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { analyzeAsset, runIfd, saveRating, suggestRatings, updateAssetMeta, updateVisualContext, type VisualFormState } from "../actions";
 import type { VisualConfig } from "../config";
+import { AnalysisActivity } from "./analysis-activity";
 import { PlacementHint, PlacementSelect } from "./placement-select";
 import type { RubricItem } from "../journey/rubric";
 
@@ -28,6 +29,7 @@ export function AnalyzeAssetForm({ studyId, assetId, hasAnalysis }: { studyId: s
       <Button type="submit" variant={hasAnalysis ? "secondary" : "primary"} disabled={pending}>
         {pending ? "Analizando la imagen… (puede tardar un minuto)" : hasAnalysis ? "Volver a analizar con IA" : "Analizar con IA"}
       </Button>
+      {pending ? <AnalysisActivity /> : null}
     </form>
   );
 }

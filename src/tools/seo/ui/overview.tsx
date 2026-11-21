@@ -98,8 +98,6 @@ export async function SeoOverview({
       <StudyHeader
         study={study}
         projectName={projectName}
-        active="overview"
-        variant="seo"
       />
       {created ? (
         <Alert>Estudio creado. Lanza la primera auditoría.</Alert>

@@ -25,7 +25,7 @@ export default async function ComparePage({ params }: PageProps<"/studies/[id]/c
 
   return (
     <div className="space-y-6">
-      <StudyHeader study={study} projectName={projectName} active="compare" variant="pieces" subtitle="Comparativa de piezas" />
+      <StudyHeader study={study} projectName={projectName} subtitle="Comparativa de piezas" />
       {assets.length < 2 ? <Card className="text-sm text-muted">Sube y analiza al menos dos piezas para compararlas.</Card> : null}
       {assets.length ? (
         <div className="overflow-x-auto rounded-lg border border-border">

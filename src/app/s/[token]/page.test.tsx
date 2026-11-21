@@ -12,10 +12,12 @@ vi.mock("@/lib/participant-api", () => ({
   availabilityError: (study: { status: string }) => study.status === "published" ? null : "closed",
 }));
 vi.mock("@/tools/visual/eye/participant.server", () => ({ loadEyeStudyByToken: mocks.eye }));
+vi.mock("@/tools/web-eyetracking/server", () => ({ loadWebEyeStudyByToken: vi.fn() }));
 vi.mock("@/tools/iat/runner/Runner", () => ({ Runner: () => null }));
 vi.mock("@/tools/survey/runner/SurveyRunner", () => ({ SurveyRunner: () => null }));
 vi.mock("@/tools/variants/runner/VariantRunner", () => ({ VariantRunner: () => null }));
 vi.mock("@/tools/visual/eye/EyeStudyRunner", () => ({ EyeStudyRunner: () => null }));
+vi.mock("@/tools/web-eyetracking/runner/WebEyeParticipantRunner", () => ({ WebEyeParticipantRunner: () => null }));
 
 const token = "a".repeat(43);
 const study = { id: "study", name: "Webcam", status: "published", closes_at: null, config: {} };

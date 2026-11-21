@@ -43,11 +43,6 @@ describe("informes", () => {
       />,
     );
     expect(
-      screen
-        .getByRole("link", { name: "Informe y resultados" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
-    expect(
       screen.getByRole("button", { name: "Analizar con IA" }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: /guardar PDF/ })).toBeTruthy();
@@ -122,11 +117,6 @@ describe("informes", () => {
         saved={null}
       />,
     );
-    expect(
-      screen
-        .getByRole("link", { name: "Informe" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
     const row = screen
       .getByRole("rowheader", { name: "Logotipo" })
       .closest("tr")!;

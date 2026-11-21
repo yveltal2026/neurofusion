@@ -4,6 +4,8 @@
  */
 import type { IconName } from "@/components/brand/icon";
 
+import type { EvidenceKind } from "@/components/ui/evidence-badge";
+
 export type ToolType =
   "iat" | "seo" | "visual" | "web_visual" | "web_eyetracking" | "survey" | "iat_variant" | "eyetracking";
 
@@ -28,6 +30,8 @@ export interface ToolDefinition {
   name: string;
   shortName: string;
   icon: IconName;
+  evidence: EvidenceKind;
+  modality: string;
   description: string;
   newStudyPath: (projectId: string) => string;
 }
@@ -39,8 +43,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "Test de Asociación Implícita (IAT)",
     shortName: "IAT",
     icon: "neuro",
+    evidence: "measured",
+    modality: "Liga para participantes",
     description:
-      "Mide la fuerza de asociación implícita entre dos marcas u opciones y atributos (p. ej. confiable / poco confiable) a partir de tiempos de reacción.",
+      "Compara dos marcas u opciones midiendo qué atributos asocian más rápido las personas.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/iat`,
   },
   {
@@ -49,8 +55,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "Auditoría SEO",
     shortName: "SEO",
     icon: "search",
+    evidence: "modeled",
+    modality: "Análisis inmediato",
     description:
-      "Rastrea un sitio (o analiza HTML subido) y revisa indexación, on-page, datos estructurados, enlaces y Core Web Vitals. La IA prioriza y redacta las recomendaciones.",
+      "Revisa una URL o archivo HTML para detectar fallos de indexación, velocidad y contenido.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/seo`,
   },
   {
@@ -59,6 +67,8 @@ export const TOOLS: ToolDefinition[] = [
     name: "Análisis de Imagen Web",
     shortName: "Imagen Web",
     icon: "eye",
+    evidence: "estimated",
+    modality: "Análisis inmediato",
     description:
       "Evalúa capturas de pantalla de un sitio (desktop o móvil): atención visual estimada, jerarquía, visibilidad del CTA, zonas ciegas y fricción UX.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/web-visual`,
@@ -69,6 +79,8 @@ export const TOOLS: ToolDefinition[] = [
     name: "Eyetracking para Web",
     shortName: "Eye Web",
     icon: "eye",
+    evidence: "measured",
+    modality: "Requiere participantes y webcam",
     description:
       "Mide la mirada real de participantes en tu sitio web mediante snippet en el <head> o con capturas web sin código, guiados por pasos e instrucciones.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/web-eyetracking`,
@@ -79,6 +91,8 @@ export const TOOLS: ToolDefinition[] = [
     name: "Análisis visual con IA",
     shortName: "Visual",
     icon: "eye",
+    evidence: "estimated",
+    modality: "Análisis inmediato",
     description:
       "Evalúa piezas gráficas, anuncios e impresos: mapa de atención estimado, recorrido visual, zonas ciegas y métricas de imagen.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/visual`,
@@ -89,8 +103,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "Encuesta",
     shortName: "Encuesta",
     icon: "survey",
+    evidence: "measured",
+    modality: "Liga para participantes",
     description:
-      "Preguntas propias e instrumentos estandarizados (SUS, NPS, SAM, intención de compra, actitud). El servidor valida y puntúa; los resultados salen con intervalos de confianza y CSV.",
+      "Combina preguntas propias con escalas validadas de usabilidad, satisfacción e intención de compra.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/survey`,
   },
   {
@@ -99,8 +115,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "Variantes del IAT (SC-IAT, Go/No-Go, priming)",
     shortName: "Variantes IAT",
     icon: "bolt",
+    evidence: "measured",
+    modality: "Liga para participantes",
     description:
-      "Mide una sola marca sin comparación (SC-IAT) o con una o dos marcas por Go/No-Go y priming evaluativo. El servidor valida los tiempos y puntúa; los resultados traen advertencias de calidad.",
+      "Evalúa una sola marca o prueba reacciones rápidas sin necesidad de compararla contra otra.",
     newStudyPath: (projectId) => `/projects/${projectId}/studies/new/variants`,
   },
   {
@@ -109,8 +127,10 @@ export const TOOLS: ToolDefinition[] = [
     name: "Eye tracking con webcam",
     shortName: "Eye tracking",
     icon: "eye",
+    evidence: "measured",
+    modality: "Requiere participantes y webcam",
     description:
-      "Mide la mirada de participantes sobre hasta 5 imágenes o un video (MP4/WebM) con Facial Coding opcional. Incluye calibración, controles de calidad, AOIs dinámicas y mapas de atención con webcam.",
+      "Registra la mirada real de participantes sobre imágenes o video con calibración y control de calidad.",
     newStudyPath: (projectId) =>
       `/projects/${projectId}/studies/new/eyetracking`,
   },
